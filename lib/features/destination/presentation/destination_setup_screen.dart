@@ -335,8 +335,7 @@ class _DestinationSetupScreenState
                   ),
                   children: [
                     TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      urlTemplate: AppConstants.tileUrlTemplate,
                       userAgentPackageName: 'com.stopco.app',
                     ),
                     if (_userLocation != null)

@@ -2,8 +2,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'app.dart';
+import 'core/constants/app_constants.dart';
 import 'core/database/database.dart';
 import 'core/database/database_provider.dart';
 
@@ -11,10 +13,6 @@ final FlutterLocalNotificationsPlugin notificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-const String alarmChannelId = 'stop_co_alarm';
-const String alarmChannelName = 'Destination Alarm';
-const String alarmChannelDesc = 'Alerts when approaching your destination';
 
 Future<void> _initNotifications() async {
   const androidSettings =
@@ -41,9 +39,9 @@ Future<void> _initNotifications() async {
   );
 
   final androidChannel = AndroidNotificationChannel(
-    alarmChannelId,
-    alarmChannelName,
-    description: alarmChannelDesc,
+    AppConstants.alarmChannelId,
+    AppConstants.alarmChannelName,
+    description: AppConstants.alarmChannelDesc,
     importance: Importance.max,
     playSound: true,
     enableVibration: true,
@@ -58,6 +56,7 @@ Future<void> _initNotifications() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
   await Firebase.initializeApp();
   await _initNotifications();
 

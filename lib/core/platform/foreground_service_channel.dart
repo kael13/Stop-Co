@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import '../constants/app_constants.dart';
 
 class ForegroundServiceChannel {
-  static const _channel = MethodChannel(AppConstants.foregroundChannel);
+  static final _channel = MethodChannel(AppConstants.foregroundChannel);
 
   static Future<bool> startTracking({
     required double latitude,

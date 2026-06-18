@@ -46,3 +46,15 @@ app.*.map.json
 
 # Firebase
 android/app/google-services.json
+
+# Environment variables
+.env
+
+# Local machine config (auto-generated SDK paths)
+android/local.properties
+
+# Product roadmap (internal planning only)
+PhasePlans.md
+
+# AI agent instructions (developer-only)
+AGENTS.md

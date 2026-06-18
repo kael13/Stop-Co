@@ -1,6 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../main.dart';
+import '../../../main.dart' show notificationsPlugin;
 import '../../settings/data/settings_providers.dart';
 
 class AlarmNotificationService {
@@ -13,9 +13,9 @@ class AlarmNotificationService {
     final enableVibration = alarmType != AlarmType.soundOnly;
 
     final androidDetails = AndroidNotificationDetails(
-      alarmChannelId,
-      alarmChannelName,
-      channelDescription: alarmChannelDesc,
+      AppConstants.alarmChannelId,
+      AppConstants.alarmChannelName,
+      channelDescription: AppConstants.alarmChannelDesc,
       importance: Importance.max,
       priority: Priority.max,
       playSound: playSound,

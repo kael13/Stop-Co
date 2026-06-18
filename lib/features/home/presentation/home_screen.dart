@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_drawer.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -94,7 +95,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate: AppConstants.tileUrlTemplate,
                         userAgentPackageName: 'com.stopco.app',
                       ),
                       MarkerLayer(

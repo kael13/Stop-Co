@@ -1,70 +1,45 @@
-# Stop-Co
+Stop-Co is a minimalist GPS-based destination alarm for commuters. Set a destination once — get an alert when you're approaching your stop, even with the app in the background.
 
-A minimalist GPS-based destination alarm app for commuters. Never miss your stop again.
+## Features
+
+- Firebase Auth (Email, Google, Guest)
+- Add destinations by searching or tapping the map
+- Saved destinations list
+- One-tap start trip with adjustable alert radius
+- Background geofencing via Android foreground service
+- Full-screen alarm with sound, vibration, and distance display
 
 ## Prerequisites
 
 - Flutter 3.44+ (Dart 3.12+)
-- Firebase project with Authentication (Email/Password, Google, Anonymous) and Firestore enabled
+- Firebase project with Authentication (Email/Password, Google, Anonymous) and Firestore
 
 ## Setup
 
-1. **Create a Firebase project** at https://console.firebase.google.com
+```sh
+cp .env.example .env          # create environment config
+flutter pub get               # install dependencies
+```
 
-2. **Enable Authentication methods:**
-   - Email/Password
-   - Google Sign-In
-   - Anonymous (Guest)
-
-3. **Create a Firestore database** in your Firebase project
-
-4. **Register your Android app** in Firebase and download `google-services.json`:
-   - Place it at `android/app/google-services.json`
-
-5. **Install dependencies:**
-   ```sh
-   flutter pub get
-   ```
-
-6. **Run the app:**
-   ```sh
-   flutter run
-   ```
-
-## Build
+Place your Firebase config at `android/app/google-services.json`, then:
 
 ```sh
-flutter build apk --debug
-flutter build apk --release
+flutter run                   # run on connected device
+flutter build apk --release   # release build
 ```
 
 ## Architecture
 
+Feature-first with Riverpod state management:
+
 ```
 lib/
-  core/              # Shared theme, components, constants, platform channels
-    theme/           # Colors, typography, spacing, theme data
-    components/      # AppButton, AppCard, AppInput
-    platform/        # Foreground service MethodChannel
-    constants/       # App-wide constants
-    utils/           # GPS utilities (distance calc, validation)
+  core/              # Theme, components, constants, platform channels
   features/
-    auth/            # Auth (Email, Google, Guest)
-    home/            # Home screen
-    destination/     # Destinations (CRUD, map, search)
+    auth/            # Authentication (Email, Google, Guest)
+    home/            # Main navigation shell
+    destination/     # Destination CRUD, map, search
     trip/            # Active trip, geofencing, alarm
+    settings/        # Appearance, alert preferences
+    simulation/      # GPS simulation for testing
 ```
-
-## Phase 1 Features
-
-- Firebase Authentication (Email/Password, Google, Guest)
-- Destination management (add via map tap or search, save, list)
-- Trip system (start from saved destination, cancel)
-- Geofencing via location polling (accuracy-filtered GPS)
-- Android foreground service for background tracking
-- Full-screen alarm with distance display
-- Minimalist tactile UI design system
-
-## Status
-
-Phase 1 MVP — Core validation. See `PhasePlans.md` for full roadmap.
