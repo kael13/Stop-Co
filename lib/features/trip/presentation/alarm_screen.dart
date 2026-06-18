@@ -1,0 +1,174 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/components/app_button.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/gps_utils.dart';
+import '../../settings/data/settings_providers.dart';
+import '../../simulation/data/simulation_service.dart';
+import '../data/alarm_notification_service.dart';
+import '../data/trip_providers.dart';
+
+class AlarmScreen extends ConsumerStatefulWidget {
+  const AlarmScreen({super.key});
+
+  @override
+  ConsumerState<AlarmScreen> createState() => _AlarmScreenState();
+}
+
+class _AlarmScreenState extends ConsumerState<AlarmScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+  Timer? _repeatTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    HapticFeedback.heavyImpact();
+
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _startRepeatingAlarm();
+  }
+
+  void _startRepeatingAlarm() {
+    final settings = ref.read(settingsProvider);
+    if (!settings.repeatedAlarm) return;
+
+    final trip = ref.read(activeTripProvider);
+    if (trip == null) return;
+
+    final destName = trip.destination.name;
+
+    _repeatTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      final alarmType = ref.read(settingsProvider).alarmType;
+      final currentTrip = ref.read(activeTripProvider);
+      if (currentTrip == null) return;
+
+      if (alarmType != AlarmType.vibrationOnly) {
+        AlarmNotificationService.showAlarmNotification(
+          destinationName: destName,
+          distance: currentTrip.currentDistance ?? 0,
+          alarmType: alarmType,
+        );
+      }
+      if (alarmType != AlarmType.soundOnly) {
+        HapticFeedback.heavyImpact();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _repeatTimer?.cancel();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  void _dismiss() {
+    _repeatTimer?.cancel();
+    AlarmNotificationService.dismissAlarm();
+    final simulationEnabled = ref.read(simulationEnabledProvider);
+    if (simulationEnabled) {
+      ref.read(simulationServiceProvider).stop();
+      ref.read(simulationEnabledProvider.notifier).state = false;
+    }
+    ref.read(activeTripProvider.notifier).completeTrip();
+    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final trip = ref.watch(activeTripProvider);
+
+    if (trip == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _dismiss());
+      return const SizedBox();
+    }
+
+    final distance = trip.currentDistance ?? 0;
+    final distanceFormatted = GpsUtils.formatDistance(distance);
+
+    return Scaffold(
+      backgroundColor: AppColors.deepSlate,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            children: [
+              const Spacer(flex: 2),
+              AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _pulseAnimation.value,
+                    child: child,
+                  );
+                },
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: AppColors.electricBlue.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.notifications_active_rounded,
+                    color: AppColors.electricBlue,
+                    size: 60,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'You are approaching',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.grey400,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                trip.destination.name,
+                style: AppTypography.largeTitle.copyWith(
+                  color: AppColors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                distanceFormatted,
+                style: AppTypography.alarm.copyWith(
+                  color: AppColors.electricBlue,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Get ready to get off soon',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.grey400,
+                ),
+              ),
+              const Spacer(flex: 3),
+              AppButton(
+                label: 'Dismiss Alarm',
+                onPressed: _dismiss,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,827 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/components/app_brand.dart';
+import '../../../core/components/app_button.dart';
+import '../../../core/components/app_card.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/gps_utils.dart';
+import '../../auth/data/auth_providers.dart';
+import '../../destination/data/destination_model.dart';
+import '../../destination/data/destination_providers.dart';
+import '../../destination/data/destination_repository.dart';
+import '../../destination/presentation/destination_setup_screen.dart';
+import '../../settings/presentation/settings_screen.dart';
+import '../../simulation/presentation/simulation_screen.dart';
+import '../../trip/data/trip_model.dart';
+import '../../trip/data/trip_providers.dart';
+
+class MainShell extends ConsumerStatefulWidget {
+  const MainShell({super.key});
+
+  @override
+  ConsumerState<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<MainShell> {
+  int _currentIndex = 0;
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  static const _tabs = <_TabItem>[
+    _TabItem(icon: Icons.home_rounded, activeIcon: Icons.home_rounded, label: 'Home'),
+    _TabItem(icon: Icons.location_on_outlined, activeIcon: Icons.location_on_rounded, label: 'Saved'),
+    _TabItem(icon: Icons.science_outlined, activeIcon: Icons.science_rounded, label: 'Simulate'),
+    _TabItem(icon: Icons.settings_outlined, activeIcon: Icons.settings_rounded, label: 'Settings'),
+  ];
+
+  final _pages = const <Widget>[
+    _HomeTab(),
+    _DestinationsTab(),
+    SimulationScreen(),
+    SettingsScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) => setState(() => _currentIndex = index),
+        children: _pages,
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: AppColors.grey100,
+              width: 1,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(
+              left: AppSpacing.xs,
+              right: AppSpacing.xs,
+              top: AppSpacing.xxs,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(_tabs.length, (index) {
+                final tab = _tabs[index];
+                final selected = _currentIndex == index;
+                return _NavBarItem(
+                  icon: selected ? tab.activeIcon : tab.icon,
+                  label: tab.label,
+                  selected: selected,
+                  onTap: () {
+                    _pageController.animateToPage(
+                      index,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavBarItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _NavBarItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.sm,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: selected ? AppColors.electricBlue : AppColors.grey400,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: AppTypography.caption.copyWith(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: selected ? AppColors.electricBlue : AppColors.grey400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TabItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+
+  const _TabItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
+}
+
+class _HomeTab extends ConsumerWidget {
+  const _HomeTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final activeTrip = ref.watch(activeTripProvider);
+    final destinationsAsync = ref.watch(recommendedDestinationsProvider);
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _HomeTabHeader(authState: authState.valueOrNull),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                children: [
+                  if (activeTrip != null)
+                    _ActiveTripBanner(trip: activeTrip)
+                  else ...[
+                    _StartTripSection(),
+                    const SizedBox(height: AppSpacing.lg),
+                    _YourStopsSection(
+                      destinations: destinationsAsync.valueOrNull ?? [],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeTabHeader extends StatelessWidget {
+  final UserSignedIn? authState;
+  const _HomeTabHeader({this.authState});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (authState?.displayName != null)
+            Text(
+              'Hi, ${authState!.displayName}',
+              style: AppTypography.largeTitle.copyWith(color: AppColors.deepSlate),
+            )
+          else
+            const AppBrand(),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            "Don't miss your stop",
+            style: AppTypography.secondary.copyWith(color: AppColors.grey400),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StartTripSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Where are you heading?',
+          style: AppTypography.sectionHeader.copyWith(color: AppColors.deepSlate),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppButton(
+          label: 'Set Destination',
+          icon: Icons.near_me_rounded,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DestinationSetupScreen(),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _YourStopsSection extends ConsumerWidget {
+  final List<Destination> destinations;
+
+  const _YourStopsSection({required this.destinations});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (destinations.isEmpty) {
+      return _EmptyDestinationsPlaceholder();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your Stops',
+          style: AppTypography.sectionHeader.copyWith(color: AppColors.deepSlate),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ...destinations.map((dest) => Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+          child: _HomeDestinationCard(destination: dest),
+        )),
+      ],
+    );
+  }
+}
+
+class _HomeDestinationCard extends ConsumerWidget {
+  final Destination destination;
+
+  const _HomeDestinationCard({required this.destination});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppCard(
+      onTap: () {
+        ref.read(activeTripProvider.notifier).startTrip(destination);
+        Navigator.pushNamed(context, '/active-trip');
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.electricBlue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            child: const Icon(
+              Icons.location_on_rounded,
+              color: AppColors.electricBlue,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  destination.name,
+                  style: AppTypography.bodyBold,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${destination.alertRadius.round()}m radius',
+                  style: AppTypography.caption.copyWith(color: AppColors.grey400),
+                ),
+              ],
+            ),
+          ),
+          if (destination.isFavorite)
+            const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: Icon(Icons.star_rounded, color: AppColors.warning, size: 20),
+            ),
+          const Icon(Icons.play_circle_fill_rounded, color: AppColors.electricBlue, size: 32),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyDestinationsPlaceholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: Column(
+          children: [
+            Icon(Icons.location_off_rounded, size: 48, color: AppColors.grey200),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Saved destinations will appear here.',
+              style: AppTypography.secondary.copyWith(color: AppColors.grey400),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              'Set your first stop to get started.',
+              style: AppTypography.caption.copyWith(color: AppColors.grey200),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveTripBanner extends ConsumerWidget {
+  final ActiveTrip trip;
+  const _ActiveTripBanner({required this.trip});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final distance = trip.currentDistance ?? 0;
+    final distanceFormatted = GpsUtils.formatDistance(distance);
+    final progress = distance > 0 && trip.destination.alertRadius > 0
+        ? (distance / trip.destination.alertRadius).clamp(0.0, 1.0)
+        : 1.0;
+
+    return GestureDetector(
+      onTap: () {
+        final trip = ref.read(activeTripProvider);
+        if (trip == null) return;
+        if (trip.status == TripStatus.alarmTriggered) {
+          Navigator.pushReplacementNamed(context, '/alarm');
+        } else {
+          Navigator.pushNamed(context, '/active-trip');
+        }
+      },
+      child: AppCard(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: const BoxDecoration(
+                    color: AppColors.success,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  'Active Trip',
+                  style: AppTypography.secondary.copyWith(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              trip.destination.name,
+              style: AppTypography.title.copyWith(color: AppColors.deepSlate),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              '$distanceFormatted away',
+              style: AppTypography.distance.copyWith(
+                color: AppColors.electricBlue,
+                fontSize: 48,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: AppColors.grey100,
+                valueColor: const AlwaysStoppedAnimation(AppColors.electricBlue),
+                minHeight: 4,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  ref.read(activeTripProvider.notifier).cancelTrip();
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(color: AppColors.error),
+                ),
+                child: const Text('Cancel Trip'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DestinationsTab extends ConsumerStatefulWidget {
+  const _DestinationsTab();
+
+  @override
+  ConsumerState<_DestinationsTab> createState() => _DestinationsTabState();
+}
+
+class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
+  final Set<String> _selectedIds = {};
+  bool _isSelectionMode = false;
+
+  void _toggleSelection(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedIds.add(id);
+        _isSelectionMode = true;
+      }
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Delete ${_selectedIds.length} destination${_selectedIds.length == 1 ? '' : 's'}?',
+        ),
+        content: const Text(
+          'These destinations will be permanently removed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      final repo = ref.read(destinationRepositoryProvider);
+      for (final id in _selectedIds) {
+        await repo.delete(id);
+      }
+      _exitSelectionMode();
+    }
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _selectedIds.clear();
+      _isSelectionMode = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final destinationsAsync = ref.watch(destinationListProvider);
+    final activeTrip = ref.watch(activeTripProvider);
+    final destinations = destinationsAsync.valueOrNull ?? [];
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.xs,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Saved Destinations',
+                    style: AppTypography.largeTitle,
+                  ),
+                  if (_isSelectionMode)
+                    TextButton(
+                      onPressed: _exitSelectionMode,
+                      child: const Text('Cancel'),
+                    )
+                  else
+                    Text(
+                      '${destinations.length} saved',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.grey400,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Expanded(
+              child: destinations.isEmpty
+                  ? ListView(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      children: [
+                        AppCard(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.lg,
+                            ),
+                            child: Center(
+                              child: Text(
+                                'No saved destinations yet.\nSet one to get started.',
+                                textAlign: TextAlign.center,
+                                style: AppTypography.secondary.copyWith(
+                                  color: AppColors.grey400,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      children: destinations.map((dest) {
+                        final isActive = dest.id == activeTrip?.destination.id;
+                        return _DestinationTile(
+                          destination: dest,
+                          isActive: isActive,
+                          isSelected: _selectedIds.contains(dest.id),
+                          isSelectionMode: _isSelectionMode,
+                          onLongPress: () => _toggleSelection(dest.id),
+                        );
+                      }).toList(),
+                    ),
+            ),
+            if (_isSelectionMode)
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: AppButton(
+                      label: 'Delete Selected (${_selectedIds.length})',
+                      icon: Icons.delete_outline_rounded,
+                      isDestructive: true,
+                      onPressed: _deleteSelected,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DestinationTile extends ConsumerWidget {
+  final Destination destination;
+  final bool isActive;
+  final bool isSelected;
+  final bool isSelectionMode;
+  final VoidCallback onLongPress;
+
+  const _DestinationTile({
+    required this.destination,
+    this.isActive = false,
+    this.isSelected = false,
+    this.isSelectionMode = false,
+    required this.onLongPress,
+  });
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete "${destination.name}"?'),
+        content: const Text('This destination will be permanently removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      final repo = ref.read(destinationRepositoryProvider);
+      await repo.delete(destination.id);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: AppCard(
+        onTap: isActive
+            ? null
+            : isSelectionMode
+                ? onLongPress
+                : () {
+                    ref
+                        .read(activeTripProvider.notifier)
+                        .startTrip(destination);
+                    Navigator.pushNamed(context, '/active-trip');
+                  },
+        onLongPress: isSelectionMode ? null : onLongPress,
+        child: Row(
+          children: [
+            if (isSelectionMode)
+              Checkbox(
+                value: isSelected,
+                onChanged: (_) => onLongPress(),
+                activeColor: AppColors.electricBlue,
+              ),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.electricBlue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: const Icon(
+                Icons.location_on_rounded,
+                color: AppColors.electricBlue,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    destination.name,
+                    style: AppTypography.bodyBold,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.straighten,
+                          size: 14, color: AppColors.grey400),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${destination.alertRadius.round()}m',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.grey400,
+                        ),
+                      ),
+                      if (destination.isFavorite) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        Icon(Icons.star_rounded,
+                            size: 14, color: AppColors.warning),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (isActive)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xxs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: Text(
+                  'Active',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            else if (!isSelectionMode) ...{
+              IconButton(
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                iconSize: 20,
+                icon: const Icon(Icons.play_arrow_rounded,
+                    color: AppColors.electricBlue),
+                onPressed: () {
+                  ref
+                      .read(activeTripProvider.notifier)
+                      .startTrip(destination);
+                  Navigator.pushNamed(context, '/active-trip');
+                },
+                tooltip: 'Start Trip',
+              ),
+              IconButton(
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                iconSize: 20,
+                icon: Icon(
+                  destination.isFavorite
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
+                  color: AppColors.warning,
+                ),
+                onPressed: () {
+                  final repo = ref.read(destinationRepositoryProvider);
+                  final updated = destination.copyWith(
+                    isFavorite: !destination.isFavorite,
+                  );
+                  repo.update(updated);
+                },
+                tooltip: destination.isFavorite
+                    ? 'Remove from Favorites'
+                    : 'Add to Favorites',
+              ),
+              IconButton(
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                iconSize: 20,
+                icon: const Icon(Icons.edit_rounded,
+                    color: AppColors.electricBlue),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DestinationSetupScreen(
+                        existingDestination: destination,
+                      ),
+                    ),
+                  );
+                },
+                tooltip: 'Edit',
+              ),
+              IconButton(
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                iconSize: 20,
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: AppColors.error),
+                onPressed: () => _confirmDelete(context, ref),
+                tooltip: 'Delete',
+              ),
+            },
+          ],
+        ),
+      ),
+    );
+  }
+}
