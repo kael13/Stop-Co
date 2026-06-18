@@ -5,6 +5,8 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/data/auth_providers.dart';
 import 'features/auth/presentation/auth_screen.dart';
 import 'features/home/presentation/main_shell.dart';
+import 'features/onboarding/data/onboarding_provider.dart';
+import 'features/onboarding/presentation/onboarding_screen.dart';
 import 'features/trip/presentation/active_trip_screen.dart';
 import 'features/trip/presentation/alarm_screen.dart';
 import 'main.dart';
@@ -14,7 +16,8 @@ class StopCoApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
+    final onboardingAsync = ref.watch(onboardingCompletedProvider);
+    final authAsync = ref.watch(authStateProvider);
 
     return MaterialApp(
       title: AppConstants.appName,
@@ -23,13 +26,20 @@ class StopCoApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.light,
-      home: authState.when(
-        data: (user) {
-          if (user != null) return const MainShell();
-          return const AuthScreen();
-        },
+      home: onboardingAsync.when(
         loading: () => const _SplashScreen(),
         error: (_, _) => const AuthScreen(),
+        data: (onboarded) {
+          if (!onboarded) return const OnboardingScreen();
+          return authAsync.when(
+            loading: () => const _SplashScreen(),
+            error: (_, _) => const AuthScreen(),
+            data: (user) {
+              if (user != null) return const MainShell();
+              return const AuthScreen();
+            },
+          );
+        },
       ),
       routes: {
         '/active-trip': (_) => const ActiveTripScreen(),

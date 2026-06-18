@@ -43,16 +43,16 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
   }
 
   void _startRepeatingAlarm() {
-    final settings = ref.read(settingsProvider);
-    if (!settings.repeatedAlarm) return;
-
     final trip = ref.read(activeTripProvider);
     if (trip == null) return;
 
     final destName = trip.destination.name;
 
     _repeatTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      final alarmType = ref.read(settingsProvider).alarmType;
+      final settings = ref.read(settingsProvider);
+      if (!settings.repeatedAlarm) return;
+
+      final alarmType = settings.alarmType;
       final currentTrip = ref.read(activeTripProvider);
       if (currentTrip == null) return;
 
