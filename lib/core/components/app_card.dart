@@ -19,36 +19,32 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = color ?? Theme.of(context).cardTheme.color;
-    final borderRadius = Theme.of(context).cardTheme.shape is RoundedRectangleBorder
-        ? (Theme.of(context).cardTheme.shape as RoundedRectangleBorder)
-            .borderRadius
-            .resolve(Directionality.of(context))
-        : BorderRadius.circular(AppSpacing.radiusLg);
+    final theme = Theme.of(context);
+    final cardColor = color ?? theme.cardTheme.color ?? theme.colorScheme.surface;
 
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Container(
-        width: double.infinity,
-        padding: padding ?? const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: borderRadius,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
+    return Padding(
+      padding: theme.cardTheme.margin ?? EdgeInsets.zero,
+      child: Material(
+        color: cardColor,
+        borderRadius: theme.cardTheme.shape is RoundedRectangleBorder
+            ? (theme.cardTheme.shape! as RoundedRectangleBorder)
+                .borderRadius
+                .resolve(Directionality.of(context))
+            : BorderRadius.circular(AppSpacing.radiusLg),
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          borderRadius: theme.cardTheme.shape is RoundedRectangleBorder
+              ? (theme.cardTheme.shape! as RoundedRectangleBorder)
+                  .borderRadius
+                  .resolve(Directionality.of(context))
+              : BorderRadius.circular(AppSpacing.radiusLg),
+          child: Container(
+            width: double.infinity,
+            padding: padding ?? const EdgeInsets.all(AppSpacing.md),
+            child: child,
+          ),
         ),
-        child: child,
       ),
     );
   }

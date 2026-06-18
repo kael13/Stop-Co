@@ -7,20 +7,25 @@ class AppTheme {
   AppTheme._();
 
   static ThemeData get light {
+    final colorScheme = ColorScheme.light(
+      primary: AppColors.electricBlue,
+      secondary: AppColors.teal,
+      error: AppColors.error,
+      surface: AppColors.white,
+      onPrimary: AppColors.white,
+      onSecondary: AppColors.white,
+      onSurface: AppColors.deepSlate,
+      onError: AppColors.white,
+    ).copyWith(
+      surfaceContainerLow: AppColors.grey50,
+      surfaceContainerHigh: AppColors.grey100,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.offWhite,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.electricBlue,
-        secondary: AppColors.teal,
-        error: AppColors.error,
-        surface: AppColors.white,
-        onPrimary: AppColors.white,
-        onSecondary: AppColors.white,
-        onSurface: AppColors.deepSlate,
-        onError: AppColors.white,
-      ),
+      colorScheme: colorScheme,
       textTheme: const TextTheme(
         displayLarge: AppTypography.largeTitle,
         headlineLarge: AppTypography.title,
@@ -30,76 +35,78 @@ class AppTheme {
         bodySmall: AppTypography.caption,
         labelLarge: AppTypography.button,
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.offWhite,
-        foregroundColor: AppColors.deepSlate,
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: AppTypography.title,
+        titleTextStyle: AppTypography.title.copyWith(color: colorScheme.onSurface),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.electricBlue,
-          foregroundColor: AppColors.white,
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
-          textStyle: AppTypography.button,
+          textStyle: AppTypography.button.copyWith(color: colorScheme.onPrimary),
           elevation: 0,
-          shadowColor: AppColors.electricBlue.withValues(alpha: 0.3),
+          shadowColor: colorScheme.primary.withValues(alpha: 0.3),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.electricBlue,
+          foregroundColor: colorScheme.primary,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
-          side: const BorderSide(color: AppColors.electricBlue, width: 1.5),
+          side: BorderSide(color: colorScheme.primary, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
-          textStyle: AppTypography.button,
+          textStyle: AppTypography.button.copyWith(color: colorScheme.primary),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.electricBlue,
+          foregroundColor: colorScheme.primary,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
-          textStyle: AppTypography.button,
+          textStyle: AppTypography.button.copyWith(color: colorScheme.primary),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.white,
+        fillColor: colorScheme.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.md,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.grey200),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.grey200),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.electricBlue, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.error),
+          borderSide: BorderSide(color: colorScheme.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.error, width: 2),
+          borderSide: BorderSide(color: colorScheme.error, width: 2),
         ),
         labelStyle: AppTypography.body,
-        hintStyle: AppTypography.secondary.copyWith(color: AppColors.grey400),
+        hintStyle: AppTypography.secondary.copyWith(
+          color: colorScheme.onSurface.withValues(alpha: 0.4),
+        ),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.white,
+        color: colorScheme.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -109,8 +116,8 @@ class AppTheme {
           vertical: AppSpacing.xs,
         ),
       ),
-      dividerTheme: const DividerThemeData(
-        color: AppColors.grey100,
+      dividerTheme: DividerThemeData(
+        color: colorScheme.outlineVariant,
         thickness: 1,
         space: 1,
       ),
@@ -118,20 +125,25 @@ class AppTheme {
   }
 
   static ThemeData get dark {
+    final colorScheme = ColorScheme.dark(
+      primary: AppColors.electricBlue,
+      secondary: AppColors.teal,
+      error: AppColors.error,
+      surface: AppColors.softCharcoal,
+      onPrimary: AppColors.white,
+      onSecondary: AppColors.white,
+      onSurface: AppColors.offWhite,
+      onError: AppColors.white,
+    ).copyWith(
+      surfaceContainerLow: AppColors.grey800,
+      surfaceContainerHigh: const Color(0xFF3A3A3C),
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.deepSlate,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.electricBlue,
-        secondary: AppColors.teal,
-        error: AppColors.error,
-        surface: AppColors.softCharcoal,
-        onPrimary: AppColors.white,
-        onSecondary: AppColors.white,
-        onSurface: AppColors.offWhite,
-        onError: AppColors.white,
-      ),
+      colorScheme: colorScheme,
       textTheme: const TextTheme(
         displayLarge: AppTypography.largeTitle,
         headlineLarge: AppTypography.title,
@@ -141,76 +153,78 @@ class AppTheme {
         bodySmall: AppTypography.caption,
         labelLarge: AppTypography.button,
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.deepSlate,
-        foregroundColor: AppColors.offWhite,
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: AppTypography.title,
+        titleTextStyle: AppTypography.title.copyWith(color: colorScheme.onSurface),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.electricBlue,
-          foregroundColor: AppColors.white,
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
-          textStyle: AppTypography.button,
+          textStyle: AppTypography.button.copyWith(color: colorScheme.onPrimary),
           elevation: 0,
-          shadowColor: AppColors.electricBlue.withValues(alpha: 0.3),
+          shadowColor: colorScheme.primary.withValues(alpha: 0.3),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.electricBlue,
+          foregroundColor: colorScheme.primary,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
-          side: const BorderSide(color: AppColors.electricBlue, width: 1.5),
+          side: BorderSide(color: colorScheme.primary, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
-          textStyle: AppTypography.button,
+          textStyle: AppTypography.button.copyWith(color: colorScheme.primary),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.electricBlue,
+          foregroundColor: colorScheme.primary,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
-          textStyle: AppTypography.button,
+          textStyle: AppTypography.button.copyWith(color: colorScheme.primary),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.softCharcoal,
+        fillColor: colorScheme.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.md,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.grey800),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.grey800),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.electricBlue, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.error),
+          borderSide: BorderSide(color: colorScheme.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.error, width: 2),
+          borderSide: BorderSide(color: colorScheme.error, width: 2),
         ),
-        labelStyle: AppTypography.body.copyWith(color: AppColors.offWhite),
-        hintStyle: AppTypography.secondary.copyWith(color: AppColors.grey400),
+        labelStyle: AppTypography.body.copyWith(color: colorScheme.onSurface),
+        hintStyle: AppTypography.secondary.copyWith(
+          color: colorScheme.onSurface.withValues(alpha: 0.4),
+        ),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.softCharcoal,
+        color: colorScheme.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -220,8 +234,8 @@ class AppTheme {
           vertical: AppSpacing.xs,
         ),
       ),
-      dividerTheme: const DividerThemeData(
-        color: AppColors.grey800,
+      dividerTheme: DividerThemeData(
+        color: colorScheme.outlineVariant,
         thickness: 1,
         space: 1,
       ),

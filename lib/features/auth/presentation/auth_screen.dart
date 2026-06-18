@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_input.dart';
 import '../../../core/components/app_brand.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_typography.dart';
 import '../data/auth_providers.dart';
 
 final _emailController = TextEditingController();
@@ -99,14 +98,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.xxl),
-              const AppBrand(),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                "Don't miss your stop",
-                style: AppTypography.secondary.copyWith(
-                  color: AppColors.grey400,
-                ),
-              ),
+              const AppBrand(showTagline: true),
               const SizedBox(height: AppSpacing.xxl * 1.5),
               if (!_isLogin)
                 AppInput(
@@ -139,8 +131,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   _error!,
-                  style: AppTypography.secondary.copyWith(
-                    color: AppColors.error,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.error,
                   ),
                 ),
               ],

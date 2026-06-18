@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
@@ -55,12 +54,12 @@ class _AppButtonState extends State<AppButton>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final backgroundColor = widget.isDestructive
-        ? AppColors.error
+        ? colorScheme.error
         : widget.isSecondary
             ? Colors.transparent
             : colorScheme.primary;
     final foregroundColor = widget.isDestructive || !widget.isSecondary
-        ? AppColors.white
+        ? colorScheme.onError
         : colorScheme.primary;
     final borderSide = widget.isSecondary
         ? BorderSide(color: colorScheme.primary, width: 1.5)

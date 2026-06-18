@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 import '../../../core/components/app_button.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_typography.dart';
 import '../data/onboarding_provider.dart';
 import 'onboarding_page.dart';
 
@@ -41,7 +40,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.offWhite,
+      backgroundColor: context.scaffoldBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -77,8 +76,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     onPressed: _finish,
                     child: Text(
                       'Skip',
-                      style: AppTypography.body.copyWith(
-                        color: AppColors.grey400,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: context.textTertiary,
                       ),
                     ),
                   )
@@ -134,8 +133,7 @@ final _slides = <Widget>[
   ),
   OnboardingPage(
     title: 'Start Your Journey',
-    subtitle:
-        'Ready to never miss a stop again? Let\'s go!',
+    subtitle: "Ready to never miss a stop again? Let's go!",
     visual: LottieBuilder.asset(
       'assets/animations/onboarding_arrival.json',
       fit: BoxFit.contain,
@@ -186,12 +184,12 @@ class _SlideIconState extends State<_SlideIcon>
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: AppColors.electricBlue.withValues(alpha: 0.1),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
         ),
         child: Icon(
           widget.icon,
           size: 120,
-          color: AppColors.electricBlue,
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );
@@ -217,7 +215,9 @@ class _PageIndicator extends StatelessWidget {
           height: 8,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(4),
-            color: isActive ? AppColors.electricBlue : AppColors.grey200,
+            color: isActive
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.outlineVariant,
           ),
         );
       }),

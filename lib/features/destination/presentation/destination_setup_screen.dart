@@ -93,10 +93,7 @@ class _DestinationSetupScreenState
         if (!_isEditing) {
           _mapController.move(latLng, _initialZoom);
         } else {
-          _mapController.move(
-            _selectedLocation!,
-            _initialZoom,
-          );
+          _mapController.move(_selectedLocation!, _initialZoom);
         }
       }
     } catch (_) {
@@ -169,9 +166,12 @@ class _DestinationSetupScreenState
         );
         await repo
             .update(updated)
-            .timeout(const Duration(seconds: 15), onTimeout: () {
-          throw Exception('Save timed out. Check your connection.');
-        });
+            .timeout(
+              const Duration(seconds: 15),
+              onTimeout: () {
+                throw Exception('Save timed out. Check your connection.');
+              },
+            );
       } else {
         final destination = Destination(
           id: _uuid.v4(),
@@ -183,9 +183,12 @@ class _DestinationSetupScreenState
         );
         await repo
             .save(destination)
-            .timeout(const Duration(seconds: 15), onTimeout: () {
-          throw Exception('Save timed out. Check your connection.');
-        });
+            .timeout(
+              const Duration(seconds: 15),
+              onTimeout: () {
+                throw Exception('Save timed out. Check your connection.');
+              },
+            );
       }
 
       if (mounted) Navigator.pop(context, true);
@@ -225,9 +228,12 @@ class _DestinationSetupScreenState
       );
       await repo
           .save(destination)
-          .timeout(const Duration(seconds: 15), onTimeout: () {
-        throw Exception('Save timed out. Check your connection.');
-      });
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('Save timed out. Check your connection.');
+            },
+          );
 
       if (mounted) {
         ref.read(activeTripProvider.notifier).startTrip(destination);
@@ -251,9 +257,7 @@ class _DestinationSetupScreenState
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Delete "${widget.existingDestination!.name}"?'),
-        content: const Text(
-          'This destination will be permanently removed.',
-        ),
+        content: const Text('This destination will be permanently removed.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -261,7 +265,9 @@ class _DestinationSetupScreenState
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -276,16 +282,19 @@ class _DestinationSetupScreenState
       final repo = ref.read(destinationRepositoryProvider);
       await repo
           .delete(widget.existingDestination!.id)
-          .timeout(const Duration(seconds: 10), onTimeout: () {
-        throw Exception('Delete timed out. Check your connection.');
-      });
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('Delete timed out. Check your connection.');
+            },
+          );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to delete: ${e.toString()}'),
-            backgroundColor: AppColors.error,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -305,12 +314,12 @@ class _DestinationSetupScreenState
           if (_isEditing)
             IconButton(
               icon: _isDeleting
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.error,
+                        color: Theme.of(context).colorScheme.error,
                       ),
                     )
                   : const Icon(Icons.delete_outline_rounded),
@@ -327,9 +336,8 @@ class _DestinationSetupScreenState
                 FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: _selectedLocation ??
-                        _userLocation ??
-                        _initialCenter,
+                    initialCenter:
+                        _selectedLocation ?? _userLocation ?? _initialCenter,
                     initialZoom: _initialZoom,
                     onTap: _onMapTap,
                   ),
@@ -349,11 +357,12 @@ class _DestinationSetupScreenState
                               width: 24,
                               height: 24,
                               decoration: BoxDecoration(
-                                color: AppColors.electricBlue
-                                    .withValues(alpha: 0.2),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.2),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: AppColors.electricBlue,
+                                  color: Theme.of(context).colorScheme.primary,
                                   width: 2.5,
                                 ),
                               ),
@@ -361,8 +370,10 @@ class _DestinationSetupScreenState
                                 child: Container(
                                   width: 8,
                                   height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.electricBlue,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -378,9 +389,9 @@ class _DestinationSetupScreenState
                             point: _selectedLocation!,
                             width: 40,
                             height: 40,
-                            child: const Icon(
+                            child: Icon(
                               Icons.location_on_rounded,
-                              color: AppColors.electricBlue,
+                              color: Theme.of(context).colorScheme.primary,
                               size: 40,
                             ),
                           ),
@@ -412,8 +423,7 @@ class _DestinationSetupScreenState
                               )
                             : IconButton(
                                 icon: const Icon(Icons.search_rounded),
-                                onPressed:
-                                    isDisabled ? null : _searchLocation,
+                                onPressed: isDisabled ? null : _searchLocation,
                               ),
                         onSubmitted: _searchLocation,
                       ),
@@ -430,10 +440,11 @@ class _DestinationSetupScreenState
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTypography.secondary,
                                 ),
-                                leading: const Icon(
+                                leading: Icon(
                                   Icons.location_on_outlined,
                                   size: 20,
-                                  color: AppColors.grey400,
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.4),
                                 ),
                                 onTap: () => _selectSearchResult(result),
                               );
@@ -442,8 +453,7 @@ class _DestinationSetupScreenState
                         ),
                       if (_locationPermissionDenied)
                         AppCard(
-                          color:
-                              AppColors.warning.withValues(alpha: 0.1),
+                          color: AppColors.warning.withValues(alpha: 0.1),
                           child: Row(
                             children: [
                               const Icon(
@@ -471,18 +481,14 @@ class _DestinationSetupScreenState
                   right: AppSpacing.sm,
                   child: FloatingActionButton.small(
                     heroTag: 'my_location',
-                    backgroundColor: AppColors.white,
-                    foregroundColor: AppColors.electricBlue,
-                    onPressed: _isGettingLocation
-                        ? null
-                        : _getUserLocation,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    foregroundColor: Theme.of(context).colorScheme.primary,
+                    onPressed: _isGettingLocation ? null : _getUserLocation,
                     child: _isGettingLocation
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.my_location_rounded),
                   ),
@@ -556,40 +562,43 @@ class _BottomPanel extends StatelessWidget {
             prefixIcon: Icons.edit_location_alt_rounded,
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Alert Radius',
-                style: AppTypography.secondary,
-              ),
-              const Spacer(),
-              ...AppConstants.alertRadiusOptions.map((r) {
-                final selected = r == radius;
-                return Padding(
-                  padding: const EdgeInsets.only(left: AppSpacing.xs),
-                  child: ChoiceChip(
+              const Text('Alert Radius', style: AppTypography.secondary),
+              const SizedBox(height: AppSpacing.xs),
+              Wrap(
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
+                children: AppConstants.alertRadiusOptions.map((r) {
+                  final selected = r == radius;
+                  return ChoiceChip(
                     label: Text(
                       '${r.round()}m',
                       style: AppTypography.caption.copyWith(
-                        fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                       ),
                     ),
                     selected: selected,
                     onSelected: (_) => onRadiusChanged(r),
-                    selectedColor: AppColors.electricBlue,
+                    selectedColor: Theme.of(context).colorScheme.primary,
                     labelStyle: TextStyle(
-                      color: selected ? AppColors.white : null,
+                      color: selected
+                          ? Theme.of(context).colorScheme.surface
+                          : null,
                     ),
-                    backgroundColor: AppColors.grey100,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerLow,
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.radiusSm),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                       side: BorderSide.none,
                     ),
-                  ),
-                );
-              }),
+                  );
+                }).toList(),
+              ),
             ],
           ),
           if (error != null) ...[
@@ -597,7 +606,7 @@ class _BottomPanel extends StatelessWidget {
             Text(
               error!,
               style: AppTypography.caption.copyWith(
-                color: AppColors.error,
+                color: Theme.of(context).colorScheme.error,
               ),
             ),
           ],
@@ -617,7 +626,9 @@ class _BottomPanel extends StatelessWidget {
                 child: Text(
                   'Save Only',
                   style: AppTypography.secondary.copyWith(
-                    color: AppColors.grey400,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
               ),

@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../destination/data/destination_model.dart';
 import '../../destination/data/destination_providers.dart';
@@ -48,14 +46,14 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                   children: [
                     Icon(
                       Icons.science_rounded,
-                      color: AppColors.teal,
+                      color: Theme.of(context).colorScheme.secondary,
                       size: 24,
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Text(
                       'GPS Movement Simulation',
-                      style: AppTypography.sectionHeader.copyWith(
-                        color: AppColors.deepSlate,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -64,8 +62,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 Text(
                   'Simulate GPS movement toward a destination for testing. '
                   'This bypasses real GPS and moves a virtual position at the selected speed.',
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.grey600,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -80,8 +78,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             AppCard(
               child: Text(
                 'Error loading destinations',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.error,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
                 ),
               ),
             )
@@ -192,8 +190,8 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: AppTypography.sectionHeader.copyWith(
-        color: AppColors.deepSlate,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
@@ -220,8 +218,8 @@ class _DestinationList extends StatelessWidget {
             child: Text(
               'No saved destinations yet.\nCreate one first.',
               textAlign: TextAlign.center,
-              style: AppTypography.secondary.copyWith(
-                color: AppColors.grey400,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ),
           ),
@@ -236,12 +234,12 @@ class _DestinationList extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: AppSpacing.xs),
           child: AppCard(
             onTap: () => onSelect(dest),
-            color: selected ? AppColors.electricBlue.withValues(alpha: 0.1) : null,
+            color: selected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : null,
             child: Row(
               children: [
                 Icon(
                   Icons.location_on_rounded,
-                  color: selected ? AppColors.electricBlue : AppColors.grey400,
+                  color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                   size: 24,
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -251,15 +249,13 @@ class _DestinationList extends StatelessWidget {
                     children: [
                       Text(
                         dest.name,
-                        style: AppTypography.bodyBold.copyWith(
-                          color: selected ? AppColors.electricBlue : AppColors.deepSlate,
-                        ),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${dest.latitude.toStringAsFixed(4)}, ${dest.longitude.toStringAsFixed(4)}',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.grey400,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                         ),
                       ),
                     ],
@@ -268,7 +264,7 @@ class _DestinationList extends StatelessWidget {
                 if (selected)
                   Icon(
                     Icons.check_circle_rounded,
-                    color: AppColors.electricBlue,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 24,
                   ),
               ],
@@ -301,11 +297,11 @@ class _SpeedSelector extends StatelessWidget {
             label: Text(mode.label),
             selected: selected,
             onSelected: (_) => onChanged(mode),
-            selectedColor: AppColors.electricBlue,
+            selectedColor: Theme.of(context).colorScheme.primary,
             labelStyle: TextStyle(
-              color: selected ? AppColors.white : AppColors.deepSlate,
+              color: selected ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurface,
             ),
-            backgroundColor: AppColors.grey100,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               side: BorderSide.none,
@@ -332,7 +328,7 @@ class _SimulationStatusCard extends StatelessWidget {
     final distance = activeTrip?.currentDistance ?? 0;
 
     return AppCard(
-      color: AppColors.teal.withValues(alpha: 0.1),
+      color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -341,17 +337,15 @@ class _SimulationStatusCard extends StatelessWidget {
               Container(
                 width: 12,
                 height: 12,
-                decoration: const BoxDecoration(
-                  color: AppColors.teal,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondary,
                   shape: BoxShape.circle,
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 'Simulation Active',
-                style: AppTypography.bodyBold.copyWith(
-                  color: AppColors.teal,
-                ),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.secondary),
               ),
             ],
           ),
@@ -359,23 +353,23 @@ class _SimulationStatusCard extends StatelessWidget {
           if (position != null) ...[
             Text(
               'Position: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.grey600,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: AppSpacing.xxs),
           ],
           Text(
             'Speed: ${(service.speedMps * 3.6).toStringAsFixed(1)} km/h',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.grey600,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
             'Distance: ${GpsUtils.formatDistance(distance)}',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.grey600,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],

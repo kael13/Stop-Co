@@ -8,9 +8,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../../core/platform/foreground_service_channel.dart';
 import '../../settings/data/settings_providers.dart';
@@ -364,9 +363,9 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                   markers: [
                     Marker(
                       point: _currentPosition!,
-                      child: const Icon(
+                      child: Icon(
                         Icons.my_location_rounded,
-                        color: AppColors.electricBlue,
+                        color: context.primary,
                         size: 24,
                       ),
                     ),
@@ -375,9 +374,9 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                         trip.destination.latitude,
                         trip.destination.longitude,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.location_on_rounded,
-                        color: AppColors.error,
+                        color: context.error,
                         size: 30,
                       ),
                     ),
@@ -393,7 +392,7 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                           trip.destination.longitude,
                         ),
                       ],
-                      color: AppColors.electricBlue.withValues(alpha: 0.4),
+                      color: context.primary.withValues(alpha: 0.4),
                       strokeWidth: 3,
                     ),
                   ],
@@ -405,7 +404,7 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
               ],
             )
           else
-            Container(color: AppColors.offWhite),
+            Container(color: context.scaffoldBackground),
 
           SafeArea(
             child: Column(
@@ -414,10 +413,10 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   child: _InfoOverlay(
                     statusColor: simulationEnabled
-                        ? AppColors.teal
+                        ? context.secondary
                         : _permissionDenied
-                            ? AppColors.error
-                            : AppColors.success,
+                            ? context.error
+                            : context.success,
                     statusLabel: simulationEnabled
                         ? 'Simulating to'
                         : _permissionDenied
@@ -508,11 +507,11 @@ class _InfoOverlay extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: context.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withValues(alpha: 0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -536,8 +535,8 @@ class _InfoOverlay extends StatelessWidget {
               Expanded(
                 child: Text(
                   '$statusLabel: $destinationName',
-                  style: AppTypography.secondary.copyWith(
-                    color: AppColors.deepSlate,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -550,16 +549,16 @@ class _InfoOverlay extends StatelessWidget {
             const SizedBox(height: AppSpacing.xxs),
             Text(
               'Speed: $speedKmh km/h',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.grey600,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.textSecondary,
               ),
             ),
           ],
           const SizedBox(height: AppSpacing.xxs),
           Text(
             'Away from your stop: $distanceFormatted',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.grey600,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: context.textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -567,9 +566,9 @@ class _InfoOverlay extends StatelessWidget {
             borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(
               value: progressValue,
-              backgroundColor: AppColors.grey100,
+              backgroundColor: context.surfaceContainerLow,
               valueColor: AlwaysStoppedAnimation(
-                isSimulation ? AppColors.teal : AppColors.electricBlue,
+                isSimulation ? context.secondary : context.primary,
               ),
               minHeight: 4,
             ),
@@ -588,19 +587,19 @@ class _PermissionDeniedBanner extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.md),
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.1),
+        color: context.warning.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+        border: Border.all(color: context.warning.withValues(alpha: 0.3)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.gps_off_rounded, color: AppColors.warning, size: 24),
+          Icon(Icons.gps_off_rounded, color: context.warning, size: 24),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Location permission is required for tracking.\nPlease enable it in Settings.',
             textAlign: TextAlign.center,
-            style: AppTypography.caption.copyWith(color: AppColors.warning),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.warning),
           ),
         ],
       ),
@@ -627,10 +626,10 @@ class _SimulationBadge extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.teal.withValues(alpha: 0.1),
+        color: context.secondary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: AppColors.teal.withValues(alpha: 0.3),
+          color: context.secondary.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -641,22 +640,22 @@ class _SimulationBadge extends StatelessWidget {
             children: [
               Icon(
                 Icons.science_rounded,
-                color: AppColors.teal,
+                color: context.secondary,
                 size: 16,
               ),
               const SizedBox(width: AppSpacing.xxs),
               Text(
                 'Simulation Active',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.teal,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.secondary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 '${(speedMps * 3.6).toStringAsFixed(0)} km/h',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.teal,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.secondary,
                 ),
               ),
             ],
@@ -674,13 +673,13 @@ class _SimulationBadge extends StatelessWidget {
                     vertical: AppSpacing.xxs,
                   ),
                   decoration: BoxDecoration(
-                    color: selected ? AppColors.teal : AppColors.grey100,
+                    color: selected ? context.secondary : context.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   ),
                   child: Text(
                     mode.label,
-                    style: AppTypography.caption.copyWith(
-                      color: selected ? AppColors.white : AppColors.grey600,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: selected ? context.textInverse : context.textSecondary,
                       fontSize: 11,
                     ),
                   ),

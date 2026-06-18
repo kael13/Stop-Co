@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_brand.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
@@ -66,7 +66,7 @@ class _MainShellState extends ConsumerState<MainShell> {
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-              color: AppColors.grey100,
+              color: context.outlineVariant,
               width: 1,
             ),
           ),
@@ -134,7 +134,7 @@ class _NavBarItem extends StatelessWidget {
             Icon(
               icon,
               size: 24,
-              color: selected ? AppColors.electricBlue : AppColors.grey400,
+              color: selected ? context.primary : context.textTertiary,
             ),
             const SizedBox(height: 2),
             Text(
@@ -142,7 +142,7 @@ class _NavBarItem extends StatelessWidget {
               style: AppTypography.caption.copyWith(
                 fontSize: 11,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? AppColors.electricBlue : AppColors.grey400,
+                color: selected ? context.primary : context.textTertiary,
               ),
             ),
           ],
@@ -221,14 +221,14 @@ class _HomeTabHeader extends StatelessWidget {
           if (authState?.displayName != null)
             Text(
               'Hi, ${authState!.displayName}',
-              style: AppTypography.largeTitle.copyWith(color: AppColors.deepSlate),
+              style: Theme.of(context).textTheme.displayLarge?.copyWith(color: context.textPrimary),
             )
           else
             const AppBrand(),
           const SizedBox(height: AppSpacing.xxs),
           Text(
             "Don't miss your stop",
-            style: AppTypography.secondary.copyWith(color: AppColors.grey400),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textTertiary),
           ),
         ],
       ),
@@ -244,7 +244,7 @@ class _StartTripSection extends StatelessWidget {
       children: [
         Text(
           'Where are you heading?',
-          style: AppTypography.sectionHeader.copyWith(color: AppColors.deepSlate),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: context.textPrimary),
         ),
         const SizedBox(height: AppSpacing.md),
         AppButton(
@@ -280,7 +280,7 @@ class _YourStopsSection extends ConsumerWidget {
       children: [
         Text(
           'Your Stops',
-          style: AppTypography.sectionHeader.copyWith(color: AppColors.deepSlate),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: context.textPrimary),
         ),
         const SizedBox(height: AppSpacing.sm),
         ...destinations.map((dest) => Padding(
@@ -310,12 +310,12 @@ class _HomeDestinationCard extends ConsumerWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.electricBlue.withValues(alpha: 0.1),
+              color: context.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.location_on_rounded,
-              color: AppColors.electricBlue,
+              color: context.primary,
               size: 22,
             ),
           ),
@@ -333,17 +333,17 @@ class _HomeDestinationCard extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${destination.alertRadius.round()}m radius',
-                  style: AppTypography.caption.copyWith(color: AppColors.grey400),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textTertiary),
                 ),
               ],
             ),
           ),
           if (destination.isFavorite)
-            const Padding(
-              padding: EdgeInsets.only(right: 4),
-              child: Icon(Icons.star_rounded, color: AppColors.warning, size: 20),
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Icon(Icons.star_rounded, color: context.warning, size: 20),
             ),
-          const Icon(Icons.play_circle_fill_rounded, color: AppColors.electricBlue, size: 32),
+          Icon(Icons.play_circle_fill_rounded, color: context.primary, size: 32),
         ],
       ),
     );
@@ -358,16 +358,16 @@ class _EmptyDestinationsPlaceholder extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
         child: Column(
           children: [
-            Icon(Icons.location_off_rounded, size: 48, color: AppColors.grey200),
+            Icon(Icons.location_off_rounded, size: 48, color: context.textTertiary),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Saved destinations will appear here.',
-              style: AppTypography.secondary.copyWith(color: AppColors.grey400),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textTertiary),
             ),
             const SizedBox(height: AppSpacing.xxs),
             Text(
               'Set your first stop to get started.',
-              style: AppTypography.caption.copyWith(color: AppColors.grey200),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textTertiary),
             ),
           ],
         ),
@@ -408,8 +408,8 @@ class _ActiveTripBanner extends ConsumerWidget {
                 Container(
                   width: 12,
                   height: 12,
-                  decoration: const BoxDecoration(
-                    color: AppColors.success,
+                  decoration: BoxDecoration(
+                    color: context.success,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -417,7 +417,7 @@ class _ActiveTripBanner extends ConsumerWidget {
                 Text(
                   'Active Trip',
                   style: AppTypography.secondary.copyWith(
-                    color: AppColors.success,
+                    color: context.success,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -426,13 +426,13 @@ class _ActiveTripBanner extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               trip.destination.name,
-              style: AppTypography.title.copyWith(color: AppColors.deepSlate),
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: context.textPrimary),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               '$distanceFormatted away',
               style: AppTypography.distance.copyWith(
-                color: AppColors.electricBlue,
+                color: context.primary,
                 fontSize: 48,
               ),
             ),
@@ -441,8 +441,8 @@ class _ActiveTripBanner extends ConsumerWidget {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: progress,
-                backgroundColor: AppColors.grey100,
-                valueColor: const AlwaysStoppedAnimation(AppColors.electricBlue),
+                backgroundColor: context.surfaceContainerLow,
+                valueColor: AlwaysStoppedAnimation<Color>(context.primary),
                 minHeight: 4,
               ),
             ),
@@ -454,8 +454,8 @@ class _ActiveTripBanner extends ConsumerWidget {
                   ref.read(activeTripProvider.notifier).cancelTrip();
                 },
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.error,
-                  side: const BorderSide(color: AppColors.error),
+                  foregroundColor: context.error,
+                  side: BorderSide(color: context.error),
                 ),
                 child: const Text('Cancel Trip'),
               ),
@@ -509,7 +509,7 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            style: TextButton.styleFrom(foregroundColor: ctx.error),
             child: const Text('Delete'),
           ),
         ],
@@ -564,9 +564,7 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
                   else
                     Text(
                       '${destinations.length} saved',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.grey400,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textTertiary),
                     ),
                 ],
               ),
@@ -586,9 +584,7 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
                               child: Text(
                                 'No saved destinations yet.\nSet one to get started.',
                                 textAlign: TextAlign.center,
-                                style: AppTypography.secondary.copyWith(
-                                  color: AppColors.grey400,
-                                ),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textTertiary),
                               ),
                             ),
                           ),
@@ -659,7 +655,7 @@ class _DestinationTile extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            style: TextButton.styleFrom(foregroundColor: context.error),
             child: const Text('Delete'),
           ),
         ],
@@ -693,18 +689,18 @@ class _DestinationTile extends ConsumerWidget {
               Checkbox(
                 value: isSelected,
                 onChanged: (_) => onLongPress(),
-                activeColor: AppColors.electricBlue,
+                activeColor: context.primary,
               ),
             Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.electricBlue.withValues(alpha: 0.1),
+                color: context.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.location_on_rounded,
-                color: AppColors.electricBlue,
+                color: context.primary,
                 size: 24,
               ),
             ),
@@ -720,23 +716,25 @@ class _DestinationTile extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(Icons.straighten,
-                          size: 14, color: AppColors.grey400),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${destination.alertRadius.round()}m',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.grey400,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Row(
+                      children: [
+                        Icon(Icons.straighten,
+                            size: 14, color: context.textTertiary),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${destination.alertRadius.round()}m',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textTertiary),
                         ),
-                      ),
-                      if (destination.isFavorite) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        Icon(Icons.star_rounded,
-                            size: 14, color: AppColors.warning),
+                        if (destination.isFavorite) ...[
+                          const SizedBox(width: AppSpacing.sm),
+                          Icon(Icons.star_rounded,
+                              size: 14, color: context.warning),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -748,13 +746,13 @@ class _DestinationTile extends ConsumerWidget {
                   vertical: AppSpacing.xxs,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
+                  color: context.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
                 child: Text(
                   'Active',
                   style: AppTypography.caption.copyWith(
-                    color: AppColors.success,
+                    color: context.success,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -763,8 +761,8 @@ class _DestinationTile extends ConsumerWidget {
               IconButton(
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 iconSize: 20,
-                icon: const Icon(Icons.play_arrow_rounded,
-                    color: AppColors.electricBlue),
+                icon: Icon(Icons.play_arrow_rounded,
+                    color: context.primary),
                 onPressed: () {
                   ref
                       .read(activeTripProvider.notifier)
@@ -780,7 +778,7 @@ class _DestinationTile extends ConsumerWidget {
                   destination.isFavorite
                       ? Icons.star_rounded
                       : Icons.star_outline_rounded,
-                  color: AppColors.warning,
+                  color: context.warning,
                 ),
                 onPressed: () {
                   final repo = ref.read(destinationRepositoryProvider);
@@ -796,8 +794,8 @@ class _DestinationTile extends ConsumerWidget {
               IconButton(
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 iconSize: 20,
-                icon: const Icon(Icons.edit_rounded,
-                    color: AppColors.electricBlue),
+                icon: Icon(Icons.edit_rounded,
+                    color: context.primary),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -813,8 +811,8 @@ class _DestinationTile extends ConsumerWidget {
               IconButton(
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 iconSize: 20,
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: AppColors.error),
+                icon: Icon(Icons.delete_outline_rounded,
+                    color: context.error),
                 onPressed: () => _confirmDelete(context, ref),
                 tooltip: 'Delete',
               ),

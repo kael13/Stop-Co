@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_button.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../settings/data/settings_providers.dart';
 import '../../simulation/data/simulation_service.dart';
@@ -101,7 +99,7 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
     final distanceFormatted = GpsUtils.formatDistance(distance);
 
     return Scaffold(
-      backgroundColor: AppColors.deepSlate,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -120,12 +118,12 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: AppColors.electricBlue.withValues(alpha: 0.15),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.notifications_active_rounded,
-                    color: AppColors.electricBlue,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 60,
                   ),
                 ),
@@ -133,30 +131,30 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
               const SizedBox(height: AppSpacing.xl),
               Text(
                 'You are approaching',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.grey400,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 trip.destination.name,
-                style: AppTypography.largeTitle.copyWith(
-                  color: AppColors.white,
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.surface,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
                 distanceFormatted,
-                style: AppTypography.alarm.copyWith(
-                  color: AppColors.electricBlue,
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 'Get ready to get off soon',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.grey400,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
               ),
               const Spacer(flex: 3),

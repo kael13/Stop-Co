@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_typography.dart';
 
 class OnboardingPage extends StatelessWidget {
   final String title;
@@ -30,16 +29,16 @@ class OnboardingPage extends StatelessWidget {
           const SizedBox(height: AppSpacing.xxl),
           Text(
             title,
-            style: AppTypography.largeTitle.copyWith(
-              color: AppColors.softCharcoal,
+            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+              color: context.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             subtitle,
-            style: AppTypography.body.copyWith(
-              color: AppColors.grey600,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: context.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),

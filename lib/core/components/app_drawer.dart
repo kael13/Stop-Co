@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../theme/app_colors.dart';
+import '../theme/theme_colors.dart';
 import '../theme/app_spacing.dart';
-import '../theme/app_typography.dart';
 import '../../features/auth/data/auth_providers.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -14,7 +13,7 @@ class AppDrawer extends ConsumerWidget {
     final user = authState.valueOrNull;
 
     return Drawer(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: context.scaffoldBackground,
       child: SafeArea(
         child: Column(
           children: [
@@ -27,16 +26,12 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerItem(
                     icon: Icons.home_rounded,
                     label: 'Home',
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
+                    onTap: () => Navigator.pop(context),
                   ),
                   _DrawerItem(
                     icon: Icons.location_on_rounded,
                     label: 'Saved Destinations',
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
+                    onTap: () => Navigator.pop(context),
                   ),
                   _DrawerItem(
                     icon: Icons.settings_rounded,
@@ -99,12 +94,12 @@ class _DrawerHeader extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.electricBlue.withValues(alpha: 0.1),
+              color: context.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.person_rounded,
-              color: AppColors.electricBlue,
+              color: context.primary,
               size: 28,
             ),
           ),
@@ -115,16 +110,16 @@ class _DrawerHeader extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: AppTypography.sectionHeader.copyWith(
-                    color: AppColors.deepSlate,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: context.textPrimary,
                   ),
                 ),
                 if (email.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     email,
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.grey400,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.textTertiary,
                     ),
                   ),
                 ],
@@ -151,15 +146,11 @@ class _DrawerItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: AppColors.grey600,
-        size: 24,
-      ),
+      leading: Icon(icon, color: context.textSecondary, size: 24),
       title: Text(
         label,
-        style: AppTypography.body.copyWith(
-          color: AppColors.deepSlate,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: context.textPrimary,
         ),
       ),
       onTap: onTap,

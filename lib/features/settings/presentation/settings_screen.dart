@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_card.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/theme_providers.dart';
 import '../../../core/constants/app_constants.dart';
 import '../data/settings_providers.dart';
 
@@ -45,10 +44,14 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (_) {
                 ref.read(settingsProvider.notifier).toggleRepeatedAlarm();
               },
-              activeColor: AppColors.electricBlue,
+              activeThumbColor: Theme.of(context).colorScheme.primary,
               contentPadding: EdgeInsets.zero,
             ),
           ),
+          const SizedBox(height: AppSpacing.lg),
+          _SectionHeader(title: 'Appearance'),
+          const SizedBox(height: AppSpacing.sm),
+          _ThemeModeSection(),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(title: 'Commute Mode'),
           const SizedBox(height: AppSpacing.sm),
@@ -80,8 +83,8 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: AppTypography.sectionHeader.copyWith(
-        color: AppColors.deepSlate,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
@@ -104,15 +107,15 @@ class _DefaultRadiusSection extends StatelessWidget {
         children: [
           Text(
             'Default Alert Radius',
-            style: AppTypography.bodyBold.copyWith(
-              color: AppColors.deepSlate,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'The default radius for new destinations',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.grey400,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -125,11 +128,11 @@ class _DefaultRadiusSection extends StatelessWidget {
                 label: Text('${radius.round()}m'),
                 selected: selected,
                 onSelected: (_) => onChanged(radius),
-                selectedColor: AppColors.electricBlue,
+                selectedColor: Theme.of(context).colorScheme.primary,
                 labelStyle: TextStyle(
-                  color: selected ? AppColors.white : AppColors.deepSlate,
+                  color: selected ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurface,
                 ),
-                backgroundColor: AppColors.grey100,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   side: BorderSide.none,
@@ -160,15 +163,15 @@ class _AlarmTypeSection extends StatelessWidget {
         children: [
           Text(
             'Alarm Type',
-            style: AppTypography.bodyBold.copyWith(
-              color: AppColors.deepSlate,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'How you want to be alerted',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.grey400,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -177,8 +180,8 @@ class _AlarmTypeSection extends StatelessWidget {
               title: Text(type.label),
               subtitle: Text(
                 _getAlarmDescription(type),
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.grey400,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
               ),
               value: type,
@@ -186,7 +189,7 @@ class _AlarmTypeSection extends StatelessWidget {
               onChanged: (value) {
                 if (value != null) onChanged(value);
               },
-              activeColor: AppColors.electricBlue,
+              activeColor: Theme.of(context).colorScheme.primary,
               contentPadding: EdgeInsets.zero,
             );
           }),
@@ -229,8 +232,8 @@ class _CommuteModeSection extends StatelessWidget {
             children: [
               Text(
                 'Commute Mode',
-                style: AppTypography.bodyBold.copyWith(
-                  color: AppColors.deepSlate,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),
@@ -240,13 +243,13 @@ class _CommuteModeSection extends StatelessWidget {
                   vertical: 2,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.teal.withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
                 child: Text(
                   'Auto',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.teal,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.secondary,
                     fontWeight: FontWeight.w600,
                     fontSize: 11,
                   ),
@@ -257,18 +260,18 @@ class _CommuteModeSection extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Automatically detected from your GPS speed while tracking.',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.grey400,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AppColors.electricBlue.withValues(alpha: 0.05),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               border: Border.all(
-                color: AppColors.electricBlue.withValues(alpha: 0.15),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
               ),
             ),
             child: Column(
@@ -291,8 +294,8 @@ class _CommuteModeSection extends StatelessWidget {
                                     : Icons.directions_car_rounded,
                         size: 18,
                         color: isActive
-                            ? AppColors.electricBlue
-                            : AppColors.grey400,
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
@@ -301,10 +304,10 @@ class _CommuteModeSection extends StatelessWidget {
                           children: [
                             Text(
                               mode.label,
-                              style: AppTypography.body.copyWith(
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                 color: isActive
-                                    ? AppColors.electricBlue
-                                    : AppColors.deepSlate,
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).colorScheme.onSurface,
                                 fontWeight: isActive
                                     ? FontWeight.w600
                                     : FontWeight.w400,
@@ -314,8 +317,8 @@ class _CommuteModeSection extends StatelessWidget {
                               mode == CommuteMode.walking
                                   ? '< 7 km/h'
                                   : '${thresholdKmh.toStringAsFixed(0)}+ km/h',
-                              style: AppTypography.caption.copyWith(
-                                color: AppColors.grey400,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                               ),
                             ),
                           ],
@@ -325,8 +328,8 @@ class _CommuteModeSection extends StatelessWidget {
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.electricBlue,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -353,31 +356,69 @@ class _AboutSection extends StatelessWidget {
             children: [
               Icon(
                 Icons.notifications_active_rounded,
-                color: AppColors.electricBlue,
+                color: Theme.of(context).colorScheme.primary,
                 size: 24,
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 AppConstants.appName,
-                style: AppTypography.sectionHeader.copyWith(
-                  color: AppColors.deepSlate,
-                ),
+                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                   color: Theme.of(context).colorScheme.onSurface,
+                 ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Version 1.0.0',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.grey400,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'A minimalist GPS-based destination alarm app for commuters.',
-            style: AppTypography.body.copyWith(
-              color: AppColors.grey600,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThemeModeSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(themeModeProvider);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(
+                value: ThemeMode.system,
+                label: Text('System'),
+                icon: Icon(Icons.settings_suggest_outlined, size: 18),
+              ),
+              ButtonSegment(
+                value: ThemeMode.light,
+                label: Text('Light'),
+                icon: Icon(Icons.light_mode_outlined, size: 18),
+              ),
+              ButtonSegment(
+                value: ThemeMode.dark,
+                label: Text('Dark'),
+                icon: Icon(Icons.dark_mode_outlined, size: 18),
+              ),
+            ],
+            selected: {current},
+            onSelectionChanged: (selected) {
+              ref.read(themeModeProvider.notifier).setThemeMode(selected.first);
+            },
+            showSelectedIcon: false,
           ),
         ],
       ),
@@ -396,8 +437,8 @@ class _ResetButton extends StatelessWidget {
       onPressed: onReset,
       child: Text(
         'Reset to Defaults',
-        style: AppTypography.button.copyWith(
-          color: AppColors.grey400,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
         ),
       ),
     );
