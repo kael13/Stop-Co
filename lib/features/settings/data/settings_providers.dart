@@ -52,12 +52,16 @@ class AppSettings {
   final AlarmType alarmType;
   final CommuteMode commuteMode;
   final bool repeatedAlarm;
+  final bool napModeEnabled;
+  final String? customAlarmSoundPath;
 
   const AppSettings({
     this.defaultAlertRadius = 300,
     this.alarmType = AlarmType.soundAndVibration,
     this.commuteMode = CommuteMode.walking,
     this.repeatedAlarm = false,
+    this.napModeEnabled = false,
+    this.customAlarmSoundPath,
   });
 
   AppSettings copyWith({
@@ -65,12 +69,17 @@ class AppSettings {
     AlarmType? alarmType,
     CommuteMode? commuteMode,
     bool? repeatedAlarm,
+    bool? napModeEnabled,
+    String? customAlarmSoundPath,
   }) {
     return AppSettings(
       defaultAlertRadius: defaultAlertRadius ?? this.defaultAlertRadius,
       alarmType: alarmType ?? this.alarmType,
       commuteMode: commuteMode ?? this.commuteMode,
       repeatedAlarm: repeatedAlarm ?? this.repeatedAlarm,
+      napModeEnabled: napModeEnabled ?? this.napModeEnabled,
+      customAlarmSoundPath:
+          customAlarmSoundPath ?? this.customAlarmSoundPath,
     );
   }
 
@@ -114,6 +123,21 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   void toggleRepeatedAlarm() {
     state = state.copyWith(repeatedAlarm: !state.repeatedAlarm);
+    _db.saveAppSettings(state);
+  }
+
+  void toggleNapMode() {
+    state = state.copyWith(napModeEnabled: !state.napModeEnabled);
+    _db.saveAppSettings(state);
+  }
+
+  void setCustomAlarmSound(String path) {
+    state = state.copyWith(customAlarmSoundPath: path);
+    _db.saveAppSettings(state);
+  }
+
+  void clearCustomAlarmSound() {
+    state = state.copyWith(customAlarmSoundPath: null);
     _db.saveAppSettings(state);
   }
 

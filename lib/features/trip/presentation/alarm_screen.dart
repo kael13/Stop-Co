@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:screen_brightness/screen_brightness.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/gps_utils.dart';
@@ -26,7 +28,7 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
   @override
   void initState() {
     super.initState();
-    HapticFeedback.heavyImpact();
+    _fireInitialVibration();
 
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -59,10 +61,11 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
           destinationName: destName,
           distance: currentTrip.currentDistance ?? 0,
           alarmType: alarmType,
+          customSoundPath: settings.customAlarmSoundPath,
         );
       }
       if (alarmType != AlarmType.soundOnly) {
-        HapticFeedback.heavyImpact();
+        _fireNapAwareVibration();
       }
     });
   }
@@ -77,6 +80,8 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
   void _dismiss() {
     _repeatTimer?.cancel();
     AlarmNotificationService.dismissAlarm();
+    ScreenBrightness().resetApplicationScreenBrightness();
+    WakelockPlus.disable();
     final simulationEnabled = ref.read(simulationEnabledProvider);
     if (simulationEnabled) {
       ref.read(simulationServiceProvider).stop();
@@ -84,6 +89,25 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
     }
     ref.read(activeTripProvider.notifier).completeTrip();
     Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+  }
+
+  void _fireInitialVibration() {
+    final settings = ref.read(settingsProvider);
+    if (settings.napModeEnabled) {
+      _fireNapAwareVibration();
+    } else {
+      HapticFeedback.heavyImpact();
+    }
+  }
+
+  void _fireNapAwareVibration() {
+    HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 600), () {
+      HapticFeedback.heavyImpact();
+      Future.delayed(const Duration(milliseconds: 400), () {
+        HapticFeedback.heavyImpact();
+      });
+    });
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 import '../../destination/data/destination_model.dart';
 import '../../settings/data/settings_providers.dart';
@@ -36,6 +37,13 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
     state = state!.copyWith(routeResult: route);
   }
 
+  void addBreadcrumb(LatLng point) {
+    if (state == null) return;
+    state = state!.copyWith(
+      gpsBreadcrumbs: [...state!.gpsBreadcrumbs, point],
+    );
+  }
+
   void triggerAlarm() {
     if (state == null) return;
     state = state!.copyWith(
@@ -43,10 +51,12 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
       hasAlerted: true,
     );
     final alarmType = _ref.read(settingsProvider).alarmType;
+    final customSoundPath = _ref.read(settingsProvider).customAlarmSoundPath;
     AlarmNotificationService.showAlarmNotification(
       destinationName: state!.destination.name,
       distance: state!.currentDistance ?? 0,
       alarmType: alarmType,
+      customSoundPath: customSoundPath,
     );
   }
 
@@ -78,6 +88,8 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
       plannedRouteDuration: trip.routeResult?.durationSeconds,
       routeCoordinatesJson:
           TripRecord.serializeCoordinates(trip.routeResult?.coordinates),
+      gpsBreadcrumbsJson:
+          TripRecord.serializeCoordinates(trip.gpsBreadcrumbs),
       createdAt: DateTime.now(),
     ));
   }

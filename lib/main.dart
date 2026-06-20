@@ -14,7 +14,13 @@ final FlutterLocalNotificationsPlugin notificationsPlugin =
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-Future<void> _initNotifications() async {
+UriAndroidNotificationSound _alarmUri(String path) {
+  return UriAndroidNotificationSound(
+    path.startsWith('content://') ? path : 'file://$path',
+  );
+}
+
+Future<void> _initNotifications({String? customSoundPath}) async {
   const androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -45,22 +51,35 @@ Future<void> _initNotifications() async {
     importance: Importance.max,
     playSound: true,
     enableVibration: true,
+    sound: customSoundPath != null
+        ? _alarmUri(customSoundPath)
+        : null,
     vibrationPattern: Int64List.fromList([0, 500, 250, 500, 250, 500]),
   );
 
-  await notificationsPlugin
+  final androidPlugin = notificationsPlugin
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
-      ?.createNotificationChannel(androidChannel);
+          AndroidFlutterLocalNotificationsPlugin>();
+
+  await androidPlugin?.deleteNotificationChannel(AppConstants.alarmChannelId);
+  await androidPlugin?.createNotificationChannel(androidChannel);
+}
+
+Future<void> recreateAlarmChannel(String? customSoundPath) async {
+  await _initNotifications(customSoundPath: customSoundPath);
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
   await Firebase.initializeApp();
-  await _initNotifications();
 
   final db = LocalDatabase();
+  final storedSettings = await db.getAppSettings();
+
+  await _initNotifications(
+    customSoundPath: storedSettings?.customAlarmSoundPath,
+  );
 
   runApp(
     ProviderScope(

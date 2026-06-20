@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:screen_brightness/screen_brightness.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/theme_colors.dart';
@@ -53,13 +55,19 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     _subscription?.cancel();
     _pollTimer?.cancel();
     ForegroundServiceChannel.stopTracking();
+    _restoreScreenBrightness();
+    WakelockPlus.disable();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _startPolling();
+      if (ref.read(simulationEnabledProvider)) {
+        _startSimulationPolling();
+      } else {
+        _startPolling();
+      }
     } else {
       _pollTimer?.cancel();
     }
@@ -88,6 +96,7 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
 
     geofenceManager.startMonitoring();
     _startForegroundService();
+    _dimScreenIfNapMode();
 
     final stream = locationService.getPositionStream();
     _subscription = stream.listen((position) {
@@ -104,14 +113,13 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
 
   void _startSimulationMonitoring() {
     _startForegroundService();
+    _dimScreenIfNapMode();
 
     _scheduleSimulationRouteFetch();
 
-    _pollTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => _pollSimulation(),
-    );
+    _startSimulationPolling();
     _startPeriodicRouteReFetching();
+    WakelockPlus.enable();
   }
 
   void _startForegroundService() {
@@ -147,6 +155,14 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     _pollTimer = Timer.periodic(
       const Duration(seconds: 10),
       (_) => _pollLocation(),
+    );
+  }
+
+  void _startSimulationPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _pollSimulation(),
     );
   }
 
@@ -222,6 +238,7 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     );
 
     ref.read(activeTripProvider.notifier).updateDistance(distance);
+    ref.read(activeTripProvider.notifier).addBreadcrumb(LatLng(lat, lon));
 
     _updateForegroundNotification(
       trip.destination.name,
@@ -320,6 +337,17 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     if (detected != settings.commuteMode) {
       ref.read(settingsProvider.notifier).setCommuteMode(detected);
     }
+  }
+
+  void _dimScreenIfNapMode() {
+    final settings = ref.read(settingsProvider);
+    if (settings.napModeEnabled) {
+      ScreenBrightness().setApplicationScreenBrightness(0.0);
+    }
+  }
+
+  void _restoreScreenBrightness() {
+    ScreenBrightness().resetApplicationScreenBrightness();
   }
 
   @override
@@ -456,11 +484,13 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                     child: AppButton(
                       label: 'Cancel Trip',
                       isDestructive: true,
-                      onPressed: () {
+                       onPressed: () {
                         _subscription?.cancel();
                         _pollTimer?.cancel();
                         _routeReFetchTimer?.cancel();
                         ForegroundServiceChannel.stopTracking();
+                        _restoreScreenBrightness();
+                        WakelockPlus.disable();
                         if (simulationEnabled) {
                           ref.read(simulationServiceProvider).stop();
                           ref.read(simulationEnabledProvider.notifier).state = false;

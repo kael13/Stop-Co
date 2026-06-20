@@ -535,6 +535,32 @@ class $AppSettingsTableTable extends AppSettingsTable
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _napModeEnabledMeta = const VerificationMeta(
+    'napModeEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> napModeEnabled = GeneratedColumn<bool>(
+    'nap_mode_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("nap_mode_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _customAlarmSoundPathMeta =
+      const VerificationMeta('customAlarmSoundPath');
+  @override
+  late final GeneratedColumn<String> customAlarmSoundPath =
+      GeneratedColumn<String>(
+        'custom_alarm_sound_path',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -542,6 +568,8 @@ class $AppSettingsTableTable extends AppSettingsTable
     alarmType,
     commuteMode,
     repeatedAlarm,
+    napModeEnabled,
+    customAlarmSoundPath,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -595,6 +623,24 @@ class $AppSettingsTableTable extends AppSettingsTable
         ),
       );
     }
+    if (data.containsKey('nap_mode_enabled')) {
+      context.handle(
+        _napModeEnabledMeta,
+        napModeEnabled.isAcceptableOrUnknown(
+          data['nap_mode_enabled']!,
+          _napModeEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('custom_alarm_sound_path')) {
+      context.handle(
+        _customAlarmSoundPathMeta,
+        customAlarmSoundPath.isAcceptableOrUnknown(
+          data['custom_alarm_sound_path']!,
+          _customAlarmSoundPathMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -624,6 +670,14 @@ class $AppSettingsTableTable extends AppSettingsTable
         DriftSqlType.bool,
         data['${effectivePrefix}repeated_alarm'],
       )!,
+      napModeEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}nap_mode_enabled'],
+      )!,
+      customAlarmSoundPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}custom_alarm_sound_path'],
+      ),
     );
   }
 
@@ -640,12 +694,16 @@ class AppSettingsTableData extends DataClass
   final String alarmType;
   final String commuteMode;
   final bool repeatedAlarm;
+  final bool napModeEnabled;
+  final String? customAlarmSoundPath;
   const AppSettingsTableData({
     required this.id,
     required this.defaultAlertRadius,
     required this.alarmType,
     required this.commuteMode,
     required this.repeatedAlarm,
+    required this.napModeEnabled,
+    this.customAlarmSoundPath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -655,6 +713,10 @@ class AppSettingsTableData extends DataClass
     map['alarm_type'] = Variable<String>(alarmType);
     map['commute_mode'] = Variable<String>(commuteMode);
     map['repeated_alarm'] = Variable<bool>(repeatedAlarm);
+    map['nap_mode_enabled'] = Variable<bool>(napModeEnabled);
+    if (!nullToAbsent || customAlarmSoundPath != null) {
+      map['custom_alarm_sound_path'] = Variable<String>(customAlarmSoundPath);
+    }
     return map;
   }
 
@@ -665,6 +727,10 @@ class AppSettingsTableData extends DataClass
       alarmType: Value(alarmType),
       commuteMode: Value(commuteMode),
       repeatedAlarm: Value(repeatedAlarm),
+      napModeEnabled: Value(napModeEnabled),
+      customAlarmSoundPath: customAlarmSoundPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customAlarmSoundPath),
     );
   }
 
@@ -681,6 +747,10 @@ class AppSettingsTableData extends DataClass
       alarmType: serializer.fromJson<String>(json['alarmType']),
       commuteMode: serializer.fromJson<String>(json['commuteMode']),
       repeatedAlarm: serializer.fromJson<bool>(json['repeatedAlarm']),
+      napModeEnabled: serializer.fromJson<bool>(json['napModeEnabled']),
+      customAlarmSoundPath: serializer.fromJson<String?>(
+        json['customAlarmSoundPath'],
+      ),
     );
   }
   @override
@@ -692,6 +762,8 @@ class AppSettingsTableData extends DataClass
       'alarmType': serializer.toJson<String>(alarmType),
       'commuteMode': serializer.toJson<String>(commuteMode),
       'repeatedAlarm': serializer.toJson<bool>(repeatedAlarm),
+      'napModeEnabled': serializer.toJson<bool>(napModeEnabled),
+      'customAlarmSoundPath': serializer.toJson<String?>(customAlarmSoundPath),
     };
   }
 
@@ -701,12 +773,18 @@ class AppSettingsTableData extends DataClass
     String? alarmType,
     String? commuteMode,
     bool? repeatedAlarm,
+    bool? napModeEnabled,
+    Value<String?> customAlarmSoundPath = const Value.absent(),
   }) => AppSettingsTableData(
     id: id ?? this.id,
     defaultAlertRadius: defaultAlertRadius ?? this.defaultAlertRadius,
     alarmType: alarmType ?? this.alarmType,
     commuteMode: commuteMode ?? this.commuteMode,
     repeatedAlarm: repeatedAlarm ?? this.repeatedAlarm,
+    napModeEnabled: napModeEnabled ?? this.napModeEnabled,
+    customAlarmSoundPath: customAlarmSoundPath.present
+        ? customAlarmSoundPath.value
+        : this.customAlarmSoundPath,
   );
   AppSettingsTableData copyWithCompanion(AppSettingsTableCompanion data) {
     return AppSettingsTableData(
@@ -721,6 +799,12 @@ class AppSettingsTableData extends DataClass
       repeatedAlarm: data.repeatedAlarm.present
           ? data.repeatedAlarm.value
           : this.repeatedAlarm,
+      napModeEnabled: data.napModeEnabled.present
+          ? data.napModeEnabled.value
+          : this.napModeEnabled,
+      customAlarmSoundPath: data.customAlarmSoundPath.present
+          ? data.customAlarmSoundPath.value
+          : this.customAlarmSoundPath,
     );
   }
 
@@ -731,7 +815,9 @@ class AppSettingsTableData extends DataClass
           ..write('defaultAlertRadius: $defaultAlertRadius, ')
           ..write('alarmType: $alarmType, ')
           ..write('commuteMode: $commuteMode, ')
-          ..write('repeatedAlarm: $repeatedAlarm')
+          ..write('repeatedAlarm: $repeatedAlarm, ')
+          ..write('napModeEnabled: $napModeEnabled, ')
+          ..write('customAlarmSoundPath: $customAlarmSoundPath')
           ..write(')'))
         .toString();
   }
@@ -743,6 +829,8 @@ class AppSettingsTableData extends DataClass
     alarmType,
     commuteMode,
     repeatedAlarm,
+    napModeEnabled,
+    customAlarmSoundPath,
   );
   @override
   bool operator ==(Object other) =>
@@ -752,7 +840,9 @@ class AppSettingsTableData extends DataClass
           other.defaultAlertRadius == this.defaultAlertRadius &&
           other.alarmType == this.alarmType &&
           other.commuteMode == this.commuteMode &&
-          other.repeatedAlarm == this.repeatedAlarm);
+          other.repeatedAlarm == this.repeatedAlarm &&
+          other.napModeEnabled == this.napModeEnabled &&
+          other.customAlarmSoundPath == this.customAlarmSoundPath);
 }
 
 class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
@@ -761,12 +851,16 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
   final Value<String> alarmType;
   final Value<String> commuteMode;
   final Value<bool> repeatedAlarm;
+  final Value<bool> napModeEnabled;
+  final Value<String?> customAlarmSoundPath;
   const AppSettingsTableCompanion({
     this.id = const Value.absent(),
     this.defaultAlertRadius = const Value.absent(),
     this.alarmType = const Value.absent(),
     this.commuteMode = const Value.absent(),
     this.repeatedAlarm = const Value.absent(),
+    this.napModeEnabled = const Value.absent(),
+    this.customAlarmSoundPath = const Value.absent(),
   });
   AppSettingsTableCompanion.insert({
     this.id = const Value.absent(),
@@ -774,6 +868,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     required String alarmType,
     required String commuteMode,
     this.repeatedAlarm = const Value.absent(),
+    this.napModeEnabled = const Value.absent(),
+    this.customAlarmSoundPath = const Value.absent(),
   }) : alarmType = Value(alarmType),
        commuteMode = Value(commuteMode);
   static Insertable<AppSettingsTableData> custom({
@@ -782,6 +878,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     Expression<String>? alarmType,
     Expression<String>? commuteMode,
     Expression<bool>? repeatedAlarm,
+    Expression<bool>? napModeEnabled,
+    Expression<String>? customAlarmSoundPath,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -790,6 +888,9 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
       if (alarmType != null) 'alarm_type': alarmType,
       if (commuteMode != null) 'commute_mode': commuteMode,
       if (repeatedAlarm != null) 'repeated_alarm': repeatedAlarm,
+      if (napModeEnabled != null) 'nap_mode_enabled': napModeEnabled,
+      if (customAlarmSoundPath != null)
+        'custom_alarm_sound_path': customAlarmSoundPath,
     });
   }
 
@@ -799,6 +900,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     Value<String>? alarmType,
     Value<String>? commuteMode,
     Value<bool>? repeatedAlarm,
+    Value<bool>? napModeEnabled,
+    Value<String?>? customAlarmSoundPath,
   }) {
     return AppSettingsTableCompanion(
       id: id ?? this.id,
@@ -806,6 +909,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
       alarmType: alarmType ?? this.alarmType,
       commuteMode: commuteMode ?? this.commuteMode,
       repeatedAlarm: repeatedAlarm ?? this.repeatedAlarm,
+      napModeEnabled: napModeEnabled ?? this.napModeEnabled,
+      customAlarmSoundPath: customAlarmSoundPath ?? this.customAlarmSoundPath,
     );
   }
 
@@ -827,6 +932,14 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     if (repeatedAlarm.present) {
       map['repeated_alarm'] = Variable<bool>(repeatedAlarm.value);
     }
+    if (napModeEnabled.present) {
+      map['nap_mode_enabled'] = Variable<bool>(napModeEnabled.value);
+    }
+    if (customAlarmSoundPath.present) {
+      map['custom_alarm_sound_path'] = Variable<String>(
+        customAlarmSoundPath.value,
+      );
+    }
     return map;
   }
 
@@ -837,7 +950,9 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
           ..write('defaultAlertRadius: $defaultAlertRadius, ')
           ..write('alarmType: $alarmType, ')
           ..write('commuteMode: $commuteMode, ')
-          ..write('repeatedAlarm: $repeatedAlarm')
+          ..write('repeatedAlarm: $repeatedAlarm, ')
+          ..write('napModeEnabled: $napModeEnabled, ')
+          ..write('customAlarmSoundPath: $customAlarmSoundPath')
           ..write(')'))
         .toString();
   }
@@ -954,6 +1069,17 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, TripsRow> {
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _gpsBreadcrumbsJsonMeta =
+      const VerificationMeta('gpsBreadcrumbsJson');
+  @override
+  late final GeneratedColumn<String> gpsBreadcrumbsJson =
+      GeneratedColumn<String>(
+        'gps_breadcrumbs_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -977,6 +1103,7 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, TripsRow> {
     plannedRouteDistance,
     plannedRouteDuration,
     routeCoordinatesJson,
+    gpsBreadcrumbsJson,
     createdAt,
   ];
   @override
@@ -1080,6 +1207,15 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, TripsRow> {
         ),
       );
     }
+    if (data.containsKey('gps_breadcrumbs_json')) {
+      context.handle(
+        _gpsBreadcrumbsJsonMeta,
+        gpsBreadcrumbsJson.isAcceptableOrUnknown(
+          data['gps_breadcrumbs_json']!,
+          _gpsBreadcrumbsJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1137,6 +1273,10 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, TripsRow> {
         DriftSqlType.string,
         data['${effectivePrefix}route_coordinates_json'],
       ),
+      gpsBreadcrumbsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gps_breadcrumbs_json'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1161,6 +1301,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
   final double? plannedRouteDistance;
   final double? plannedRouteDuration;
   final String? routeCoordinatesJson;
+  final String? gpsBreadcrumbsJson;
   final DateTime createdAt;
   const TripsRow({
     required this.id,
@@ -1173,6 +1314,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
     this.plannedRouteDistance,
     this.plannedRouteDuration,
     this.routeCoordinatesJson,
+    this.gpsBreadcrumbsJson,
     required this.createdAt,
   });
   @override
@@ -1193,6 +1335,9 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
     }
     if (!nullToAbsent || routeCoordinatesJson != null) {
       map['route_coordinates_json'] = Variable<String>(routeCoordinatesJson);
+    }
+    if (!nullToAbsent || gpsBreadcrumbsJson != null) {
+      map['gps_breadcrumbs_json'] = Variable<String>(gpsBreadcrumbsJson);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -1216,6 +1361,9 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
       routeCoordinatesJson: routeCoordinatesJson == null && nullToAbsent
           ? const Value.absent()
           : Value(routeCoordinatesJson),
+      gpsBreadcrumbsJson: gpsBreadcrumbsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(gpsBreadcrumbsJson),
       createdAt: Value(createdAt),
     );
   }
@@ -1242,6 +1390,9 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
       routeCoordinatesJson: serializer.fromJson<String?>(
         json['routeCoordinatesJson'],
       ),
+      gpsBreadcrumbsJson: serializer.fromJson<String?>(
+        json['gpsBreadcrumbsJson'],
+      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1259,6 +1410,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
       'plannedRouteDistance': serializer.toJson<double?>(plannedRouteDistance),
       'plannedRouteDuration': serializer.toJson<double?>(plannedRouteDuration),
       'routeCoordinatesJson': serializer.toJson<String?>(routeCoordinatesJson),
+      'gpsBreadcrumbsJson': serializer.toJson<String?>(gpsBreadcrumbsJson),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1274,6 +1426,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
     Value<double?> plannedRouteDistance = const Value.absent(),
     Value<double?> plannedRouteDuration = const Value.absent(),
     Value<String?> routeCoordinatesJson = const Value.absent(),
+    Value<String?> gpsBreadcrumbsJson = const Value.absent(),
     DateTime? createdAt,
   }) => TripsRow(
     id: id ?? this.id,
@@ -1292,6 +1445,9 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
     routeCoordinatesJson: routeCoordinatesJson.present
         ? routeCoordinatesJson.value
         : this.routeCoordinatesJson,
+    gpsBreadcrumbsJson: gpsBreadcrumbsJson.present
+        ? gpsBreadcrumbsJson.value
+        : this.gpsBreadcrumbsJson,
     createdAt: createdAt ?? this.createdAt,
   );
   TripsRow copyWithCompanion(TripsCompanion data) {
@@ -1318,6 +1474,9 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
       routeCoordinatesJson: data.routeCoordinatesJson.present
           ? data.routeCoordinatesJson.value
           : this.routeCoordinatesJson,
+      gpsBreadcrumbsJson: data.gpsBreadcrumbsJson.present
+          ? data.gpsBreadcrumbsJson.value
+          : this.gpsBreadcrumbsJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1335,6 +1494,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
           ..write('plannedRouteDistance: $plannedRouteDistance, ')
           ..write('plannedRouteDuration: $plannedRouteDuration, ')
           ..write('routeCoordinatesJson: $routeCoordinatesJson, ')
+          ..write('gpsBreadcrumbsJson: $gpsBreadcrumbsJson, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1352,6 +1512,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
     plannedRouteDistance,
     plannedRouteDuration,
     routeCoordinatesJson,
+    gpsBreadcrumbsJson,
     createdAt,
   );
   @override
@@ -1368,6 +1529,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
           other.plannedRouteDistance == this.plannedRouteDistance &&
           other.plannedRouteDuration == this.plannedRouteDuration &&
           other.routeCoordinatesJson == this.routeCoordinatesJson &&
+          other.gpsBreadcrumbsJson == this.gpsBreadcrumbsJson &&
           other.createdAt == this.createdAt);
 }
 
@@ -1382,6 +1544,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
   final Value<double?> plannedRouteDistance;
   final Value<double?> plannedRouteDuration;
   final Value<String?> routeCoordinatesJson;
+  final Value<String?> gpsBreadcrumbsJson;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const TripsCompanion({
@@ -1395,6 +1558,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
     this.plannedRouteDistance = const Value.absent(),
     this.plannedRouteDuration = const Value.absent(),
     this.routeCoordinatesJson = const Value.absent(),
+    this.gpsBreadcrumbsJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1409,6 +1573,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
     this.plannedRouteDistance = const Value.absent(),
     this.plannedRouteDuration = const Value.absent(),
     this.routeCoordinatesJson = const Value.absent(),
+    this.gpsBreadcrumbsJson = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1430,6 +1595,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
     Expression<double>? plannedRouteDistance,
     Expression<double>? plannedRouteDuration,
     Expression<String>? routeCoordinatesJson,
+    Expression<String>? gpsBreadcrumbsJson,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1447,6 +1613,8 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
         'planned_route_duration': plannedRouteDuration,
       if (routeCoordinatesJson != null)
         'route_coordinates_json': routeCoordinatesJson,
+      if (gpsBreadcrumbsJson != null)
+        'gps_breadcrumbs_json': gpsBreadcrumbsJson,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1463,6 +1631,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
     Value<double?>? plannedRouteDistance,
     Value<double?>? plannedRouteDuration,
     Value<String?>? routeCoordinatesJson,
+    Value<String?>? gpsBreadcrumbsJson,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -1477,6 +1646,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
       plannedRouteDistance: plannedRouteDistance ?? this.plannedRouteDistance,
       plannedRouteDuration: plannedRouteDuration ?? this.plannedRouteDuration,
       routeCoordinatesJson: routeCoordinatesJson ?? this.routeCoordinatesJson,
+      gpsBreadcrumbsJson: gpsBreadcrumbsJson ?? this.gpsBreadcrumbsJson,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1521,6 +1691,9 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
         routeCoordinatesJson.value,
       );
     }
+    if (gpsBreadcrumbsJson.present) {
+      map['gps_breadcrumbs_json'] = Variable<String>(gpsBreadcrumbsJson.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1543,6 +1716,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
           ..write('plannedRouteDistance: $plannedRouteDistance, ')
           ..write('plannedRouteDuration: $plannedRouteDuration, ')
           ..write('routeCoordinatesJson: $routeCoordinatesJson, ')
+          ..write('gpsBreadcrumbsJson: $gpsBreadcrumbsJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1822,6 +1996,8 @@ typedef $$AppSettingsTableTableCreateCompanionBuilder =
       required String alarmType,
       required String commuteMode,
       Value<bool> repeatedAlarm,
+      Value<bool> napModeEnabled,
+      Value<String?> customAlarmSoundPath,
     });
 typedef $$AppSettingsTableTableUpdateCompanionBuilder =
     AppSettingsTableCompanion Function({
@@ -1830,6 +2006,8 @@ typedef $$AppSettingsTableTableUpdateCompanionBuilder =
       Value<String> alarmType,
       Value<String> commuteMode,
       Value<bool> repeatedAlarm,
+      Value<bool> napModeEnabled,
+      Value<String?> customAlarmSoundPath,
     });
 
 class $$AppSettingsTableTableFilterComposer
@@ -1863,6 +2041,16 @@ class $$AppSettingsTableTableFilterComposer
 
   ColumnFilters<bool> get repeatedAlarm => $composableBuilder(
     column: $table.repeatedAlarm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get napModeEnabled => $composableBuilder(
+    column: $table.napModeEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customAlarmSoundPath => $composableBuilder(
+    column: $table.customAlarmSoundPath,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1900,6 +2088,16 @@ class $$AppSettingsTableTableOrderingComposer
     column: $table.repeatedAlarm,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get napModeEnabled => $composableBuilder(
+    column: $table.napModeEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customAlarmSoundPath => $composableBuilder(
+    column: $table.customAlarmSoundPath,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableTableAnnotationComposer
@@ -1929,6 +2127,16 @@ class $$AppSettingsTableTableAnnotationComposer
 
   GeneratedColumn<bool> get repeatedAlarm => $composableBuilder(
     column: $table.repeatedAlarm,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get napModeEnabled => $composableBuilder(
+    column: $table.napModeEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get customAlarmSoundPath => $composableBuilder(
+    column: $table.customAlarmSoundPath,
     builder: (column) => column,
   );
 }
@@ -1975,12 +2183,16 @@ class $$AppSettingsTableTableTableManager
                 Value<String> alarmType = const Value.absent(),
                 Value<String> commuteMode = const Value.absent(),
                 Value<bool> repeatedAlarm = const Value.absent(),
+                Value<bool> napModeEnabled = const Value.absent(),
+                Value<String?> customAlarmSoundPath = const Value.absent(),
               }) => AppSettingsTableCompanion(
                 id: id,
                 defaultAlertRadius: defaultAlertRadius,
                 alarmType: alarmType,
                 commuteMode: commuteMode,
                 repeatedAlarm: repeatedAlarm,
+                napModeEnabled: napModeEnabled,
+                customAlarmSoundPath: customAlarmSoundPath,
               ),
           createCompanionCallback:
               ({
@@ -1989,12 +2201,16 @@ class $$AppSettingsTableTableTableManager
                 required String alarmType,
                 required String commuteMode,
                 Value<bool> repeatedAlarm = const Value.absent(),
+                Value<bool> napModeEnabled = const Value.absent(),
+                Value<String?> customAlarmSoundPath = const Value.absent(),
               }) => AppSettingsTableCompanion.insert(
                 id: id,
                 defaultAlertRadius: defaultAlertRadius,
                 alarmType: alarmType,
                 commuteMode: commuteMode,
                 repeatedAlarm: repeatedAlarm,
+                napModeEnabled: napModeEnabled,
+                customAlarmSoundPath: customAlarmSoundPath,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -2037,6 +2253,7 @@ typedef $$TripsTableCreateCompanionBuilder =
       Value<double?> plannedRouteDistance,
       Value<double?> plannedRouteDuration,
       Value<String?> routeCoordinatesJson,
+      Value<String?> gpsBreadcrumbsJson,
       required DateTime createdAt,
       Value<int> rowid,
     });
@@ -2052,6 +2269,7 @@ typedef $$TripsTableUpdateCompanionBuilder =
       Value<double?> plannedRouteDistance,
       Value<double?> plannedRouteDuration,
       Value<String?> routeCoordinatesJson,
+      Value<String?> gpsBreadcrumbsJson,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -2112,6 +2330,11 @@ class $$TripsTableFilterComposer
 
   ColumnFilters<String> get routeCoordinatesJson => $composableBuilder(
     column: $table.routeCoordinatesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get gpsBreadcrumbsJson => $composableBuilder(
+    column: $table.gpsBreadcrumbsJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2180,6 +2403,11 @@ class $$TripsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get gpsBreadcrumbsJson => $composableBuilder(
+    column: $table.gpsBreadcrumbsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2237,6 +2465,11 @@ class $$TripsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get gpsBreadcrumbsJson => $composableBuilder(
+    column: $table.gpsBreadcrumbsJson,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
@@ -2279,6 +2512,7 @@ class $$TripsTableTableManager
                 Value<double?> plannedRouteDistance = const Value.absent(),
                 Value<double?> plannedRouteDuration = const Value.absent(),
                 Value<String?> routeCoordinatesJson = const Value.absent(),
+                Value<String?> gpsBreadcrumbsJson = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TripsCompanion(
@@ -2292,6 +2526,7 @@ class $$TripsTableTableManager
                 plannedRouteDistance: plannedRouteDistance,
                 plannedRouteDuration: plannedRouteDuration,
                 routeCoordinatesJson: routeCoordinatesJson,
+                gpsBreadcrumbsJson: gpsBreadcrumbsJson,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -2307,6 +2542,7 @@ class $$TripsTableTableManager
                 Value<double?> plannedRouteDistance = const Value.absent(),
                 Value<double?> plannedRouteDuration = const Value.absent(),
                 Value<String?> routeCoordinatesJson = const Value.absent(),
+                Value<String?> gpsBreadcrumbsJson = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => TripsCompanion.insert(
@@ -2320,6 +2556,7 @@ class $$TripsTableTableManager
                 plannedRouteDistance: plannedRouteDistance,
                 plannedRouteDuration: plannedRouteDuration,
                 routeCoordinatesJson: routeCoordinatesJson,
+                gpsBreadcrumbsJson: gpsBreadcrumbsJson,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

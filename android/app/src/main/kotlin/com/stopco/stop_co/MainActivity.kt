@@ -1,5 +1,6 @@
 package com.stopco.stop_co
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +12,10 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
 
     private val CHANNEL = "com.stopco.app/foreground_service"
+    private val FILE_PICKER_CHANNEL = "com.stopco.app/file_picker"
+
+    private var filePickerResult: MethodChannel.Result? = null
+    private val FILE_PICKER_REQUEST_CODE = 1001
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -66,6 +71,47 @@ class MainActivity : FlutterActivity() {
                     result.notImplemented()
                 }
             }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            FILE_PICKER_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "pickAudioFile" -> {
+                    filePickerResult = result
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "audio/*"
+                    }
+                    startActivityForResult(intent, FILE_PICKER_REQUEST_CODE)
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == FILE_PICKER_REQUEST_CODE) {
+            if (resultCode == Activity.RESULT_OK && data?.data != null) {
+                val uri = data.data!!
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                    filePickerResult?.success(uri.toString())
+                } catch (e: Exception) {
+                    filePickerResult?.success("")
+                }
+            } else {
+                filePickerResult?.success("")
+            }
+            filePickerResult = null
         }
     }
 

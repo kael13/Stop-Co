@@ -13,6 +13,7 @@ class TripRecord {
   final double? plannedRouteDistance;
   final double? plannedRouteDuration;
   final String? routeCoordinatesJson;
+  final String? gpsBreadcrumbsJson;
   final DateTime createdAt;
 
   const TripRecord({
@@ -26,10 +27,13 @@ class TripRecord {
     this.plannedRouteDistance,
     this.plannedRouteDuration,
     this.routeCoordinatesJson,
+    this.gpsBreadcrumbsJson,
     required this.createdAt,
   });
 
   List<LatLng> get routeCoordinates => _deserializeCoordinates(routeCoordinatesJson);
+
+  List<LatLng> get gpsBreadcrumbs => _deserializeCoordinates(gpsBreadcrumbsJson);
 
   Duration get duration => endedAt.difference(startedAt);
 

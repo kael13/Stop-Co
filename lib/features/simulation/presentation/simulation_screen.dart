@@ -4,6 +4,8 @@ import 'package:latlong2/latlong.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../destination/data/destination_model.dart';
 import '../../destination/data/destination_providers.dart';
@@ -106,6 +108,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               service: simulationService,
               activeTrip: activeTrip,
             ),
+            if (settings.napModeEnabled) ...[
+              const SizedBox(height: AppSpacing.md),
+              _NapModeActiveBanner(),
+            ],
             const SizedBox(height: AppSpacing.md),
             AppButton(
               label: 'Stop Simulation',
@@ -113,6 +119,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               onPressed: () {
                 simulationService.stop();
                 ref.read(simulationEnabledProvider.notifier).state = false;
+                ref.read(activeTripProvider.notifier).cancelTrip();
                 setState(() => _isSimulating = false);
               },
             ),
@@ -370,6 +377,28 @@ class _SimulationStatusCard extends StatelessWidget {
             'Distance: ${GpsUtils.formatDistance(distance)}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NapModeActiveBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      color: context.secondary.withValues(alpha: 0.1),
+      child: Row(
+        children: [
+          Icon(Icons.bedtime_rounded, color: context.secondary, size: 20),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            'Nap Mode is ON — screen will dim on trip start',
+            style: AppTypography.caption.copyWith(
+              color: context.secondary,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

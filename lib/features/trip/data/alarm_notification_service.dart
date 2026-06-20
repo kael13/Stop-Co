@@ -8,9 +8,18 @@ class AlarmNotificationService {
     required String destinationName,
     required double distance,
     AlarmType alarmType = AlarmType.soundAndVibration,
+    String? customSoundPath,
   }) async {
     final playSound = alarmType != AlarmType.vibrationOnly;
     final enableVibration = alarmType != AlarmType.soundOnly;
+
+    AndroidNotificationSound? sound;
+    if (playSound && customSoundPath != null) {
+      final uri = customSoundPath.startsWith('content://')
+          ? customSoundPath
+          : 'file://$customSoundPath';
+      sound = UriAndroidNotificationSound(uri);
+    }
 
     final androidDetails = AndroidNotificationDetails(
       AppConstants.alarmChannelId,
@@ -19,6 +28,7 @@ class AlarmNotificationService {
       importance: Importance.max,
       priority: Priority.max,
       playSound: playSound,
+      sound: sound,
       enableVibration: enableVibration,
       fullScreenIntent: true,
       category: AndroidNotificationCategory.alarm,

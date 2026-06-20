@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:latlong2/latlong.dart';
 import '../../destination/data/destination_model.dart';
 import '../domain/route_result.dart';
 
@@ -11,6 +12,7 @@ class ActiveTrip {
   final double? currentDistance;
   final bool hasAlerted;
   final RouteResult? routeResult;
+  final List<LatLng> gpsBreadcrumbs;
 
   const ActiveTrip({
     required this.destination,
@@ -19,6 +21,7 @@ class ActiveTrip {
     this.currentDistance,
     this.hasAlerted = false,
     this.routeResult,
+    this.gpsBreadcrumbs = const [],
   });
 
   ActiveTrip copyWith({
@@ -28,6 +31,7 @@ class ActiveTrip {
     double? currentDistance,
     bool? hasAlerted,
     RouteResult? routeResult,
+    List<LatLng>? gpsBreadcrumbs,
   }) {
     return ActiveTrip(
       destination: destination ?? this.destination,
@@ -36,6 +40,7 @@ class ActiveTrip {
       currentDistance: currentDistance ?? this.currentDistance,
       hasAlerted: hasAlerted ?? this.hasAlerted,
       routeResult: routeResult ?? this.routeResult,
+      gpsBreadcrumbs: gpsBreadcrumbs ?? this.gpsBreadcrumbs,
     );
   }
 

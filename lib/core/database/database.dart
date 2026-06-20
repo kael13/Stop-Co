@@ -34,6 +34,9 @@ class AppSettingsTable extends Table {
   TextColumn get commuteMode => text()();
   BoolColumn get repeatedAlarm =>
       boolean().withDefault(const Constant(false))();
+  BoolColumn get napModeEnabled =>
+      boolean().withDefault(const Constant(false))();
+  TextColumn get customAlarmSoundPath => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -51,6 +54,7 @@ class Trips extends Table {
   RealColumn get plannedRouteDistance => real().nullable()();
   RealColumn get plannedRouteDuration => real().nullable()();
   TextColumn get routeCoordinatesJson => text().nullable()();
+  TextColumn get gpsBreadcrumbsJson => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
   @override
@@ -62,13 +66,22 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         await migrator.createTable(trips);
+      }
+      if (from < 3) {
+        await migrator.addColumn(
+            appSettingsTable, appSettingsTable.napModeEnabled);
+        await migrator.addColumn(
+            appSettingsTable, appSettingsTable.customAlarmSoundPath);
+      }
+      if (from < 4) {
+        await migrator.addColumn(trips, trips.gpsBreadcrumbsJson);
       }
     },
   );
@@ -152,6 +165,8 @@ class LocalDatabase extends _$LocalDatabase {
       commuteMode:
           CommuteMode.values.firstWhere((e) => e.name == row.commuteMode),
       repeatedAlarm: row.repeatedAlarm,
+      napModeEnabled: row.napModeEnabled,
+      customAlarmSoundPath: row.customAlarmSoundPath,
     );
   }
 
@@ -163,6 +178,9 @@ class LocalDatabase extends _$LocalDatabase {
         alarmType: Value(settings.alarmType.name),
         commuteMode: Value(settings.commuteMode.name),
         repeatedAlarm: Value(settings.repeatedAlarm),
+        napModeEnabled: Value(settings.napModeEnabled),
+        customAlarmSoundPath:
+            Value.absentIfNull(settings.customAlarmSoundPath),
       ),
       mode: InsertMode.replace,
     );
@@ -202,6 +220,7 @@ class LocalDatabase extends _$LocalDatabase {
       plannedRouteDistance: Value.absentIfNull(trip.plannedRouteDistance),
       plannedRouteDuration: Value.absentIfNull(trip.plannedRouteDuration),
       routeCoordinatesJson: Value.absentIfNull(trip.routeCoordinatesJson),
+      gpsBreadcrumbsJson: Value.absentIfNull(trip.gpsBreadcrumbsJson),
       createdAt: Value(trip.createdAt),
     ));
   }
@@ -226,6 +245,7 @@ class LocalDatabase extends _$LocalDatabase {
       plannedRouteDistance: row.plannedRouteDistance,
       plannedRouteDuration: row.plannedRouteDuration,
       routeCoordinatesJson: row.routeCoordinatesJson,
+      gpsBreadcrumbsJson: row.gpsBreadcrumbsJson,
       createdAt: row.createdAt,
     );
   }

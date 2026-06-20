@@ -57,17 +57,26 @@ class TripDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final routeCoords = trip.routeCoordinates;
-    final destinationPoint =
-        routeCoords.isNotEmpty ? routeCoords.last : null;
-    final hasRoute = routeCoords.isNotEmpty;
+    final traveledPath = trip.gpsBreadcrumbs;
+    final plannedRoute = trip.routeCoordinates;
+    final destinationPoint = traveledPath.isNotEmpty
+        ? traveledPath.last
+        : plannedRoute.isNotEmpty
+            ? plannedRoute.last
+            : null;
+    final hasPath = traveledPath.isNotEmpty || plannedRoute.isNotEmpty;
 
-    final mapCenter = hasRoute
+    final mapCenter = traveledPath.isNotEmpty
         ? LatLng(
-            (routeCoords.first.latitude + routeCoords.last.latitude) / 2,
-            (routeCoords.first.longitude + routeCoords.last.longitude) / 2,
+            (traveledPath.first.latitude + traveledPath.last.latitude) / 2,
+            (traveledPath.first.longitude + traveledPath.last.longitude) / 2,
           )
-        : const LatLng(0, 0);
+        : plannedRoute.isNotEmpty
+            ? LatLng(
+                (plannedRoute.first.latitude + plannedRoute.last.latitude) / 2,
+                (plannedRoute.first.longitude + plannedRoute.last.longitude) / 2,
+              )
+            : const LatLng(0, 0);
 
     final distanceFormatted = GpsUtils.formatDistance(trip.totalDistance);
     final duration = _formatDuration(trip.duration);
@@ -83,20 +92,31 @@ class TripDetailScreen extends ConsumerWidget {
             child: FlutterMap(
               options: MapOptions(
                 initialCenter: mapCenter,
-                initialZoom: hasRoute ? 13 : 2,
+                initialZoom: hasPath ? 13 : 2,
               ),
               children: [
                 TileLayer(
                   urlTemplate: AppConstants.tileUrlTemplate,
                   userAgentPackageName: 'com.stopco.app',
                 ),
-                if (hasRoute)
+                if (traveledPath.isNotEmpty)
                   PolylineLayer(
                     polylines: [
                       Polyline(
-                        points: routeCoords,
-                        color: _statusColor(context).withValues(alpha: 0.6),
-                        strokeWidth: 4,
+                        points: traveledPath,
+                        color: context.success,
+                        strokeWidth: 5,
+                      ),
+                    ],
+                  ),
+                if (plannedRoute.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: plannedRoute,
+                        color: context.textTertiary.withValues(alpha: 0.5),
+                        strokeWidth: 2,
+                        pattern: const StrokePattern.dotted(),
                       ),
                     ],
                   ),
@@ -111,9 +131,18 @@ class TripDetailScreen extends ConsumerWidget {
                           size: 36,
                         ),
                       ),
-                      if (routeCoords.length > 1)
+                      if (traveledPath.length > 1)
                         Marker(
-                          point: routeCoords.first,
+                          point: traveledPath.first,
+                          child: Icon(
+                            Icons.trip_origin_rounded,
+                            color: context.success,
+                            size: 28,
+                          ),
+                        )
+                      else if (plannedRoute.length > 1)
+                        Marker(
+                          point: plannedRoute.first,
                           child: Icon(
                             Icons.trip_origin_rounded,
                             color: context.primary,

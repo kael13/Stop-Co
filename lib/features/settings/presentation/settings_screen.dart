@@ -1,9 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_card.dart';
+import '../../../core/platform/file_picker_channel.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/theme_providers.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../main.dart' show recreateAlarmChannel;
 import '../data/settings_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -43,6 +47,33 @@ class SettingsScreen extends ConsumerWidget {
               value: settings.repeatedAlarm,
               onChanged: (_) {
                 ref.read(settingsProvider.notifier).toggleRepeatedAlarm();
+              },
+              activeThumbColor: Theme.of(context).colorScheme.primary,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _CustomAlarmSoundTile(
+            currentPath: settings.customAlarmSoundPath,
+            onSelected: (path) {
+              ref.read(settingsProvider.notifier).setCustomAlarmSound(path);
+              recreateAlarmChannel(path);
+            },
+            onClear: () {
+              ref.read(settingsProvider.notifier).clearCustomAlarmSound();
+              recreateAlarmChannel(null);
+            },
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _SectionHeader(title: 'Nap Mode'),
+          const SizedBox(height: AppSpacing.sm),
+          AppCard(
+            child: SwitchListTile(
+              title: const Text('Enable Nap Mode'),
+              subtitle: const Text('Dims screen and extends vibration when active'),
+              value: settings.napModeEnabled,
+              onChanged: (_) {
+                ref.read(settingsProvider.notifier).toggleNapMode();
               },
               activeThumbColor: Theme.of(context).colorScheme.primary,
               contentPadding: EdgeInsets.zero,
@@ -440,6 +471,112 @@ class _ResetButton extends StatelessWidget {
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
         ),
+      ),
+    );
+  }
+}
+
+class _CustomAlarmSoundTile extends ConsumerWidget {
+  final String? currentPath;
+  final ValueChanged<String> onSelected;
+  final VoidCallback onClear;
+
+  const _CustomAlarmSoundTile({
+    required this.currentPath,
+    required this.onSelected,
+    required this.onClear,
+  });
+
+  String get _displayName {
+    if (currentPath == null) return 'Default';
+    if (currentPath!.startsWith('content://')) {
+      return 'Custom sound';
+    }
+    final segments = currentPath!.split('/');
+    final fileName = segments.last;
+    return fileName.length > 24
+        ? '${fileName.substring(0, 21)}...'
+        : fileName;
+  }
+
+  Future<void> _pickFile(BuildContext ctx) async {
+    try {
+      final nativePath = await FilePickerChannel.pickAudioFile();
+      if (nativePath != null && nativePath.isNotEmpty) {
+        onSelected(nativePath);
+        return;
+      }
+      if (nativePath == '') return; // user cancelled native picker
+    } on MissingPluginException {
+      // platform not supported, fall through to manual dialog
+    }
+
+    // Fallback: manual path input
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: ctx,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Alarm Sound Path'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: '/storage/emulated/0/Music/alert.mp3',
+            labelText: 'File path',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.isEmpty) return;
+
+    final sourceFile = File(result);
+    if (!await sourceFile.exists()) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(content: Text('File not found')),
+      );
+      return;
+    }
+
+    onSelected(result);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppCard(
+      child: ListTile(
+        title: const Text('Alarm Sound'),
+        subtitle: Text(
+          _displayName,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
+        ),
+        leading: Icon(
+          Icons.music_note_rounded,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        trailing: currentPath != null
+            ? IconButton(
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                onPressed: onClear,
+                tooltip: 'Reset to default',
+              )
+            : const Icon(Icons.chevron_right_rounded),
+        onTap: () => _pickFile(context),
+        contentPadding: EdgeInsets.zero,
       ),
     );
   }
