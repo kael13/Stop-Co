@@ -16,6 +16,8 @@ import '../../settings/presentation/settings_screen.dart';
 import '../../simulation/presentation/simulation_screen.dart';
 import '../../trip/data/trip_model.dart';
 import '../../trip/data/trip_providers.dart';
+import '../../trip/data/trip_record.dart';
+import '../../trip/presentation/trip_detail_screen.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
@@ -172,6 +174,7 @@ class _HomeTab extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final activeTrip = ref.watch(activeTripProvider);
     final destinationsAsync = ref.watch(recommendedDestinationsProvider);
+    final recentTripsAsync = ref.watch(recentTripsProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -190,6 +193,10 @@ class _HomeTab extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.lg),
                     _YourStopsSection(
                       destinations: destinationsAsync.valueOrNull ?? [],
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _RecentTripsSection(
+                      trips: recentTripsAsync.valueOrNull ?? [],
                     ),
                   ],
                 ],
@@ -819,6 +826,194 @@ class _DestinationTile extends ConsumerWidget {
             },
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RecentTripsSection extends ConsumerWidget {
+  final List<TripRecord> trips;
+
+  const _RecentTripsSection({required this.trips});
+
+  String _formatDuration(Duration d) {
+    if (d.inHours > 0) {
+      return '${d.inHours}h ${d.inMinutes.remainder(60)}m';
+    }
+    if (d.inMinutes > 0) {
+      return '${d.inMinutes}m ${d.inSeconds.remainder(60)}s';
+    }
+    return '${d.inSeconds}s';
+  }
+
+  String _relativeDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'Yesterday';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (trips.isEmpty) return const SizedBox.shrink();
+
+    final displayTrips = trips.take(5).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Recent Trips',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: context.textPrimary),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ...displayTrips.map((trip) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: _TripCard(
+                trip: trip,
+                relativeDate: _relativeDate(trip.startedAt),
+                formattedDuration: _formatDuration(trip.duration),
+              ),
+            )),
+        if (trips.length > 5) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                // Future: navigate to full trips list
+              },
+              icon: const Icon(Icons.list_alt_rounded, size: 18),
+              label: Text(
+                'View all ${trips.length} trips',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _TripCard extends ConsumerWidget {
+  final TripRecord trip;
+  final String relativeDate;
+  final String formattedDuration;
+
+  const _TripCard({
+    required this.trip,
+    required this.relativeDate,
+    required this.formattedDuration,
+  });
+
+  IconData get _statusIcon {
+    switch (trip.status) {
+      case TripStatus.completed:
+        return Icons.check_circle_rounded;
+      case TripStatus.cancelled:
+        return Icons.cancel_rounded;
+      case TripStatus.alarmTriggered:
+        return Icons.notifications_active_rounded;
+      case TripStatus.monitoring:
+        return Icons.timelapse_rounded;
+    }
+  }
+
+  Color _statusColor(BuildContext context) {
+    switch (trip.status) {
+      case TripStatus.completed:
+        return context.success;
+      case TripStatus.cancelled:
+        return context.textTertiary;
+      case TripStatus.alarmTriggered:
+        return context.warning;
+      case TripStatus.monitoring:
+        return context.primary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final distanceFormatted = GpsUtils.formatDistance(trip.totalDistance);
+
+    return AppCard(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TripDetailScreen(trip: trip),
+          ),
+        );
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: _statusColor(context).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            child: Icon(
+              _statusIcon,
+              color: _statusColor(context),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  trip.destinationName,
+                  style: AppTypography.bodyBold,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$distanceFormatted · $formattedDuration',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                relativeDate,
+                style: AppTypography.caption.copyWith(color: context.textTertiary),
+              ),
+              const SizedBox(height: 2),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: _statusColor(context).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: Text(
+                  trip.status == TripStatus.alarmTriggered
+                      ? 'Alarm'
+                      : trip.status.name[0].toUpperCase() + trip.status.name.substring(1),
+                  style: AppTypography.caption.copyWith(
+                    color: _statusColor(context),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

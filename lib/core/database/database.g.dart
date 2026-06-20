@@ -843,6 +843,713 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
   }
 }
 
+class $TripsTable extends Trips with TableInfo<$TripsTable, TripsRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TripsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _destinationIdMeta = const VerificationMeta(
+    'destinationId',
+  );
+  @override
+  late final GeneratedColumn<String> destinationId = GeneratedColumn<String>(
+    'destination_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _destinationNameMeta = const VerificationMeta(
+    'destinationName',
+  );
+  @override
+  late final GeneratedColumn<String> destinationName = GeneratedColumn<String>(
+    'destination_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endedAtMeta = const VerificationMeta(
+    'endedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> endedAt = GeneratedColumn<DateTime>(
+    'ended_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalDistanceMeta = const VerificationMeta(
+    'totalDistance',
+  );
+  @override
+  late final GeneratedColumn<double> totalDistance = GeneratedColumn<double>(
+    'total_distance',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _plannedRouteDistanceMeta =
+      const VerificationMeta('plannedRouteDistance');
+  @override
+  late final GeneratedColumn<double> plannedRouteDistance =
+      GeneratedColumn<double>(
+        'planned_route_distance',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _plannedRouteDurationMeta =
+      const VerificationMeta('plannedRouteDuration');
+  @override
+  late final GeneratedColumn<double> plannedRouteDuration =
+      GeneratedColumn<double>(
+        'planned_route_duration',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _routeCoordinatesJsonMeta =
+      const VerificationMeta('routeCoordinatesJson');
+  @override
+  late final GeneratedColumn<String> routeCoordinatesJson =
+      GeneratedColumn<String>(
+        'route_coordinates_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    destinationId,
+    destinationName,
+    status,
+    startedAt,
+    endedAt,
+    totalDistance,
+    plannedRouteDistance,
+    plannedRouteDuration,
+    routeCoordinatesJson,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'trips';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TripsRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('destination_id')) {
+      context.handle(
+        _destinationIdMeta,
+        destinationId.isAcceptableOrUnknown(
+          data['destination_id']!,
+          _destinationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_destinationIdMeta);
+    }
+    if (data.containsKey('destination_name')) {
+      context.handle(
+        _destinationNameMeta,
+        destinationName.isAcceptableOrUnknown(
+          data['destination_name']!,
+          _destinationNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_destinationNameMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('ended_at')) {
+      context.handle(
+        _endedAtMeta,
+        endedAt.isAcceptableOrUnknown(data['ended_at']!, _endedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endedAtMeta);
+    }
+    if (data.containsKey('total_distance')) {
+      context.handle(
+        _totalDistanceMeta,
+        totalDistance.isAcceptableOrUnknown(
+          data['total_distance']!,
+          _totalDistanceMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_totalDistanceMeta);
+    }
+    if (data.containsKey('planned_route_distance')) {
+      context.handle(
+        _plannedRouteDistanceMeta,
+        plannedRouteDistance.isAcceptableOrUnknown(
+          data['planned_route_distance']!,
+          _plannedRouteDistanceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('planned_route_duration')) {
+      context.handle(
+        _plannedRouteDurationMeta,
+        plannedRouteDuration.isAcceptableOrUnknown(
+          data['planned_route_duration']!,
+          _plannedRouteDurationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('route_coordinates_json')) {
+      context.handle(
+        _routeCoordinatesJsonMeta,
+        routeCoordinatesJson.isAcceptableOrUnknown(
+          data['route_coordinates_json']!,
+          _routeCoordinatesJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TripsRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TripsRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      destinationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}destination_id'],
+      )!,
+      destinationName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}destination_name'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}started_at'],
+      )!,
+      endedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}ended_at'],
+      )!,
+      totalDistance: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_distance'],
+      )!,
+      plannedRouteDistance: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}planned_route_distance'],
+      ),
+      plannedRouteDuration: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}planned_route_duration'],
+      ),
+      routeCoordinatesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}route_coordinates_json'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TripsTable createAlias(String alias) {
+    return $TripsTable(attachedDatabase, alias);
+  }
+}
+
+class TripsRow extends DataClass implements Insertable<TripsRow> {
+  final String id;
+  final String destinationId;
+  final String destinationName;
+  final String status;
+  final DateTime startedAt;
+  final DateTime endedAt;
+  final double totalDistance;
+  final double? plannedRouteDistance;
+  final double? plannedRouteDuration;
+  final String? routeCoordinatesJson;
+  final DateTime createdAt;
+  const TripsRow({
+    required this.id,
+    required this.destinationId,
+    required this.destinationName,
+    required this.status,
+    required this.startedAt,
+    required this.endedAt,
+    required this.totalDistance,
+    this.plannedRouteDistance,
+    this.plannedRouteDuration,
+    this.routeCoordinatesJson,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['destination_id'] = Variable<String>(destinationId);
+    map['destination_name'] = Variable<String>(destinationName);
+    map['status'] = Variable<String>(status);
+    map['started_at'] = Variable<DateTime>(startedAt);
+    map['ended_at'] = Variable<DateTime>(endedAt);
+    map['total_distance'] = Variable<double>(totalDistance);
+    if (!nullToAbsent || plannedRouteDistance != null) {
+      map['planned_route_distance'] = Variable<double>(plannedRouteDistance);
+    }
+    if (!nullToAbsent || plannedRouteDuration != null) {
+      map['planned_route_duration'] = Variable<double>(plannedRouteDuration);
+    }
+    if (!nullToAbsent || routeCoordinatesJson != null) {
+      map['route_coordinates_json'] = Variable<String>(routeCoordinatesJson);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  TripsCompanion toCompanion(bool nullToAbsent) {
+    return TripsCompanion(
+      id: Value(id),
+      destinationId: Value(destinationId),
+      destinationName: Value(destinationName),
+      status: Value(status),
+      startedAt: Value(startedAt),
+      endedAt: Value(endedAt),
+      totalDistance: Value(totalDistance),
+      plannedRouteDistance: plannedRouteDistance == null && nullToAbsent
+          ? const Value.absent()
+          : Value(plannedRouteDistance),
+      plannedRouteDuration: plannedRouteDuration == null && nullToAbsent
+          ? const Value.absent()
+          : Value(plannedRouteDuration),
+      routeCoordinatesJson: routeCoordinatesJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(routeCoordinatesJson),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory TripsRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TripsRow(
+      id: serializer.fromJson<String>(json['id']),
+      destinationId: serializer.fromJson<String>(json['destinationId']),
+      destinationName: serializer.fromJson<String>(json['destinationName']),
+      status: serializer.fromJson<String>(json['status']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      endedAt: serializer.fromJson<DateTime>(json['endedAt']),
+      totalDistance: serializer.fromJson<double>(json['totalDistance']),
+      plannedRouteDistance: serializer.fromJson<double?>(
+        json['plannedRouteDistance'],
+      ),
+      plannedRouteDuration: serializer.fromJson<double?>(
+        json['plannedRouteDuration'],
+      ),
+      routeCoordinatesJson: serializer.fromJson<String?>(
+        json['routeCoordinatesJson'],
+      ),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'destinationId': serializer.toJson<String>(destinationId),
+      'destinationName': serializer.toJson<String>(destinationName),
+      'status': serializer.toJson<String>(status),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+      'endedAt': serializer.toJson<DateTime>(endedAt),
+      'totalDistance': serializer.toJson<double>(totalDistance),
+      'plannedRouteDistance': serializer.toJson<double?>(plannedRouteDistance),
+      'plannedRouteDuration': serializer.toJson<double?>(plannedRouteDuration),
+      'routeCoordinatesJson': serializer.toJson<String?>(routeCoordinatesJson),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  TripsRow copyWith({
+    String? id,
+    String? destinationId,
+    String? destinationName,
+    String? status,
+    DateTime? startedAt,
+    DateTime? endedAt,
+    double? totalDistance,
+    Value<double?> plannedRouteDistance = const Value.absent(),
+    Value<double?> plannedRouteDuration = const Value.absent(),
+    Value<String?> routeCoordinatesJson = const Value.absent(),
+    DateTime? createdAt,
+  }) => TripsRow(
+    id: id ?? this.id,
+    destinationId: destinationId ?? this.destinationId,
+    destinationName: destinationName ?? this.destinationName,
+    status: status ?? this.status,
+    startedAt: startedAt ?? this.startedAt,
+    endedAt: endedAt ?? this.endedAt,
+    totalDistance: totalDistance ?? this.totalDistance,
+    plannedRouteDistance: plannedRouteDistance.present
+        ? plannedRouteDistance.value
+        : this.plannedRouteDistance,
+    plannedRouteDuration: plannedRouteDuration.present
+        ? plannedRouteDuration.value
+        : this.plannedRouteDuration,
+    routeCoordinatesJson: routeCoordinatesJson.present
+        ? routeCoordinatesJson.value
+        : this.routeCoordinatesJson,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  TripsRow copyWithCompanion(TripsCompanion data) {
+    return TripsRow(
+      id: data.id.present ? data.id.value : this.id,
+      destinationId: data.destinationId.present
+          ? data.destinationId.value
+          : this.destinationId,
+      destinationName: data.destinationName.present
+          ? data.destinationName.value
+          : this.destinationName,
+      status: data.status.present ? data.status.value : this.status,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
+      totalDistance: data.totalDistance.present
+          ? data.totalDistance.value
+          : this.totalDistance,
+      plannedRouteDistance: data.plannedRouteDistance.present
+          ? data.plannedRouteDistance.value
+          : this.plannedRouteDistance,
+      plannedRouteDuration: data.plannedRouteDuration.present
+          ? data.plannedRouteDuration.value
+          : this.plannedRouteDuration,
+      routeCoordinatesJson: data.routeCoordinatesJson.present
+          ? data.routeCoordinatesJson.value
+          : this.routeCoordinatesJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TripsRow(')
+          ..write('id: $id, ')
+          ..write('destinationId: $destinationId, ')
+          ..write('destinationName: $destinationName, ')
+          ..write('status: $status, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('totalDistance: $totalDistance, ')
+          ..write('plannedRouteDistance: $plannedRouteDistance, ')
+          ..write('plannedRouteDuration: $plannedRouteDuration, ')
+          ..write('routeCoordinatesJson: $routeCoordinatesJson, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    destinationId,
+    destinationName,
+    status,
+    startedAt,
+    endedAt,
+    totalDistance,
+    plannedRouteDistance,
+    plannedRouteDuration,
+    routeCoordinatesJson,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TripsRow &&
+          other.id == this.id &&
+          other.destinationId == this.destinationId &&
+          other.destinationName == this.destinationName &&
+          other.status == this.status &&
+          other.startedAt == this.startedAt &&
+          other.endedAt == this.endedAt &&
+          other.totalDistance == this.totalDistance &&
+          other.plannedRouteDistance == this.plannedRouteDistance &&
+          other.plannedRouteDuration == this.plannedRouteDuration &&
+          other.routeCoordinatesJson == this.routeCoordinatesJson &&
+          other.createdAt == this.createdAt);
+}
+
+class TripsCompanion extends UpdateCompanion<TripsRow> {
+  final Value<String> id;
+  final Value<String> destinationId;
+  final Value<String> destinationName;
+  final Value<String> status;
+  final Value<DateTime> startedAt;
+  final Value<DateTime> endedAt;
+  final Value<double> totalDistance;
+  final Value<double?> plannedRouteDistance;
+  final Value<double?> plannedRouteDuration;
+  final Value<String?> routeCoordinatesJson;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const TripsCompanion({
+    this.id = const Value.absent(),
+    this.destinationId = const Value.absent(),
+    this.destinationName = const Value.absent(),
+    this.status = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.endedAt = const Value.absent(),
+    this.totalDistance = const Value.absent(),
+    this.plannedRouteDistance = const Value.absent(),
+    this.plannedRouteDuration = const Value.absent(),
+    this.routeCoordinatesJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TripsCompanion.insert({
+    required String id,
+    required String destinationId,
+    required String destinationName,
+    required String status,
+    required DateTime startedAt,
+    required DateTime endedAt,
+    required double totalDistance,
+    this.plannedRouteDistance = const Value.absent(),
+    this.plannedRouteDuration = const Value.absent(),
+    this.routeCoordinatesJson = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       destinationId = Value(destinationId),
+       destinationName = Value(destinationName),
+       status = Value(status),
+       startedAt = Value(startedAt),
+       endedAt = Value(endedAt),
+       totalDistance = Value(totalDistance),
+       createdAt = Value(createdAt);
+  static Insertable<TripsRow> custom({
+    Expression<String>? id,
+    Expression<String>? destinationId,
+    Expression<String>? destinationName,
+    Expression<String>? status,
+    Expression<DateTime>? startedAt,
+    Expression<DateTime>? endedAt,
+    Expression<double>? totalDistance,
+    Expression<double>? plannedRouteDistance,
+    Expression<double>? plannedRouteDuration,
+    Expression<String>? routeCoordinatesJson,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (destinationId != null) 'destination_id': destinationId,
+      if (destinationName != null) 'destination_name': destinationName,
+      if (status != null) 'status': status,
+      if (startedAt != null) 'started_at': startedAt,
+      if (endedAt != null) 'ended_at': endedAt,
+      if (totalDistance != null) 'total_distance': totalDistance,
+      if (plannedRouteDistance != null)
+        'planned_route_distance': plannedRouteDistance,
+      if (plannedRouteDuration != null)
+        'planned_route_duration': plannedRouteDuration,
+      if (routeCoordinatesJson != null)
+        'route_coordinates_json': routeCoordinatesJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TripsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? destinationId,
+    Value<String>? destinationName,
+    Value<String>? status,
+    Value<DateTime>? startedAt,
+    Value<DateTime>? endedAt,
+    Value<double>? totalDistance,
+    Value<double?>? plannedRouteDistance,
+    Value<double?>? plannedRouteDuration,
+    Value<String?>? routeCoordinatesJson,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return TripsCompanion(
+      id: id ?? this.id,
+      destinationId: destinationId ?? this.destinationId,
+      destinationName: destinationName ?? this.destinationName,
+      status: status ?? this.status,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
+      totalDistance: totalDistance ?? this.totalDistance,
+      plannedRouteDistance: plannedRouteDistance ?? this.plannedRouteDistance,
+      plannedRouteDuration: plannedRouteDuration ?? this.plannedRouteDuration,
+      routeCoordinatesJson: routeCoordinatesJson ?? this.routeCoordinatesJson,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (destinationId.present) {
+      map['destination_id'] = Variable<String>(destinationId.value);
+    }
+    if (destinationName.present) {
+      map['destination_name'] = Variable<String>(destinationName.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    if (endedAt.present) {
+      map['ended_at'] = Variable<DateTime>(endedAt.value);
+    }
+    if (totalDistance.present) {
+      map['total_distance'] = Variable<double>(totalDistance.value);
+    }
+    if (plannedRouteDistance.present) {
+      map['planned_route_distance'] = Variable<double>(
+        plannedRouteDistance.value,
+      );
+    }
+    if (plannedRouteDuration.present) {
+      map['planned_route_duration'] = Variable<double>(
+        plannedRouteDuration.value,
+      );
+    }
+    if (routeCoordinatesJson.present) {
+      map['route_coordinates_json'] = Variable<String>(
+        routeCoordinatesJson.value,
+      );
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TripsCompanion(')
+          ..write('id: $id, ')
+          ..write('destinationId: $destinationId, ')
+          ..write('destinationName: $destinationName, ')
+          ..write('status: $status, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('totalDistance: $totalDistance, ')
+          ..write('plannedRouteDistance: $plannedRouteDistance, ')
+          ..write('plannedRouteDuration: $plannedRouteDuration, ')
+          ..write('routeCoordinatesJson: $routeCoordinatesJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -850,6 +1557,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $AppSettingsTableTable appSettingsTable = $AppSettingsTableTable(
     this,
   );
+  late final $TripsTable trips = $TripsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -857,6 +1565,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     destinations,
     appSettingsTable,
+    trips,
   ];
 }
 
@@ -1316,6 +2025,326 @@ typedef $$AppSettingsTableTableProcessedTableManager =
       AppSettingsTableData,
       PrefetchHooks Function()
     >;
+typedef $$TripsTableCreateCompanionBuilder =
+    TripsCompanion Function({
+      required String id,
+      required String destinationId,
+      required String destinationName,
+      required String status,
+      required DateTime startedAt,
+      required DateTime endedAt,
+      required double totalDistance,
+      Value<double?> plannedRouteDistance,
+      Value<double?> plannedRouteDuration,
+      Value<String?> routeCoordinatesJson,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$TripsTableUpdateCompanionBuilder =
+    TripsCompanion Function({
+      Value<String> id,
+      Value<String> destinationId,
+      Value<String> destinationName,
+      Value<String> status,
+      Value<DateTime> startedAt,
+      Value<DateTime> endedAt,
+      Value<double> totalDistance,
+      Value<double?> plannedRouteDistance,
+      Value<double?> plannedRouteDuration,
+      Value<String?> routeCoordinatesJson,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$TripsTableFilterComposer
+    extends Composer<_$LocalDatabase, $TripsTable> {
+  $$TripsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get destinationId => $composableBuilder(
+    column: $table.destinationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get destinationName => $composableBuilder(
+    column: $table.destinationName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endedAt => $composableBuilder(
+    column: $table.endedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalDistance => $composableBuilder(
+    column: $table.totalDistance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get plannedRouteDistance => $composableBuilder(
+    column: $table.plannedRouteDistance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get plannedRouteDuration => $composableBuilder(
+    column: $table.plannedRouteDuration,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get routeCoordinatesJson => $composableBuilder(
+    column: $table.routeCoordinatesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TripsTableOrderingComposer
+    extends Composer<_$LocalDatabase, $TripsTable> {
+  $$TripsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get destinationId => $composableBuilder(
+    column: $table.destinationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get destinationName => $composableBuilder(
+    column: $table.destinationName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endedAt => $composableBuilder(
+    column: $table.endedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalDistance => $composableBuilder(
+    column: $table.totalDistance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get plannedRouteDistance => $composableBuilder(
+    column: $table.plannedRouteDistance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get plannedRouteDuration => $composableBuilder(
+    column: $table.plannedRouteDuration,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get routeCoordinatesJson => $composableBuilder(
+    column: $table.routeCoordinatesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TripsTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $TripsTable> {
+  $$TripsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get destinationId => $composableBuilder(
+    column: $table.destinationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get destinationName => $composableBuilder(
+    column: $table.destinationName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endedAt =>
+      $composableBuilder(column: $table.endedAt, builder: (column) => column);
+
+  GeneratedColumn<double> get totalDistance => $composableBuilder(
+    column: $table.totalDistance,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get plannedRouteDistance => $composableBuilder(
+    column: $table.plannedRouteDistance,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get plannedRouteDuration => $composableBuilder(
+    column: $table.plannedRouteDuration,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get routeCoordinatesJson => $composableBuilder(
+    column: $table.routeCoordinatesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$TripsTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $TripsTable,
+          TripsRow,
+          $$TripsTableFilterComposer,
+          $$TripsTableOrderingComposer,
+          $$TripsTableAnnotationComposer,
+          $$TripsTableCreateCompanionBuilder,
+          $$TripsTableUpdateCompanionBuilder,
+          (TripsRow, BaseReferences<_$LocalDatabase, $TripsTable, TripsRow>),
+          TripsRow,
+          PrefetchHooks Function()
+        > {
+  $$TripsTableTableManager(_$LocalDatabase db, $TripsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TripsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TripsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TripsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> destinationId = const Value.absent(),
+                Value<String> destinationName = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> startedAt = const Value.absent(),
+                Value<DateTime> endedAt = const Value.absent(),
+                Value<double> totalDistance = const Value.absent(),
+                Value<double?> plannedRouteDistance = const Value.absent(),
+                Value<double?> plannedRouteDuration = const Value.absent(),
+                Value<String?> routeCoordinatesJson = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TripsCompanion(
+                id: id,
+                destinationId: destinationId,
+                destinationName: destinationName,
+                status: status,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                totalDistance: totalDistance,
+                plannedRouteDistance: plannedRouteDistance,
+                plannedRouteDuration: plannedRouteDuration,
+                routeCoordinatesJson: routeCoordinatesJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String destinationId,
+                required String destinationName,
+                required String status,
+                required DateTime startedAt,
+                required DateTime endedAt,
+                required double totalDistance,
+                Value<double?> plannedRouteDistance = const Value.absent(),
+                Value<double?> plannedRouteDuration = const Value.absent(),
+                Value<String?> routeCoordinatesJson = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => TripsCompanion.insert(
+                id: id,
+                destinationId: destinationId,
+                destinationName: destinationName,
+                status: status,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                totalDistance: totalDistance,
+                plannedRouteDistance: plannedRouteDistance,
+                plannedRouteDuration: plannedRouteDuration,
+                routeCoordinatesJson: routeCoordinatesJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TripsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $TripsTable,
+      TripsRow,
+      $$TripsTableFilterComposer,
+      $$TripsTableOrderingComposer,
+      $$TripsTableAnnotationComposer,
+      $$TripsTableCreateCompanionBuilder,
+      $$TripsTableUpdateCompanionBuilder,
+      (TripsRow, BaseReferences<_$LocalDatabase, $TripsTable, TripsRow>),
+      TripsRow,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -1324,4 +2353,6 @@ class $LocalDatabaseManager {
       $$DestinationsTableTableManager(_db, _db.destinations);
   $$AppSettingsTableTableTableManager get appSettingsTable =>
       $$AppSettingsTableTableTableManager(_db, _db.appSettingsTable);
+  $$TripsTableTableManager get trips =>
+      $$TripsTableTableManager(_db, _db.trips);
 }

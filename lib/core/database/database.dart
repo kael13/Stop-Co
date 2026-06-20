@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../features/destination/data/destination_model.dart';
 import '../../features/settings/data/settings_providers.dart';
+import '../../features/trip/data/trip_record.dart';
+import '../../features/trip/data/trip_model.dart';
 
 part 'database.g.dart';
 
@@ -37,12 +39,39 @@ class AppSettingsTable extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Destinations, AppSettingsTable])
+@DataClassName('TripsRow')
+class Trips extends Table {
+  TextColumn get id => text()();
+  TextColumn get destinationId => text()();
+  TextColumn get destinationName => text()();
+  TextColumn get status => text()();
+  DateTimeColumn get startedAt => dateTime()();
+  DateTimeColumn get endedAt => dateTime()();
+  RealColumn get totalDistance => real()();
+  RealColumn get plannedRouteDistance => real().nullable()();
+  RealColumn get plannedRouteDuration => real().nullable()();
+  TextColumn get routeCoordinatesJson => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Destinations, AppSettingsTable, Trips])
 class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.createTable(trips);
+      }
+    },
+  );
 
   // ---------------------------------------------------------------------------
   // Destinations DAO
@@ -136,6 +165,68 @@ class LocalDatabase extends _$LocalDatabase {
         repeatedAlarm: Value(settings.repeatedAlarm),
       ),
       mode: InsertMode.replace,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Trips DAO
+  // ---------------------------------------------------------------------------
+
+  Stream<List<TripRecord>> watchRecentTrips({int limit = 10}) {
+    return (select(trips)
+          ..orderBy([(t) => OrderingTerm(
+              expression: t.startedAt, mode: OrderingMode.desc)])
+          ..limit(limit))
+        .watch()
+        .map((rows) => rows.map(_toTripRecord).toList());
+  }
+
+  Future<List<TripRecord>> getRecentTrips({int limit = 10}) async {
+    final rows = await (select(trips)
+          ..orderBy([(t) => OrderingTerm(
+              expression: t.startedAt, mode: OrderingMode.desc)])
+          ..limit(limit))
+        .get();
+    return rows.map(_toTripRecord).toList();
+  }
+
+  Future<void> saveTrip(TripRecord trip) {
+    return into(trips).insert(TripsCompanion(
+      id: Value(trip.id),
+      destinationId: Value(trip.destinationId),
+      destinationName: Value(trip.destinationName),
+      status: Value(trip.status.name),
+      startedAt: Value(trip.startedAt),
+      endedAt: Value(trip.endedAt),
+      totalDistance: Value(trip.totalDistance),
+      plannedRouteDistance: Value.absentIfNull(trip.plannedRouteDistance),
+      plannedRouteDuration: Value.absentIfNull(trip.plannedRouteDuration),
+      routeCoordinatesJson: Value.absentIfNull(trip.routeCoordinatesJson),
+      createdAt: Value(trip.createdAt),
+    ));
+  }
+
+  Future<void> deleteTrip(String id) {
+    return (delete(trips)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<void> deleteAllTrips() {
+    return delete(trips).go();
+  }
+
+  TripRecord _toTripRecord(TripsRow row) {
+    return TripRecord(
+      id: row.id,
+      destinationId: row.destinationId,
+      destinationName: row.destinationName,
+      status: TripStatus.values.firstWhere((s) => s.name == row.status),
+      startedAt: row.startedAt,
+      endedAt: row.endedAt,
+      totalDistance: row.totalDistance,
+      plannedRouteDistance: row.plannedRouteDistance,
+      plannedRouteDuration: row.plannedRouteDuration,
+      routeCoordinatesJson: row.routeCoordinatesJson,
+      createdAt: row.createdAt,
     );
   }
 }
