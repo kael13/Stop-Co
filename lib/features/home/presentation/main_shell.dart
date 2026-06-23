@@ -11,6 +11,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../auth/data/auth_providers.dart';
+import '../../community/presentation/community_feed_tab.dart';
 import '../../destination/data/destination_model.dart';
 import '../../destination/data/destination_providers.dart';
 import '../../destination/data/destination_repository.dart';
@@ -49,6 +50,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     _TabItem(icon: Icons.home_rounded, activeIcon: Icons.home_rounded, label: 'Home'),
     _TabItem(icon: Icons.location_on_outlined, activeIcon: Icons.location_on_rounded, label: 'Saved'),
     _TabItem(icon: Icons.science_outlined, activeIcon: Icons.science_rounded, label: 'Simulate'),
+    _TabItem(icon: Icons.groups_2_outlined, activeIcon: Icons.groups_2_rounded, label: 'Community'),
     _TabItem(icon: Icons.settings_outlined, activeIcon: Icons.settings_rounded, label: 'Settings'),
   ];
 
@@ -56,6 +58,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     _HomeTab(),
     _DestinationsTab(),
     SimulationScreen(),
+    CommunityFeedTab(),
     SettingsScreen(),
   ];
 

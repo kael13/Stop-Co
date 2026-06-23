@@ -81,3 +81,73 @@
 - `lib/features/trip/data/alarm_notification_service.dart` — `UriAndroidNotificationSound` with conditional `file://` prefix
 - `android/app/src/main/kotlin/com/stopco/stop_co/MainActivity.kt` — `ACTION_OPEN_DOCUMENT` file picker, `takePersistableUriPermission()`, returns `content://` URI
 - `pubspec.yaml` — Added: `screen_brightness`, `wakelock_plus`. Removed: `file_picker`
+
+---
+
+# Session: Visual overhaul — flutter_animate, shimmer, google_fonts, glassmorphism, Hero transitions
+
+## Goal
+- Comprehensive visual overhaul of the Stop-Co Flutter app with an energetic/branded design direction, adding flutter_animate, shimmer, and google_fonts packages, and polishing all screens.
+
+## Constraints & Preferences
+- Design direction: "More energetic/branded" — gradients, glassmorphism overlays, bolder color accents on electric blue/teal
+- All three new packages approved: flutter_animate ^4.5.2, shimmer ^3.0.0, google_fonts ^6.3.3
+- Google Fonts Inter bundled offline (reasonable default chosen)
+- Glassmorphism on active trip screen: always-on (reasonable default chosen)
+- Auth header: gradient + AppBrand only, no new Lottie
+- All screens in scope (user chose "All of the above")
+
+## What was done
+1. Phase 1: Foundation — added flutter_animate, shimmer, google_fonts to pubspec.yaml; rewrote `app_typography.dart` to use `GoogleFonts.inter()` (converted all `const TextStyle` to getters, kept fallbacks); updated `app_theme.dart` to remove `const` from TextTheme; created `core/animation/animation_presets.dart` with `fadeSlideUp`, `cardEntrance`, `scaleTapHaptic`, `subtleShimmerSweep`, `buildShimmerBox`, `buildShimmerLine`; deleted orphaned `home_screen.dart`; fixed `alarm_screen.dart` color bug (surface → onSurface); fixed `const` issue in `destination_setup_screen.dart` line 568
+2. Phase 3: Auth screen redesign — full rewrite of `auth_screen.dart` with gradient header (primary→secondary), elevated card with rounded top corners, staggered field entrance via flutter_animate, brand header with circular icon, error shake animation
+3. Phase 4: Home shell polish — added staggered entrance to `_HomeTabHeader`, `_StartTripSection`, `_DestinationsBlock`, `_RecentTripsBlock`; created `_DestinationsSkeleton` and `_RecentTripsSkeleton` shimmer loaders; added pulsing glow animation to active-trip banner status dot; wrapped distance in `Hero(tag: 'active-trip-distance')`; wrapped trip card icon in `Hero(tag: 'trip-${trip.id}')`; added staggered `fadeSlideUp` to destination cards and trip cards by index; converted `_NavBarItem` to StatefulWidget with scale-down haptic on tap
+4. Phase 5: Trip detail screen — full rewrite of `trip_detail_screen.dart` with Hero tag on status icon, 2×2 stat tile grid (`_StatTile` with colored icon chips), animated polyline drawing via `_AnimatedTripMap` with AnimationController (1200ms, easeOutCubic, progressive reveal of traveled+planned routes), destination marker appears at 90% progress
+5. Phase 6: Active trip screen — glassy info overlay using `BackdropFilter` blur + 60% surface opacity + colored border; `Hero(tag: 'active-trip-distance')` wired; `AppTypography.distance` style at 48px; pulsing status dot; shimmer sweep on progress bar; replaced user marker with `_PulsingUserMarker` (concentric pulse animation); added `_DestinationPinMarker` with halo ring when within threshold
+6. Phase 2: Splash + onboarding — rewrote `_SplashScreen` in `app.dart` with gradient background, animated bell scale-in (easeOutBack), app name + tagline staggered entrance, white spinner; polished `brand_intro_screen.dart` with staggered text entrance + shimmer on "Tap to continue"; polished `onboarding_page.dart` with fadeIn+slideY on title and subtitle
+7. Phase 7: Settings + simulation polish — settings screen `_SectionHeader` updated with accent color bar; all sections wrapped with staggered `flutter_animate` reveals; `RadioListTile` for alarm type replaced with `SegmentedButton` with colored icons; simulation screen `_SectionHeader` updated with accent bar; destination selection cards get `AnimatedScale` bounce on selection + staggered fadeIn; simulation status card redesigned with red pulsing "SIMULATION LIVE" badge, `distance` typography for distance readout, speed row with icon
+8. Phase 8: Full `flutter analyze` (0 errors, 2 pre-existing info warnings) + `flutter build apk --debug` (succeeded in 49s)
+
+## Key decisions
+- `flutter_animate` constrained to ^4.5.2 (4.9.0 doesn't exist)
+- AppTypography converted from static `const TextStyle` to getters returning `GoogleFonts.inter()`, with `const` fallbacks preserved for reference
+- `app_theme.dart` TextTheme changed from `const TextTheme` to non-const `TextTheme` since GoogleFonts returns runtime values
+- SegmentedButton for alarm type replaces deprecated RadioListTile (fixes deprecation warnings at lines 219-220)
+- Pulsing user marker created as local `_PulsingUserMarker` in active_trip_screen.dart rather than shared component (scope decision)
+- Google Fonts fetched at runtime on first launch unless bundled — chose to accept tiny first-launch penalty (reasonable default)
+
+## Verification
+- `flutter analyze`: 0 errors, 2 info warnings (pre-existing `use_build_context_synchronously` in settings_screen.dart lines 576/603 — file-picker manual fallback, unchanged code)
+- `flutter build apk --debug`: succeeded — `build/app/outputs/flutter-apk/app-debug.apk`
+
+## Critical Context
+- `flutter_animate` `.shake()` uses `offset` as `Offset?` not `int` — fixed with `const Offset(4, 0)`
+- `subtleShimmerSweep` is an extension method on `Widget` — works on any widget including `LinearProgressIndicator`
+- Pre-existing info warnings in `settings_screen.dart` lines 576/603 (use_build_context_synchronously) — not introduced by this work
+- `app_typography.dart` getters cannot be used in `const` contexts — any `const Text(style: AppTypography.xxx)` must be changed to non-const
+- Google Fonts fetched at runtime on first launch unless bundled — chose to accept tiny first-launch penalty (reasonable default)
+
+## Fresh install
+- Device applicationId: `com.stopco.stop_co`
+- Install only: `flutter install`
+- Build + run: `flutter run`
+- Clean reinstall (uninstall first, then install built APK):
+  ```
+  adb uninstall com.stopco.stop_co && adb install build/app/outputs/flutter-apk/app-debug.apk
+  ```
+
+## Relevant Files
+- `pubspec.yaml` — added flutter_animate ^4.5.2, shimmer ^3.0.0, google_fonts ^6.3.3
+- `lib/core/theme/app_typography.dart` — rewrote with GoogleFonts.inter() getters + const fallbacks
+- `lib/core/theme/app_theme.dart` — removed const from TextTheme for both light and dark
+- `lib/core/animation/animation_presets.dart` — NEW: reusable animation presets + shimmer helpers
+- `lib/app.dart` — rewrote `_SplashScreen` with gradient + animated bell
+- `lib/features/auth/presentation/auth_screen.dart` — full rewrite with gradient header + card + staggered entrance
+- `lib/features/home/presentation/main_shell.dart` — skeleton loaders, staggered reveals, Hero tags, pulsing banner, nav micro-interaction
+- `lib/features/trip/presentation/trip_detail_screen.dart` — full rewrite with Hero, stat tiles, animated polyline map
+- `lib/features/trip/presentation/active_trip_screen.dart` — glassy overlay, pulsing markers, distance typography, shimmer sweep
+- `lib/features/onboarding/presentation/brand_intro_screen.dart` — added flutter_animate staggered entrances
+- `lib/features/onboarding/presentation/onboarding_page.dart` — added flutter_animate on title/subtitle
+- `lib/features/settings/presentation/settings_screen.dart` — accent bars, SegmentedButton, staggered reveals
+- `lib/features/simulation/presentation/simulation_screen.dart` — accent headers, recording pulse, distance typography, selection bounce
+- `lib/features/destination/presentation/destination_setup_screen.dart` — removed const from Text(style: AppTypography.secondary)
+- `lib/features/trip/presentation/alarm_screen.dart` — fixed color bug (surface → onSurface)

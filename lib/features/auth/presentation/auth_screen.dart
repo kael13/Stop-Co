@@ -6,6 +6,7 @@ import '../../../core/components/app_input.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../data/auth_action_providers.dart';
 import '../data/auth_providers.dart';
 
 final _emailController = TextEditingController();
@@ -51,6 +52,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           _passwordController.text,
           _nameController.text.trim(),
         );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Verification email sent — check your inbox'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -92,6 +101,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
+    final authAsync = ref.watch(authStateProvider);
+    final user = authAsync.valueOrNull;
+    final needsVerification =
+        user != null && !user.emailVerified && !user.isAnonymous;
     return Scaffold(
       body: Stack(
         children: [
@@ -130,8 +143,45 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ),
             ),
           ),
+          if (needsVerification)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + AppSpacing.sm,
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              child: _VerificationBanner(
+                onResend: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  try {
+                    await ref
+                        .read(resendVerificationEmailActionProvider.future);
+                    if (mounted) {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Verification email resent'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              e.toString().replaceAll('Exception: ', '')),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
+                },
+                onRefresh: () =>
+                    ref.read(reloadCurrentUserActionProvider.future),
+              ).animate().fadeIn(duration: 300.ms).slideY(begin: -0.1, end: 0),
+            ),
           Positioned(
-            top: MediaQuery.of(context).padding.top + AppSpacing.md,
+            top: needsVerification
+                ? MediaQuery.of(context).padding.top + AppSpacing.xl + 48
+                : MediaQuery.of(context).padding.top + AppSpacing.md,
             left: 0,
             right: 0,
             child: _BrandHeader().animate().fadeIn(
@@ -351,6 +401,88 @@ class _FormCard extends StatelessWidget {
                 ),
               ),
             ).animate().fadeIn(delay: staggerBase + 480.ms),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Persistent banner shown on AuthScreen when the user is signed in via
+/// email/password but hasn't verified their email yet. Google users are
+/// auto-verified and never see this.
+class _VerificationBanner extends StatelessWidget {
+  final VoidCallback onResend;
+  final Future<void> Function() onRefresh;
+
+  const _VerificationBanner({required this.onResend, required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 6,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      color: context.primary,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.mark_email_unread_outlined,
+                    color: Colors.white, size: 20),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    'Verify your email to post in Community',
+                    style: AppTypography.secondary.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              'Check your inbox and tap the verification link, then refresh.',
+              style: AppTypography.secondary.copyWith(
+                color: Colors.white.withValues(alpha: 0.85),
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: onResend,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    minimumSize: const Size(0, 32),
+                  ),
+                  child: const Text('Resend', style: TextStyle(fontSize: 13)),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                FilledButton.tonal(
+                  onPressed: onRefresh,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: context.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    minimumSize: const Size(0, 32),
+                  ),
+                  child: const Text('I\'ve verified',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
           ],
         ),
       ),

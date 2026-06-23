@@ -29,7 +29,19 @@ class AuthRepository {
       password: password,
     );
     await credential.user?.updateDisplayName(name);
+    await credential.user?.sendEmailVerification();
     return credential;
+  }
+
+  /// Reload the current Firebase user so `emailVerified` reflects the latest
+  /// server-side state (e.g. after the user taps the verification link).
+  Future<void> reloadCurrentUser() async {
+    await _auth.currentUser?.reload();
+  }
+
+  /// Resend the verification email to the current user (throttled by Firebase).
+  Future<void> resendEmailVerification() async {
+    await _auth.currentUser?.sendEmailVerification();
   }
 
   Future<UserCredential> signInWithGoogle() async {
