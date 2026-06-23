@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -39,6 +40,19 @@ class TripDetailScreen extends ConsumerWidget {
         return context.textTertiary;
       case TripStatus.monitoring:
         return context.primary;
+    }
+  }
+
+  IconData _statusIcon() {
+    switch (trip.status) {
+      case TripStatus.completed:
+        return Icons.check_circle_rounded;
+      case TripStatus.alarmTriggered:
+        return Icons.notifications_active_rounded;
+      case TripStatus.cancelled:
+        return Icons.cancel_rounded;
+      case TripStatus.monitoring:
+        return Icons.timelapse_rounded;
     }
   }
 
@@ -89,74 +103,12 @@ class TripDetailScreen extends ConsumerWidget {
         children: [
           Expanded(
             flex: 3,
-            child: FlutterMap(
-              options: MapOptions(
-                initialCenter: mapCenter,
-                initialZoom: hasPath ? 13 : 2,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: AppConstants.tileUrlTemplate,
-                  userAgentPackageName: 'com.stopco.app',
-                ),
-                if (traveledPath.isNotEmpty)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: traveledPath,
-                        color: context.success,
-                        strokeWidth: 5,
-                      ),
-                    ],
-                  ),
-                if (plannedRoute.isNotEmpty)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: plannedRoute,
-                        color: context.textTertiary.withValues(alpha: 0.5),
-                        strokeWidth: 2,
-                        pattern: const StrokePattern.dotted(),
-                      ),
-                    ],
-                  ),
-                if (destinationPoint != null)
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: destinationPoint,
-                        child: Icon(
-                          Icons.location_on_rounded,
-                          color: context.error,
-                          size: 36,
-                        ),
-                      ),
-                      if (traveledPath.length > 1)
-                        Marker(
-                          point: traveledPath.first,
-                          child: Icon(
-                            Icons.trip_origin_rounded,
-                            color: context.success,
-                            size: 28,
-                          ),
-                        )
-                      else if (plannedRoute.length > 1)
-                        Marker(
-                          point: plannedRoute.first,
-                          child: Icon(
-                            Icons.trip_origin_rounded,
-                            color: context.primary,
-                            size: 28,
-                          ),
-                        ),
-                    ],
-                  ),
-                SimpleAttributionWidget(
-                  source:
-                      const Text('© OSM contributors · Routing by OSRM'),
-                  alignment: Alignment.bottomRight,
-                ),
-              ],
+            child: _AnimatedTripMap(
+              traveledPath: traveledPath,
+              plannedRoute: plannedRoute,
+              mapCenter: mapCenter,
+              hasPath: hasPath,
+              destinationPoint: destinationPoint,
             ),
           ),
           Expanded(
@@ -166,6 +118,24 @@ class TripDetailScreen extends ConsumerWidget {
               children: [
                 Row(
                   children: [
+                    Hero(
+                      tag: 'trip-${trip.id}',
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: _statusColor(context).withValues(alpha: 0.12),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusMd),
+                        ),
+                        child: Icon(
+                          _statusIcon(),
+                          color: _statusColor(context),
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         trip.destinationName,
@@ -194,55 +164,310 @@ class TripDetailScreen extends ConsumerWidget {
                       ),
                     ),
                   ],
-                ),
+                ).animate().fadeIn(delay: 100.ms).slideY(
+                      begin: 0.06,
+                      end: 0,
+                      duration: 280.ms,
+                    ),
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _StatTile(
+                        icon: Icons.straighten_rounded,
+                        label: 'Distance',
+                        value: distanceFormatted,
+                        color: context.primary,
+                        heroTag: 'trip-${trip.id}-distance',
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: _StatTile(
+                        icon: Icons.timer_rounded,
+                        label: 'Duration',
+                        value: duration,
+                        color: context.secondary,
+                      ),
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 200.ms).slideY(
+                      begin: 0.08,
+                      end: 0,
+                      duration: 280.ms,
+                    ),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _StatTile(
+                        icon: Icons.route_rounded,
+                        label: 'Planned route',
+                        value: trip.plannedRouteDistance != null
+                            ? GpsUtils.formatDistance(
+                                trip.plannedRouteDistance!)
+                            : '—',
+                        color: context.success,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: _StatTile(
+                        icon: Icons.schedule_rounded,
+                        label: 'ETA',
+                        value: trip.plannedRouteDuration != null
+                            ? _formatDuration(
+                                Duration(
+                                    seconds:
+                                        trip.plannedRouteDuration!.round()),
+                              )
+                            : '—',
+                        color: context.warning,
+                      ),
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 280.ms).slideY(
+                      begin: 0.08,
+                      end: 0,
+                      duration: 280.ms,
+                    ),
                 const SizedBox(height: AppSpacing.lg),
                 _DetailRow(
-                  icon: Icons.straighten_rounded,
-                  label: 'Distance',
-                  value: distanceFormatted,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _DetailRow(
-                  icon: Icons.timer_rounded,
-                  label: 'Duration',
-                  value: duration,
-                ),
-                if (trip.plannedRouteDistance != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _DetailRow(
-                    icon: Icons.route_rounded,
-                    label: 'Planned route',
-                    value: GpsUtils.formatDistance(
-                        trip.plannedRouteDistance!),
-                  ),
-                ],
-                if (trip.plannedRouteDuration != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _DetailRow(
-                    icon: Icons.schedule_rounded,
-                    label: 'ETA',
-                    value: _formatDuration(
-                      Duration(seconds: trip.plannedRouteDuration!.round()),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.sm),
-                _DetailRow(
-                  icon: Icons.calendar_today_rounded,
+                  icon: Icons.play_arrow_rounded,
                   label: 'Started',
                   value: _formatDate(trip.startedAt),
-                ),
+                ).animate().fadeIn(delay: 360.ms),
                 const SizedBox(height: AppSpacing.sm),
                 _DetailRow(
                   icon: Icons.flag_rounded,
                   label: 'Ended',
                   value: _formatDate(trip.endedAt),
-                ),
+                ).animate().fadeIn(delay: 420.ms),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  final String? heroTag;
+
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    this.heroTag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tile = Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: context.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(
+          color: color.withValues(alpha: 0.15),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 16, color: color),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            label,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: context.textTertiary),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              value,
+              style: AppTypography.title.copyWith(
+                color: context.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (heroTag != null) {
+      return Hero(tag: heroTag!, child: tile);
+    }
+    return tile;
+  }
+}
+
+class _AnimatedTripMap extends StatefulWidget {
+  final List<LatLng> traveledPath;
+  final List<LatLng> plannedRoute;
+  final LatLng mapCenter;
+  final bool hasPath;
+  final LatLng? destinationPoint;
+
+  const _AnimatedTripMap({
+    required this.traveledPath,
+    required this.plannedRoute,
+    required this.mapCenter,
+    required this.hasPath,
+    required this.destinationPoint,
+  });
+
+  @override
+  State<_AnimatedTripMap> createState() => _AnimatedTripMapState();
+}
+
+class _AnimatedTripMapState extends State<_AnimatedTripMap>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _progress = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+    if (widget.hasPath) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _controller.forward());
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  List<LatLng> _visibleTraveled() {
+    if (widget.traveledPath.isEmpty) return const [];
+    final count = (widget.traveledPath.length * _progress.value).ceil();
+    if (count < 2) return const [];
+    return widget.traveledPath.sublist(0, count.clamp(0, widget.traveledPath.length));
+  }
+
+  List<LatLng> _visiblePlanned() {
+    if (widget.plannedRoute.isEmpty) return const [];
+    final count = (widget.plannedRoute.length * _progress.value).ceil();
+    if (count < 2) return const [];
+    return widget.plannedRoute.sublist(0, count.clamp(0, widget.plannedRoute.length));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _progress,
+      builder: (context, _) {
+        final visibleTraveled = _visibleTraveled();
+        final visiblePlanned = _visiblePlanned();
+        return FlutterMap(
+          options: MapOptions(
+            initialCenter: widget.mapCenter,
+            initialZoom: widget.hasPath ? 13 : 2,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: AppConstants.tileUrlTemplate,
+              userAgentPackageName: 'com.stopco.app',
+            ),
+            if (visibleTraveled.length > 1)
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: visibleTraveled,
+                    color: context.success,
+                    strokeWidth: 5,
+                  ),
+                ],
+              ),
+            if (visiblePlanned.length > 1)
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: visiblePlanned,
+                    color: context.textTertiary.withValues(alpha: 0.5),
+                    strokeWidth: 2,
+                    pattern: const StrokePattern.dotted(),
+                  ),
+                ],
+              ),
+            if (widget.destinationPoint != null && _progress.value > 0.9)
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: widget.destinationPoint!,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: context.error.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(
+                        Icons.location_on_rounded,
+                        color: context.error,
+                        size: 30,
+                      ),
+                    ),
+                  ),
+                  if (widget.traveledPath.length > 1)
+                    Marker(
+                      point: widget.traveledPath.first,
+                      child: Icon(
+                        Icons.trip_origin_rounded,
+                        color: context.success,
+                        size: 26,
+                      ),
+                    )
+                  else if (widget.plannedRoute.length > 1)
+                    Marker(
+                      point: widget.plannedRoute.first,
+                      child: Icon(
+                        Icons.trip_origin_rounded,
+                        color: context.primary,
+                        size: 26,
+                      ),
+                    ),
+                ],
+              ),
+            SimpleAttributionWidget(
+              source:
+                  const Text('© OSM contributors · Routing by OSRM'),
+              alignment: Alignment.bottomRight,
+            ),
+          ],
+        );
+      },
     );
   }
 }

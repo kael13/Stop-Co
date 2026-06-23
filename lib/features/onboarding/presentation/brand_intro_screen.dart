@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -115,21 +116,38 @@ class _BrandIntroScreenState extends ConsumerState<BrandIntroScreen>
                           color: context.textPrimary,
                           fontWeight: FontWeight.w700,
                         ),
-                      ),
+                      )
+                          .animate()
+                          .fadeIn(delay: 380.ms, duration: 420.ms)
+                          .slideY(
+                            begin: 0.08,
+                            end: 0,
+                            duration: 420.ms,
+                            curve: Curves.easeOutCubic,
+                          ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         "Don't miss your stop",
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: context.textSecondary,
                         ),
-                      ),
+                      )
+                          .animate()
+                          .fadeIn(delay: 540.ms, duration: 360.ms),
                       const SizedBox(height: AppSpacing.xxl),
                       Text(
                         'Tap to continue',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: context.textTertiary,
                         ),
-                      ),
+                      )
+                          .animate(delay: 700.ms)
+                          .fadeIn(duration: 400.ms)
+                          .then()
+                          .shimmer(
+                            duration: 1400.ms,
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
                     ],
                   ),
                 ),

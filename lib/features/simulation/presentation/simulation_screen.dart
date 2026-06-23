@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/components/app_button.dart';
@@ -72,7 +73,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          _SectionHeader(title: 'Select Destination'),
+          _SectionHeader(
+              title: 'Select Destination',
+              accentColor: const Color(0xFF0066FF),
+            ),
           const SizedBox(height: AppSpacing.sm),
           if (destinationsAsync.isLoading)
             const Center(child: CircularProgressIndicator())
@@ -94,7 +98,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               },
             ),
           const SizedBox(height: AppSpacing.lg),
-          _SectionHeader(title: 'Speed'),
+          _SectionHeader(
+              title: 'Speed',
+              accentColor: const Color(0xFFFF6B35),
+            ),
           const SizedBox(height: AppSpacing.sm),
           _SpeedSelector(
             currentMode: settings.commuteMode,
@@ -190,16 +197,34 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
 
 class _SectionHeader extends StatelessWidget {
   final String title;
+  final Color accentColor;
 
-  const _SectionHeader({required this.title});
+  const _SectionHeader({
+    required this.title,
+    this.accentColor = const Color(0xFF00A896),
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            color: accentColor,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -235,49 +260,57 @@ class _DestinationList extends StatelessWidget {
     }
 
     return Column(
-      children: destinations.map((dest) {
+      children: destinations.asMap().entries.map((entry) {
+        final dest = entry.value;
         final selected = dest.id == selectedId;
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-          child: AppCard(
-            onTap: () => onSelect(dest),
-            color: selected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : null,
-            child: Row(
-              children: [
-                Icon(
-                  Icons.location_on_rounded,
-                  color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                  size: 24,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        dest.name,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${dest.latitude.toStringAsFixed(4)}, ${dest.longitude.toStringAsFixed(4)}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (selected)
+          child: AnimatedScale(
+            scale: selected ? 1.02 : 1.0,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutBack,
+            child: AppCard(
+              onTap: () => onSelect(dest),
+              color: selected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : null,
+              child: Row(
+                children: [
                   Icon(
-                    Icons.check_circle_rounded,
-                    color: Theme.of(context).colorScheme.primary,
+                    Icons.location_on_rounded,
+                    color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     size: 24,
                   ),
-              ],
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          dest.name,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${dest.latitude.toStringAsFixed(4)}, ${dest.longitude.toStringAsFixed(4)}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (selected)
+                    Icon(
+                      Icons.check_circle_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 24,
+                    ),
+                ],
+              ),
             ),
           ),
-        );
+        )
+            .animate()
+            .fadeIn(delay: Duration(milliseconds: 40 * entry.key), duration: 220.ms);
       }).toList(),
     );
   }
@@ -342,43 +375,96 @@ class _SimulationStatusCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 12,
-                height: 12,
+                width: 10,
+                height: 10,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary,
+                  color: context.error,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: context.error.withValues(alpha: 0.5),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    ),
+                  ],
                 ),
-              ),
+              )
+                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                  .scaleXY(begin: 1.0, end: 1.4, duration: 800.ms),
               const SizedBox(width: AppSpacing.xs),
               Text(
-                'Simulation Active',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.secondary),
+                'SIMULATION LIVE',
+                style: AppTypography.caption.copyWith(
+                  color: context.error,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.0,
+                ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          if (position != null) ...[
-            Text(
-              'Position: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  GpsUtils.formatDistance(distance),
+                  style: AppTypography.distance.copyWith(
+                    color: Theme.of(context).colorScheme.secondary,
+                    fontSize: 44,
+                    height: 1.0,
+                  ),
+                ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  'away',
+                  style: AppTypography.caption.copyWith(
+                    color: context.textTertiary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Icon(
+                Icons.speed_rounded,
+                size: 16,
+                color: context.textTertiary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '${(service.speedMps * 3.6).toStringAsFixed(1)} km/h',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          if (position != null) ...[
             const SizedBox(height: AppSpacing.xxs),
+            Row(
+              children: [
+                Icon(
+                  Icons.my_location_rounded,
+                  size: 14,
+                  color: context.textTertiary,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.textTertiary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
           ],
-          Text(
-            'Speed: ${(service.speedMps * 3.6).toStringAsFixed(1)} km/h',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(
-            'Distance: ${GpsUtils.formatDistance(distance)}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
         ],
       ),
     );

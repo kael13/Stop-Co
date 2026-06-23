@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/animation/animation_presets.dart';
 import '../../../core/components/app_brand.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
@@ -106,7 +109,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 }
 
-class _NavBarItem extends StatelessWidget {
+class _NavBarItem extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool selected;
@@ -120,34 +123,70 @@ class _NavBarItem extends StatelessWidget {
   });
 
   @override
+  State<_NavBarItem> createState() => _NavBarItemState();
+}
+
+class _NavBarItemState extends State<_NavBarItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 110),
+      vsync: this,
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.88).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    HapticFeedback.lightImpact();
+    _scaleController.forward().then((_) => _scaleController.reverse());
+    widget.onTap();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: _handleTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.sm,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: selected ? context.primary : context.textTertiary,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: AppTypography.caption.copyWith(
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? context.primary : context.textTertiary,
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.sm,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.icon,
+                size: 24,
+                color: widget.selected ? context.primary : context.textTertiary,
               ),
-            ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                widget.label,
+                style: AppTypography.caption.copyWith(
+                  fontSize: 11,
+                  fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
+                  color: widget.selected ? context.primary : context.textTertiary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -173,34 +212,35 @@ class _HomeTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
     final activeTrip = ref.watch(activeTripProvider);
-    final destinationsAsync = ref.watch(recommendedDestinationsProvider);
-    final recentTripsAsync = ref.watch(recentTripsProvider);
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _HomeTabHeader(authState: authState.valueOrNull),
+            _HomeTabHeader(authState: authState.valueOrNull)
+                .animate()
+                .fadeIn(duration: 320.ms, curve: Curves.easeOutCubic)
+                .slideY(begin: -0.04, end: 0, duration: 320.ms),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                children: [
-                  if (activeTrip != null)
-                    _ActiveTripBanner(trip: activeTrip)
-                  else ...[
-                    _StartTripSection(),
-                    const SizedBox(height: AppSpacing.lg),
-                    _YourStopsSection(
-                      destinations: destinationsAsync.valueOrNull ?? [],
+              child: activeTrip != null
+                  ? ListView(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      children: [
+                        _ActiveTripBanner(trip: activeTrip)
+                            .cardEntrance(),
+                      ],
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      children: [
+                        _StartTripSection().fadeSlideUp(delay: 80.ms),
+                        const SizedBox(height: AppSpacing.lg),
+                        const _DestinationsBlock().fadeSlideUp(delay: 160.ms),
+                        const SizedBox(height: AppSpacing.lg),
+                        const _RecentTripsBlock().fadeSlideUp(delay: 240.ms),
+                      ],
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _RecentTripsSection(
-                      trips: recentTripsAsync.valueOrNull ?? [],
-                    ),
-                  ],
-                ],
-              ),
             ),
           ],
         ),
@@ -209,9 +249,134 @@ class _HomeTab extends ConsumerWidget {
   }
 }
 
+class _DestinationsBlock extends ConsumerWidget {
+  const _DestinationsBlock();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final destinationsAsync = ref.watch(recommendedDestinationsProvider);
+    return destinationsAsync.when(
+      loading: () => const _DestinationsSkeleton(),
+      error: (_, _) => _YourStopsSection(destinations: const []),
+      data: (destinations) => _YourStopsSection(destinations: destinations),
+    );
+  }
+}
+
+class _RecentTripsBlock extends ConsumerWidget {
+  const _RecentTripsBlock();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recentTripsAsync = ref.watch(recentTripsProvider);
+    return recentTripsAsync.when(
+      loading: () => const _RecentTripsSkeleton(),
+      error: (_, _) => _RecentTripsSection(trips: const []),
+      data: (trips) => _RecentTripsSection(trips: trips),
+    );
+  }
+}
+
+class _DestinationsSkeleton extends StatelessWidget {
+  const _DestinationsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildShimmerLine(context: context, width: 96, height: 22, radius: 4),
+        const SizedBox(height: AppSpacing.sm),
+        ...List.generate(
+          3,
+          (i) => Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            child: AppCard(
+              child: Row(
+                children: [
+                  buildShimmerBox(
+                    context: context,
+                    width: 44,
+                    height: 44,
+                    radius: AppSpacing.radiusMd,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        buildShimmerLine(context: context, width: 140, height: 14),
+                        const SizedBox(height: 6),
+                        buildShimmerLine(context: context, width: 80, height: 12),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecentTripsSkeleton extends StatelessWidget {
+  const _RecentTripsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildShimmerLine(context: context, width: 110, height: 22, radius: 4),
+        const SizedBox(height: AppSpacing.sm),
+        ...List.generate(
+          2,
+          (i) => Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            child: AppCard(
+              child: Row(
+                children: [
+                  buildShimmerBox(
+                    context: context,
+                    width: 44,
+                    height: 44,
+                    radius: AppSpacing.radiusMd,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        buildShimmerLine(context: context, width: 120, height: 14),
+                        const SizedBox(height: 6),
+                        buildShimmerLine(context: context, width: 90, height: 12),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _HomeTabHeader extends StatelessWidget {
   final UserSignedIn? authState;
   const _HomeTabHeader({this.authState});
+
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 5) return 'Late night';
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    if (h < 21) return 'Good evening';
+    return 'Good night';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -225,6 +390,36 @@ class _HomeTabHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      context.primary,
+                      context.secondary,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                ),
+                child: Text(
+                  _greeting(),
+                  style: AppTypography.caption.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
           if (authState?.displayName != null)
             Text(
               'Hi, ${authState!.displayName}',
@@ -290,9 +485,10 @@ class _YourStopsSection extends ConsumerWidget {
           style: Theme.of(context).textTheme.titleLarge?.copyWith(color: context.textPrimary),
         ),
         const SizedBox(height: AppSpacing.sm),
-        ...destinations.map((dest) => Padding(
+        ...destinations.asMap().entries.map((entry) => Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-          child: _HomeDestinationCard(destination: dest),
+          child: _HomeDestinationCard(destination: entry.value)
+              .fadeSlideUp(delay: Duration(milliseconds: 60 * entry.key)),
         )),
       ],
     );
@@ -418,8 +614,18 @@ class _ActiveTripBanner extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: context.success,
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: context.success.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
-                ),
+                )
+                    .animate(onPlay: (c) => c.repeat(reverse: true))
+                    .scaleXY(begin: 1.0, end: 1.3, duration: 900.ms)
+                    .fadeIn(),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
                   'Active Trip',
@@ -436,11 +642,14 @@ class _ActiveTripBanner extends ConsumerWidget {
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: context.textPrimary),
             ),
             const SizedBox(height: AppSpacing.xs),
-            Text(
-              '$distanceFormatted away',
-              style: AppTypography.distance.copyWith(
-                color: context.primary,
-                fontSize: 48,
+            Hero(
+              tag: 'active-trip-distance',
+              child: Text(
+                '$distanceFormatted away',
+                style: AppTypography.distance.copyWith(
+                  color: context.primary,
+                  fontSize: 48,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -559,7 +768,7 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Saved Destinations',
                     style: AppTypography.largeTitle,
                   ),
@@ -871,13 +1080,13 @@ class _RecentTripsSection extends ConsumerWidget {
           style: Theme.of(context).textTheme.titleLarge?.copyWith(color: context.textPrimary),
         ),
         const SizedBox(height: AppSpacing.sm),
-        ...displayTrips.map((trip) => Padding(
+        ...displayTrips.asMap().entries.map((entry) => Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: _TripCard(
-                trip: trip,
-                relativeDate: _relativeDate(trip.startedAt),
-                formattedDuration: _formatDuration(trip.duration),
-              ),
+                trip: entry.value,
+                relativeDate: _relativeDate(entry.value.startedAt),
+                formattedDuration: _formatDuration(entry.value.duration),
+              ).fadeSlideUp(delay: Duration(milliseconds: 60 * entry.key)),
             )),
         if (trips.length > 5) ...[
           const SizedBox(height: AppSpacing.xs),
@@ -951,17 +1160,20 @@ class _TripCard extends ConsumerWidget {
       },
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: _statusColor(context).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            ),
-            child: Icon(
-              _statusIcon,
-              color: _statusColor(context),
-              size: 22,
+          Hero(
+            tag: 'trip-${trip.id}',
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: _statusColor(context).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: Icon(
+                _statusIcon,
+                color: _statusColor(context),
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

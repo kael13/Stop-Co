@@ -163,7 +163,7 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
               Text(
                 trip.destination.name,
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.surface,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),

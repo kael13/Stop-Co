@@ -9,6 +9,8 @@ class AppButton extends StatefulWidget {
   final bool isLoading;
   final bool isDestructive;
   final bool isSecondary;
+  final bool isTonal;
+  final bool isText;
   final IconData? icon;
   final double? width;
 
@@ -19,6 +21,8 @@ class AppButton extends StatefulWidget {
     this.isLoading = false,
     this.isDestructive = false,
     this.isSecondary = false,
+    this.isTonal = false,
+    this.isText = false,
     this.icon,
     this.width,
   });
@@ -52,31 +56,18 @@ class _AppButtonState extends State<AppButton>
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final backgroundColor = widget.isDestructive
-        ? colorScheme.error
-        : widget.isSecondary
-            ? Colors.transparent
-            : colorScheme.primary;
-    final foregroundColor = widget.isDestructive || !widget.isSecondary
-        ? colorScheme.onError
-        : colorScheme.primary;
-    final borderSide = widget.isSecondary
-        ? BorderSide(color: colorScheme.primary, width: 1.5)
-        : BorderSide.none;
+    final isEnabled = widget.onPressed != null && !widget.isLoading;
 
     return GestureDetector(
-      onTapDown: widget.onPressed != null && !widget.isLoading
+      onTapDown: isEnabled
           ? (_) {
               HapticFeedback.lightImpact();
               _controller.forward();
             }
           : null,
-      onTapUp: widget.onPressed != null && !widget.isLoading
-          ? (_) => _controller.reverse()
-          : null,
+      onTapUp: isEnabled ? (_) => _controller.reverse() : null,
       onTapCancel: () => _controller.reverse(),
-      onTap: widget.onPressed,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) {
@@ -85,51 +76,95 @@ class _AppButtonState extends State<AppButton>
             child: child,
           );
         },
-        child: Container(
-          width: widget.width ?? double.infinity,
-          height: AppSpacing.buttonHeight,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            border: Border.fromBorderSide(borderSide),
-            boxShadow: widget.isSecondary || widget.isDestructive
-                ? null
-                : [
-                    BoxShadow(
-                      color: colorScheme.primary.withValues(alpha: 0.25),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-          ),
-          child: Center(
-            child: widget.isLoading
-                ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: foregroundColor,
-                    ),
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (widget.icon != null) ...[
-                        Icon(widget.icon, color: foregroundColor, size: 20),
-                        const SizedBox(width: AppSpacing.xs),
-                      ],
-                      Text(
-                        widget.label,
-                        style: AppTypography.button.copyWith(
-                          color: foregroundColor,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
+        child: _buildButton(context, isEnabled),
       ),
+    );
+  }
+
+  Widget _buildButton(BuildContext context, bool isEnabled) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+    );
+    final minSize = Size(
+      widget.width ?? double.infinity,
+      AppSpacing.buttonHeight,
+    );
+
+    if (widget.isText) {
+      return TextButton(
+        onPressed: isEnabled ? widget.onPressed : null,
+        style: TextButton.styleFrom(
+          foregroundColor: widget.isDestructive
+              ? colorScheme.error
+              : colorScheme.primary,
+          shape: shape,
+        ),
+        child: _buildContent(),
+      );
+    }
+
+    if (widget.isSecondary) {
+      return OutlinedButton(
+        onPressed: isEnabled ? widget.onPressed : null,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          side: BorderSide(color: colorScheme.primary, width: 1),
+          shape: shape,
+          minimumSize: minSize,
+        ),
+        child: _buildContent(),
+      );
+    }
+
+    if (widget.isTonal) {
+      return FilledButton.tonal(
+        onPressed: isEnabled ? widget.onPressed : null,
+        style: FilledButton.styleFrom(
+          shape: shape,
+          minimumSize: minSize,
+          overlayColor: Colors.transparent,
+        ),
+        child: _buildContent(),
+      );
+    }
+
+    return FilledButton(
+      onPressed: isEnabled ? widget.onPressed : null,
+      style: FilledButton.styleFrom(
+        backgroundColor: widget.isDestructive
+            ? colorScheme.error
+            : colorScheme.primary,
+        foregroundColor: widget.isDestructive
+            ? colorScheme.onError
+            : colorScheme.onPrimary,
+        shape: shape,
+        elevation: 0,
+        minimumSize: minSize,
+        overlayColor: Colors.transparent,
+      ),
+      child: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
+    if (widget.isLoading) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2.5),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.icon != null) ...[
+          Icon(widget.icon, size: 20),
+          const SizedBox(width: AppSpacing.xs),
+        ],
+        Text(widget.label, style: AppTypography.button),
+      ],
     );
   }
 }

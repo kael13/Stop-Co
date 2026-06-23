@@ -26,7 +26,7 @@ class AppTheme {
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.offWhite,
       colorScheme: colorScheme,
-      textTheme: const TextTheme(
+      textTheme: TextTheme(
         displayLarge: AppTypography.largeTitle,
         headlineLarge: AppTypography.title,
         titleLarge: AppTypography.sectionHeader,
@@ -144,7 +144,7 @@ class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.deepSlate,
       colorScheme: colorScheme,
-      textTheme: const TextTheme(
+      textTheme: TextTheme(
         displayLarge: AppTypography.largeTitle,
         headlineLarge: AppTypography.title,
         titleLarge: AppTypography.sectionHeader,

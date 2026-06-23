@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 
@@ -33,7 +34,15 @@ class OnboardingPage extends StatelessWidget {
               color: context.textPrimary,
             ),
             textAlign: TextAlign.center,
-          ),
+          )
+              .animate()
+              .fadeIn(duration: 380.ms, curve: Curves.easeOutCubic)
+              .slideY(
+                begin: 0.06,
+                end: 0,
+                duration: 380.ms,
+                curve: Curves.easeOutCubic,
+              ),
           const SizedBox(height: AppSpacing.md),
           Text(
             subtitle,
@@ -41,7 +50,15 @@ class OnboardingPage extends StatelessWidget {
               color: context.textSecondary,
             ),
             textAlign: TextAlign.center,
-          ),
+          )
+              .animate()
+              .fadeIn(delay: 140.ms, duration: 380.ms)
+              .slideY(
+                begin: 0.06,
+                end: 0,
+                duration: 380.ms,
+                curve: Curves.easeOutCubic,
+              ),
         ],
       ),
     );

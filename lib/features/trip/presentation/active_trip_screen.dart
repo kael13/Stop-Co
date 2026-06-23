@@ -1,17 +1,21 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import '../../../core/animation/animation_presets.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../../core/platform/foreground_service_channel.dart';
 import '../../settings/data/settings_providers.dart';
@@ -391,21 +395,20 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                   markers: [
                     Marker(
                       point: _currentPosition!,
-                      child: Icon(
-                        Icons.my_location_rounded,
-                        color: context.primary,
-                        size: 24,
-                      ),
+                      width: 36,
+                      height: 36,
+                      child: const _PulsingUserMarker(),
                     ),
                     Marker(
                       point: LatLng(
                         trip.destination.latitude,
                         trip.destination.longitude,
                       ),
-                      child: Icon(
-                        Icons.location_on_rounded,
-                        color: context.error,
-                        size: 30,
+                      width: 36,
+                      height: 36,
+                      child: _DestinationPinMarker(
+                        withinThreshold:
+                            distance <= trip.destination.alertRadius,
                       ),
                     ),
                   ],
@@ -533,77 +536,116 @@ class _InfoOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    final isDark = context.isDark;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.sm,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
+          decoration: BoxDecoration(
+            color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: statusColor.withValues(alpha: 0.25),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.xxs),
-              Expanded(
-                child: Text(
-                  '$statusLabel: $destinationName',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.textPrimary,
-                    fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: statusColor.withValues(alpha: 0.5),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  )
+                      .animate(onPlay: (c) => c.repeat(reverse: true))
+                      .scaleXY(begin: 1.0, end: 1.3, duration: 900.ms),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      '$statusLabel: $destinationName',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: context.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Hero(
+                      tag: 'active-trip-distance',
+                      child: Text(
+                        distanceFormatted,
+                        style: AppTypography.distance.copyWith(
+                          color: isSimulation ? context.secondary : context.primary,
+                          fontSize: 48,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'away',
+                      style: AppTypography.caption.copyWith(
+                        color: context.textTertiary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (speedKmh != null && !isSimulation) ...[
+                const SizedBox(height: 2),
+                Text(
+                  '$speedKmh km/h',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.textSecondary,
+                  ),
                 ),
+              ],
+              const SizedBox(height: AppSpacing.xs),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: progressValue,
+                  backgroundColor: context.surfaceContainerLow,
+                  valueColor: AlwaysStoppedAnimation(
+                    isSimulation ? context.secondary : context.primary,
+                  ),
+                  minHeight: 5,
+                ).subtleShimmerSweep(),
               ),
             ],
           ),
-          if (speedKmh != null && !isSimulation) ...[
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              'Speed: $speedKmh km/h',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: context.textSecondary,
-              ),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.xxs),
-          Text(
-            'Away from your stop: $distanceFormatted',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: context.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: progressValue,
-              backgroundColor: context.surfaceContainerLow,
-              valueColor: AlwaysStoppedAnimation(
-                isSimulation ? context.secondary : context.primary,
-              ),
-              minHeight: 4,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -719,6 +761,122 @@ class _SimulationBadge extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PulsingUserMarker extends StatefulWidget {
+  const _PulsingUserMarker();
+
+  @override
+  State<_PulsingUserMarker> createState() => _PulsingUserMarkerState();
+}
+
+class _PulsingUserMarkerState extends State<_PulsingUserMarker>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1600),
+      vsync: this,
+    )..repeat();
+    _pulse = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) {
+        return SizedBox(
+          width: 36,
+          height: 36,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Transform.scale(
+                scale: 0.4 + _pulse.value * 1.2,
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: primary.withValues(alpha: 0.25 * (1 - _pulse.value)),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primary.withValues(alpha: 0.6),
+                      blurRadius: 4,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DestinationPinMarker extends StatelessWidget {
+  final bool withinThreshold;
+  const _DestinationPinMarker({required this.withinThreshold});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = withinThreshold
+        ? Theme.of(context).colorScheme.error
+        : Theme.of(context).colorScheme.error;
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (withinThreshold)
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+          )
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .scaleXY(begin: 0.8, end: 1.15, duration: 800.ms),
+        Icon(
+          Icons.location_on_rounded,
+          color: color,
+          size: 30,
+          shadows: [
+            Shadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

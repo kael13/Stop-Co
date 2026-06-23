@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/platform/file_picker_channel.dart';
@@ -24,21 +25,24 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          _SectionHeader(title: 'Alert Preferences'),
+          _SectionHeader(
+            title: 'Alert Preferences',
+            accentColor: const Color(0xFF0066FF),
+          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
           _DefaultRadiusSection(
             currentRadius: settings.defaultAlertRadius,
             onChanged: (radius) {
               ref.read(settingsProvider.notifier).setDefaultAlertRadius(radius);
             },
-          ),
+          ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.md),
           _AlarmTypeSection(
             currentType: settings.alarmType,
             onChanged: (type) {
               ref.read(settingsProvider.notifier).setAlarmType(type);
             },
-          ),
+          ).animate().fadeIn(delay: 120.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.md),
           AppCard(
             child: SwitchListTile(
@@ -51,7 +55,7 @@ class SettingsScreen extends ConsumerWidget {
               activeThumbColor: Theme.of(context).colorScheme.primary,
               contentPadding: EdgeInsets.zero,
             ),
-          ),
+          ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.md),
           _CustomAlarmSoundTile(
             currentPath: settings.customAlarmSoundPath,
@@ -63,9 +67,12 @@ class SettingsScreen extends ConsumerWidget {
               ref.read(settingsProvider.notifier).clearCustomAlarmSound();
               recreateAlarmChannel(null);
             },
-          ),
+          ).animate().fadeIn(delay: 240.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
-          _SectionHeader(title: 'Nap Mode'),
+          _SectionHeader(
+            title: 'Nap Mode',
+            accentColor: const Color(0xFF8E8E93),
+          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
           AppCard(
             child: SwitchListTile(
@@ -78,21 +85,30 @@ class SettingsScreen extends ConsumerWidget {
               activeThumbColor: Theme.of(context).colorScheme.primary,
               contentPadding: EdgeInsets.zero,
             ),
-          ),
+          ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
-          _SectionHeader(title: 'Appearance'),
+          _SectionHeader(
+            title: 'Appearance',
+            accentColor: const Color(0xFF3F51B5),
+          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
-          _ThemeModeSection(),
+          _ThemeModeSection().animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
-          _SectionHeader(title: 'Commute Mode'),
+          _SectionHeader(
+            title: 'Commute Mode',
+            accentColor: const Color(0xFF00A896),
+          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
           _CommuteModeSection(
             currentMode: settings.commuteMode,
-          ),
+          ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
-          _SectionHeader(title: 'About'),
+          _SectionHeader(
+            title: 'About',
+            accentColor: const Color(0xFF8E8E93),
+          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
-          _AboutSection(),
+          _AboutSection().animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
           _ResetButton(
             onReset: () {
@@ -107,16 +123,34 @@ class SettingsScreen extends ConsumerWidget {
 
 class _SectionHeader extends StatelessWidget {
   final String title;
+  final Color accentColor;
 
-  const _SectionHeader({required this.title});
+  const _SectionHeader({
+    required this.title,
+    this.accentColor = const Color(0xFF0066FF),
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            color: accentColor,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -188,6 +222,12 @@ class _AlarmTypeSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = <AlarmType, Color>{
+      AlarmType.soundAndVibration: const Color(0xFF0066FF),
+      AlarmType.soundOnly: const Color(0xFFFF6B35),
+      AlarmType.vibrationOnly: const Color(0xFF8E8E93),
+    };
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,27 +246,46 @@ class _AlarmTypeSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          ...AlarmType.values.map((type) {
-            return RadioListTile<AlarmType>(
-              title: Text(type.label),
-              subtitle: Text(
-                _getAlarmDescription(type),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                ),
-              ),
-              value: type,
-              groupValue: currentType,
-              onChanged: (value) {
-                if (value != null) onChanged(value);
-              },
-              activeColor: Theme.of(context).colorScheme.primary,
-              contentPadding: EdgeInsets.zero,
-            );
-          }),
+          SegmentedButton<AlarmType>(
+            segments: AlarmType.values
+                .map(
+                  (type) => ButtonSegment<AlarmType>(
+                    value: type,
+                    label: Text(type.label),
+                    icon: Icon(_getAlarmIcon(type), size: 16),
+                  ),
+                )
+                .toList(),
+            selected: {currentType},
+            onSelectionChanged: (selected) => onChanged(selected.first),
+            showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: colors[currentType],
+              selectedForegroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _getAlarmDescription(currentType),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colors[currentType],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  IconData _getAlarmIcon(AlarmType type) {
+    switch (type) {
+      case AlarmType.soundAndVibration:
+        return Icons.vibration_rounded;
+      case AlarmType.soundOnly:
+        return Icons.volume_up_rounded;
+      case AlarmType.vibrationOnly:
+        return Icons.vibration_rounded;
+    }
   }
 
   String _getAlarmDescription(AlarmType type) {

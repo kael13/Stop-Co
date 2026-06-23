@@ -565,7 +565,7 @@ class _BottomPanel extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Alert Radius', style: AppTypography.secondary),
+              Text('Alert Radius', style: AppTypography.secondary),
               const SizedBox(height: AppSpacing.xs),
               Wrap(
                 spacing: AppSpacing.xs,
