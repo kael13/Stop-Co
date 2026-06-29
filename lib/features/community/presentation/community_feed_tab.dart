@@ -5,11 +5,15 @@ import 'package:shimmer/shimmer.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/theme_colors.dart';
+import '../../auth/data/auth_providers.dart';
 import '../data/community_providers.dart';
+import '../data/models/community_post.dart';
 import '../domain/community_sort.dart';
+import '../domain/vote_value.dart';
 import 'guest_gate_dialog.dart';
 import 'post_card.dart';
 import 'post_composer_screen.dart';
+import 'post_detail_screen.dart';
 
 /// The 5th tab in [MainShell]: community feed with sort chips, live-updating
 /// post list, shimmer skeleton loader, and a "New post" FAB (auth-gated).
@@ -36,6 +40,7 @@ class _CommunityFeedTabState extends ConsumerState<CommunityFeedTab> {
       appBar: AppBar(
         title: const Text('Community'),
         centerTitle: false,
+        toolbarHeight: 48,
       ),
       floatingActionButton: canWrite
           ? FloatingActionButton.extended(
@@ -78,10 +83,10 @@ class _SortChips extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
         AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.sm,
       ),
       child: SegmentedButton<CommunitySort>(
         segments: CommunitySort.values
@@ -120,24 +125,61 @@ class _FeedBody extends ConsumerWidget {
         if (posts.isEmpty) {
           return const _EmptyFeed();
         }
+        final user = ref.watch(currentCommunityUserProvider).valueOrNull;
+        final postIds = posts.map((p) => p.id).toList();
+        final votesAsync = user != null
+            ? ref.watch(myPostVotesProvider(
+                MyVotesArgs(ids: postIds, uid: user.uid),
+              ))
+            : null;
+        final myVotes = votesAsync?.valueOrNull ?? const <String, VoteValue>{};
+
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(communityFeedProvider);
+            ref.invalidate(myPostVotesProvider);
           },
           child: ListView.builder(
-            padding: const EdgeInsets.only(bottom: 100),
+            padding: const EdgeInsets.only(bottom: 80),
             itemCount: posts.length,
-            itemBuilder: (context, index) => PostCard(
-              post: posts[index],
-              index: index,
-              onTap: () {
-                // TODO: push PostDetailScreen (Phase A.3)
-              },
-            ),
+            itemBuilder: (context, index) {
+              final post = posts[index];
+              return PostCard(
+                post: post,
+                index: index,
+                myVote: myVotes[post.id] ?? VoteValue.none,
+                canVote: canWrite,
+                onVote: (value) => _votePost(ref, post, value, user, context),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => PostDetailScreen(postId: post.id),
+                    ),
+                  );
+                },
+              );
+            },
           ),
         );
       },
     );
+  }
+
+  Future<void> _votePost(
+    WidgetRef ref,
+    CommunityPost post,
+    VoteValue value,
+    UserSignedIn? user,
+    BuildContext context,
+  ) async {
+    if (user == null || !user.canWriteCommunity) {
+      showGuestGateDialog(context);
+      return;
+    }
+    await ref.read(votePostActionProvider(
+      VotePostArgs(post.id, value, user.uid),
+    ).future);
+    ref.invalidate(myPostVotesProvider);
   }
 }
 
@@ -208,8 +250,8 @@ class _FeedSkeleton extends StatelessWidget {
       child: ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.xs,
+          horizontal: AppSpacing.sm,
+          vertical: 2,
         ),
         itemCount: 4,
         itemBuilder: (_, _) => const _CardSkeleton(),
@@ -224,30 +266,30 @@ class _CardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Container(
-        height: 220,
-        padding: const EdgeInsets.all(AppSpacing.md),
+        height: 170,
+        padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
           color: context.outlineVariant,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                _ShimmerBox(width: 32, height: 32, radius: 16),
-                const SizedBox(width: AppSpacing.sm),
-                _ShimmerBox(width: 120, height: 12),
+                _ShimmerBox(width: 24, height: 24, radius: 12),
+                const SizedBox(width: AppSpacing.xs),
+                _ShimmerBox(width: 100, height: 10),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            _ShimmerBox(width: double.infinity, height: 14),
-            const SizedBox(height: AppSpacing.xs),
-            _ShimmerBox(width: 240, height: 14),
-            const SizedBox(height: AppSpacing.md),
-            _ShimmerBox(width: double.infinity, height: 120, radius: 12),
+            const SizedBox(height: AppSpacing.sm),
+            _ShimmerBox(width: double.infinity, height: 12),
+            const SizedBox(height: AppSpacing.xxs),
+            _ShimmerBox(width: 200, height: 12),
+            const SizedBox(height: AppSpacing.sm),
+            _ShimmerBox(width: double.infinity, height: 90, radius: AppSpacing.radiusSm),
           ],
         ),
       ),

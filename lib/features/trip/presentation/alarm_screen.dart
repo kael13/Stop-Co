@@ -43,11 +43,6 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
   }
 
   void _startRepeatingAlarm() {
-    final trip = ref.read(activeTripProvider);
-    if (trip == null) return;
-
-    final destName = trip.destination.name;
-
     _repeatTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       final settings = ref.read(settingsProvider);
       if (!settings.repeatedAlarm) return;
@@ -58,7 +53,7 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
 
       if (alarmType != AlarmType.vibrationOnly) {
         AlarmNotificationService.showAlarmNotification(
-          destinationName: destName,
+          destinationName: currentTrip.destination.name,
           distance: currentTrip.currentDistance ?? 0,
           alarmType: alarmType,
           customSoundPath: settings.customAlarmSoundPath,

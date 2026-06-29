@@ -18,3 +18,11 @@ final resendVerificationEmailActionProvider =
   final auth = ref.read(authRepositoryProvider);
   await auth.resendEmailVerification();
 });
+
+/// Action that signs the user out from both Firebase Auth and Google Sign-In.
+/// After this resolves, [authStateProvider] re-emits `null`, routing the app
+/// back to the Auth screen.
+final signOutActionProvider = FutureProvider<void>((ref) async {
+  final auth = ref.read(authRepositoryProvider);
+  await auth.signOut();
+});

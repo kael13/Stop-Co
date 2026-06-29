@@ -151,3 +151,121 @@
 - `lib/features/simulation/presentation/simulation_screen.dart` — accent headers, recording pulse, distance typography, selection bounce
 - `lib/features/destination/presentation/destination_setup_screen.dart` — removed const from Text(style: AppTypography.secondary)
 - `lib/features/trip/presentation/alarm_screen.dart` — fixed color bug (surface → onSurface)
+
+---
+
+# Session: Community tab — Reddit-style posts, votes, comments, guest gate, images, coordinates
+
+## Goal
+Add a "Community" tab with Reddit-style posts (create/update/delete), upvote+downvote, flat comments, 3 images per post, coordinates with map preview, sort by relevant/topvoted/recent, and guest read-only with email-verified-only writes.
+
+## Constraints & Preferences
+- Auth: Firebase Auth (email, Google, anonymous), with Google Sign-In broken without SHA-1.
+- Database: Firebase Firestore + Storage (chose Firestore over Supabase/custom API).
+- Guest: unauthenticated users read-only; anonymous Firebase users also blocked from write.
+- Email verification required to post/vote/comment (Google users auto-verified).
+- 15-minute edit lock on posts and comments.
+- Up to 3 images per post, 1 per comment; images stored in Firebase Storage (no blobs in DB).
+- Coordinates optional; when set, displayed as tappable chip → MapPreviewScreen (OSM).
+- Post-moderation (approved by default; flagged auto-hidden; dashboard future).
+- Existing app: Riverpod (manual, no codegen), Drift SQLite for destinations/trips, Flutter Map for maps, `file_picker` banned (AGP issue) — using `image_picker` instead.
+- No new backend API — Flutter talks to Firebase directly.
+- Comment images deferred to future phase (text-only in current implementation).
+
+## What was done
+### Phase A.0 — Foundation
+- Added deps: `cloud_firestore`, `firebase_storage`, `image_picker` to pubspec.yaml.
+- Extended `UserSignedIn` with `photoURL` field.
+- Created `lib/features/community/` with domain enums (`CommunitySort`, `ModerationStatus`, `VoteValue`), models (`CommunityPost`, `CommunityComment`), `CommunityRepository` (all CRUD + vote transactions + Storage helpers), and `community_providers.dart` (manual Riverpod).
+
+### Phase A.0.1 — Auth foundations
+- Added `sendEmailVerification()` to `registerWithEmail`.
+- Added `reloadCurrentUser()` and `resendEmailVerification()` to AuthRepository.
+- Added `emailVerified` field to `UserSignedIn` with `canWriteCommunity` getter.
+- Created `auth_action_providers.dart` with reload and resend action providers.
+- Updated AuthScreen: post-registration snackbar, persistent verification banner with `[Resend]` and `[I've verified]` buttons, auto-hides on verify.
+- Created `guest_gate_dialog.dart` — Option B dialog ("Maybe later" / "Sign in") for anonymous/unverified write attempts.
+
+### Phase A.1 — Feed UI
+- Added Community as 5th tab in `main_shell.dart` (groups_2 icon, between Simulate and Settings).
+- Created `CommunityFeedTab` with sort chips (`SegmentedButton<CommunitySort>`: relevant/topVoted/recent), shimmer skeleton loader, empty state, pull-to-refresh, and FAB (`"New Post"` for writers, `"Sign in to Post"` for guests → gate dialog).
+- Created `PostCard` with author row, description, 3-image grid, tappable coordinate chip, vote/comment footer, staggered fadeSlideUp animation.
+- Created `CoordinateChip` → `MapPreviewScreen` (FlutterMap + OSM tiles + "Open in Google Maps" via url_launcher).
+
+### Phase A.2 — Post creation
+- Created `PostComposerScreen` with description field (500 char limit), 3-slot image picker (Android Photo Picker, `content://` URIs), map-tap coordinate picker, "Use my location" button, auto reverse-geocoding (Nominatim), submit with image upload → Firestore create.
+- Made coordinates optional (only description required).
+
+### Phase A.3 — Engagement
+- Added new providers to `community_providers.dart`: `watchCommentsProvider`, `voteCommentActionProvider`, `addCommentActionProvider`, `updateCommentActionProvider`, `deleteCommentActionProvider`, `updatePostActionProvider`, `deletePostActionProvider`, `myPostVotesProvider`, `myCommentVotesProvider`.
+- Created `PostDetailScreen` with live post header (`communityPostProvider`), interactive vote bar (highlighted via `myPostVotesProvider`), comments list from `watchCommentsProvider` (sorted by score-then-recent), per-comment vote arrows + edit/delete (author-only, 15-min lock), comment composer (text field + send button), guest gate on all write surfaces, post overflow menu (Edit description dialog / Delete with confirm).
+- Updated `PostCard` footer arrows to be tappable with `myVote` highlight and `onVote` callback; guest gate on vote tap.
+- Wired `CommunityFeedTab` to push `PostDetailScreen` on PostCard tap, watch `myPostVotesProvider` for visible post highlights, invalidate my-votes after each vote.
+
+### Image upload fix
+- Switched `uploadPostImage` / `uploadCommentImage` from `putData(bytes)` → temp file + `putFile` (more reliable on Android for `content://` URIs).
+- Added proper `contentType` metadata (`image/jpeg`, `image/png`, `image/webp`).
+- Added empty bytes guard.
+- Added retry logic (up to 3 attempts with backoff) for `getDownloadURL` against transient `object-not-found`.
+- Made image uploads per-image resilient: one failed image skips it but doesn't abort the whole post; SnackBar warns about failures.
+
+### Firebase console tasks
+- Added debug SHA-1 `D5:08:2B:9D:54:04:98:1C:E2:AA:48:72:00:D1:A3:18:61:AE:76:27` → downloaded new `google-services.json` (oauth_client now populated, fixing Google Sign-In API10 error).
+- Firestore rules with `isVerifiedWriter()` (email_verified gate) and `sign_in_provider` fallback for anonymous block.
+- Storage rules matching email_verified gate.
+- 5 composite indexes created (posts: moderationStatus+createdAt, moderationStatus+score+createdAt, moderationStatus+hot; comments: postId+score+createdAt, postId+createdAt).
+- 1 additional composite index for comments: `postId` (asc) / `moderationStatus` (asc) / `score` (desc) / `createdAt` (desc) — user created via Console.
+
+## Key decisions
+- Firestore + Storage over Supabase/custom API (chosen over original Postgres plan).
+- Post-moderation (visible immediately, flagged posts auto-hidden; moderation dashboard deferred).
+- Flat comments (no nesting) for lightweight UI.
+- Coordinates optional (user asked "is this required?" — only description required).
+- 3 images per post, 1 per comment.
+- "Option I" for deep-linking: manual `[Refresh]` button, no auto-return from email verification.
+- Guest = unauthenticated (anonymous Firebase users also blocked from write — `sign_in_provider` check).
+- Email verification required (both Firestore rules and client gate).
+- Comment images deferred (text-only for A.3 — repo supports it but UI excluded).
+- Report post deferred to A.4 Moderation phase.
+- Vote in both feed cards and detail screen (chosen over detail-only).
+- Edit + Delete post in A.3 (chosen over deferring to A.4).
+- One-shot `FutureProvider` for my-votes state (chosen over live `StreamProvider`).
+
+## Verification
+- `flutter analyze`: 0 errors, 2 pre-existing info warnings (`settings_screen.dart:576,603`).
+- `flutter build apk --debug`: succeeds (~20-80s depending on plugin regeneration).
+
+## Critical Context
+- Google Sign-In was broken (`api10` / `DEVELOPER_ERROR`) because `google-services.json` had empty `"oauth_client": []` — fixed by adding SHA-1 fingerprint `D5:08:2B:9D:54:04:98:1C:E2:AA:48:72:00:D1:A3:18:61:AE:76:27` in Firebase console and re-downloading the file.
+- `image_picker` on Android 13+ returns `content://` URIs in `XFile.path` — upload must read bytes via `XFile.readAsBytes()` then write to a temp file for `putFile()` with proper `contentType` metadata; `putData(bytes)` had a race condition with `getDownloadURL()`.
+- Need to add release SHA-1 from Play Console if publishing.
+- No deep-link auto-return from email verification — user must tap `[I've verified]` button.
+- The `canWriteCommunity` gate expression: `!isAnonymous && emailVerified`.
+- `watchComments` requires a 4-field composite index in Firebase Console — user created it (postId asc / moderationStatus asc / score desc / createdAt desc).
+- `comments` query: `where('postId', ==) + where('moderationStatus', ==) + orderBy('score', desc) + orderBy('createdAt', desc)` — needs matching index (now created and Enabled).
+
+## Next Steps
+- Phase A.4 — Moderation: report button, flagged-self-view blur, SafeSearch Cloud Function (deferred).
+- Phase B (future) — Moderation dashboard (web admin).
+- "My Posts" screen, profile/user page, push notifications for replies — deferred.
+- Polish / bug fixes on A.3 as needed.
+
+## Relevant Files
+- `lib/features/community/presentation/community_feed_tab.dart`: 5th tab — feed, sort chips, FAB, shimmer skeleton, wired to push PostDetailScreen, watches `myPostVotesProvider`.
+- `lib/features/community/presentation/post_composer_screen.dart`: create post form with image picker, map-tap coords, submit.
+- `lib/features/community/presentation/post_card.dart`: feed card — author, images, coord chip, interactive vote arrows with highlight, guest gate.
+- `lib/features/community/presentation/post_detail_screen.dart`: full-screen post view with live header, vote bar, comments list, comment composer, edit/delete overflow.
+- `lib/features/community/presentation/coordinate_chip.dart`: tappable chip → MapPreviewScreen.
+- `lib/features/community/presentation/map_preview_screen.dart`: OSM full-screen map.
+- `lib/features/community/presentation/guest_gate_dialog.dart`: option-B dialog for unverified/anonymous users.
+- `lib/features/community/data/community_repository.dart`: Firestore + Storage CRUD, vote transactions, image upload via temp file + `putFile`.
+- `lib/features/community/data/community_providers.dart`: Riverpod providers (feed, post, votes, comments, CRUD actions, my-votes).
+- `lib/features/community/data/models/`: `community_post.dart`, `community_comment.dart`.
+- `lib/features/community/domain/`: `community_sort.dart`, `moderation_status.dart`, `vote_value.dart`.
+- `lib/features/auth/data/auth_repository.dart`: `registerWithEmail` → sends verification email, `reloadCurrentUser`, `resendEmailVerification`.
+- `lib/features/auth/data/auth_providers.dart`: `UserSignedIn` with `emailVerified` + `canWriteCommunity`.
+- `lib/features/auth/data/auth_action_providers.dart`: reload + resend action providers.
+- `lib/features/auth/presentation/auth_screen.dart`: verification banner with `[Resend]` + `[I've verified]`, post-registration snackbar.
+- `lib/features/home/presentation/main_shell.dart`: 5-tab nav (Home, Saved, Simulate, Community, Settings).
+- `android/app/google-services.json`: updated with non-empty `oauth_client` (Google Sign-In fix).
+- `pubspec.yaml`: added `cloud_firestore`, `firebase_storage`, `image_picker`.

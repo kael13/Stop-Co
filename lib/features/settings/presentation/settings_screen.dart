@@ -6,9 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/platform/file_picker_channel.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/theme_providers.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../main.dart' show recreateAlarmChannel;
+import '../../../core/components/app_button.dart';
+import '../../auth/data/auth_action_providers.dart';
+import '../../auth/data/auth_providers.dart';
 import '../data/settings_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -61,11 +64,9 @@ class SettingsScreen extends ConsumerWidget {
             currentPath: settings.customAlarmSoundPath,
             onSelected: (path) {
               ref.read(settingsProvider.notifier).setCustomAlarmSound(path);
-              recreateAlarmChannel(path);
             },
             onClear: () {
               ref.read(settingsProvider.notifier).clearCustomAlarmSound();
-              recreateAlarmChannel(null);
             },
           ).animate().fadeIn(delay: 240.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
@@ -115,6 +116,8 @@ class SettingsScreen extends ConsumerWidget {
               ref.read(settingsProvider.notifier).reset();
             },
           ),
+          const SizedBox(height: AppSpacing.lg),
+          _SignOutSection(settingsProvider: settingsProvider),
         ],
       ),
     );
@@ -531,6 +534,58 @@ class _ResetButton extends StatelessWidget {
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
         ),
       ),
+    );
+  }
+}
+
+class _SignOutSection extends ConsumerWidget {
+  final dynamic settingsProvider;
+
+  const _SignOutSection({required this.settingsProvider});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).valueOrNull;
+
+    if (user == null) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        _SectionHeader(
+          title: 'Account',
+          accentColor: context.error,
+        ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
+        const SizedBox(height: AppSpacing.sm),
+        AppButton(
+          label: 'Sign Out',
+          icon: Icons.logout_rounded,
+          isDestructive: true,
+          onPressed: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Sign Out'),
+                content: const Text('Are you sure you want to sign out?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: context.error,
+                    ),
+                    child: const Text('Sign Out'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed != true) return;
+            await ref.read(signOutActionProvider.future);
+          },
+        ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+      ],
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/data/auth_providers.dart';
 import '../data/community_repository.dart';
+import '../data/models/community_comment.dart';
 import '../data/models/community_post.dart';
 import '../domain/community_sort.dart';
 import '../domain/vote_value.dart';
@@ -119,4 +120,170 @@ class CreatePostArgs {
     this.imagePaths = const [],
     this.postId,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Comments
+// ---------------------------------------------------------------------------
+
+/// Live stream of flat comments for a post, sorted by score-then-recent.
+final watchCommentsProvider = StreamProvider.family
+    .autoDispose<List<CommunityComment>, String>((ref, postId) {
+  final repo = ref.watch(communityRepositoryProvider);
+  return repo.watchComments(postId);
+});
+
+/// Async action: add a text comment to a post. Returns comment ID.
+/// The caller invalidates [watchCommentsProvider] after this resolves.
+final addCommentActionProvider =
+    FutureProvider.family.autoDispose<String, AddCommentArgs>((ref, args) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  return repo.addComment(
+    author: args.author,
+    postId: args.postId,
+    text: args.text,
+  );
+});
+
+class AddCommentArgs {
+  final UserSignedIn author;
+  final String postId;
+  final String text;
+  const AddCommentArgs({
+    required this.author,
+    required this.postId,
+    required this.text,
+  });
+  @override
+  bool operator ==(Object other) =>
+      other is AddCommentArgs &&
+      other.postId == postId &&
+      other.text == text &&
+      other.author.uid == author.uid;
+  @override
+  int get hashCode => Object.hash(postId, text, author.uid);
+}
+
+/// Async action: update a comment's text (within 15-min edit lock).
+final updateCommentActionProvider =
+    FutureProvider.family.autoDispose<void, UpdateCommentArgs>((ref, args) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  await repo.updateComment(args.comment, text: args.text);
+});
+
+class UpdateCommentArgs {
+  final CommunityComment comment;
+  final String text;
+  const UpdateCommentArgs({required this.comment, required this.text});
+  @override
+  bool operator ==(Object other) =>
+      other is UpdateCommentArgs &&
+      other.comment.id == comment.id &&
+      other.text == text;
+  @override
+  int get hashCode => Object.hash(comment.id, text);
+}
+
+/// Async action: delete a comment (author-only, enforced by Firestore rules).
+final deleteCommentActionProvider =
+    FutureProvider.family.autoDispose<void, CommunityComment>((ref, comment) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  await repo.deleteComment(comment);
+});
+
+// ---------------------------------------------------------------------------
+// Comment votes
+// ---------------------------------------------------------------------------
+
+/// Async action: cast/flip/remove a comment vote.
+/// Invalidate [myCommentVotesProvider] after this resolves.
+final voteCommentActionProvider =
+    FutureProvider.family.autoDispose<void, VoteCommentArgs>((ref, args) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  await repo.voteComment(args.commentId, args.value, args.uid);
+});
+
+class VoteCommentArgs {
+  final String commentId;
+  final VoteValue value;
+  final String uid;
+  const VoteCommentArgs(this.commentId, this.value, this.uid);
+  @override
+  bool operator ==(Object other) =>
+      other is VoteCommentArgs &&
+      other.commentId == commentId &&
+      other.value == value &&
+      other.uid == uid;
+  @override
+  int get hashCode => Object.hash(commentId, value, uid);
+}
+
+// ---------------------------------------------------------------------------
+// Post edit / delete
+// ---------------------------------------------------------------------------
+
+/// Async action: edit a post's description (within 15-min edit lock).
+final updatePostActionProvider =
+    FutureProvider.family.autoDispose<void, UpdatePostArgs>((ref, args) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  await repo.updatePost(args.post, description: args.description);
+});
+
+class UpdatePostArgs {
+  final CommunityPost post;
+  final String description;
+  const UpdatePostArgs({required this.post, required this.description});
+  @override
+  bool operator ==(Object other) =>
+      other is UpdatePostArgs &&
+      other.post.id == post.id &&
+      other.description == description;
+  @override
+  int get hashCode => Object.hash(post.id, description);
+}
+
+/// Async action: delete a post (author-only, enforced by Firestore rules).
+final deletePostActionProvider =
+    FutureProvider.family.autoDispose<void, CommunityPost>((ref, post) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  await repo.deletePost(post);
+});
+
+// ---------------------------------------------------------------------------
+// My-votes state (one-shot fetch, invalidate on each vote)
+// ---------------------------------------------------------------------------
+
+/// One-shot fetch of the current user's votes on a set of post IDs.
+/// Returns a map of `postId → VoteValue`. Invalidate after each vote to
+/// refresh the highlight state.
+final myPostVotesProvider = FutureProvider.family
+    .autoDispose<Map<String, VoteValue>, MyVotesArgs>((ref, args) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  return repo.myVotesForPosts(args.ids, args.uid);
+});
+
+/// One-shot fetch of the current user's votes on a set of comment IDs.
+final myCommentVotesProvider = FutureProvider.family
+    .autoDispose<Map<String, VoteValue>, MyVotesArgs>((ref, args) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  return repo.myVotesForComments(args.ids, args.uid);
+});
+
+class MyVotesArgs {
+  final List<String> ids;
+  final String uid;
+  const MyVotesArgs({required this.ids, required this.uid});
+  @override
+  bool operator ==(Object other) =>
+      other is MyVotesArgs && other.uid == uid && _listEquals(other.ids, ids);
+  @override
+  int get hashCode => Object.hash(uid, Object.hashAll(ids));
+
+  static bool _listEquals(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 }

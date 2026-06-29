@@ -4,67 +4,79 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../data/models/community_post.dart';
+import '../domain/vote_value.dart';
 import 'coordinate_chip.dart';
 
 /// A single post card rendered in the community feed.
 ///
 /// Displays: author avatar/name, timestamp, description, image grid (up to 3),
-/// coordinate chip, vote count + comment count. Tap navigates to post detail
-/// (Phase A.3).
+/// coordinate chip, interactive vote arrows + comment count. Tap navigates to
+/// [PostDetailScreen].
 class PostCard extends StatelessWidget {
   final CommunityPost post;
   final int index;
   final VoidCallback? onTap;
+  final VoteValue myVote;
+  final bool canVote;
+  final ValueChanged<VoteValue>? onVote;
 
   const PostCard({
     super.key,
     required this.post,
     required this.index,
     this.onTap,
+    this.myVote = VoteValue.none,
+    this.canVote = false,
+    this.onVote,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
+        horizontal: AppSpacing.sm,
+        vertical: 2,
       ),
       child: Material(
         color: context.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        elevation: 1,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        elevation: 0.5,
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _AuthorRow(post: post),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.xs),
                 if (post.description.isNotEmpty) ...[
                   Text(
                     post.description,
-                    style: AppTypography.body,
+                    style: AppTypography.secondary,
                     maxLines: 5,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.xs),
                 ],
                 if (post.imageURLs.isNotEmpty) ...[
                   _ImageGrid(urls: post.imageURLs),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.xs),
                 ],
                 if (post.latitude != 0 || post.longitude != 0)
                   CoordinateChip(
                     latitude: post.latitude,
                     longitude: post.longitude,
                     placeName: post.placeName,
+                    compact: true,
                   ),
-                const SizedBox(height: AppSpacing.sm),
-                _FooterRow(post: post),
+                const SizedBox(height: AppSpacing.xs),
+                _FooterRow(
+                  post: post,
+                  myVote: myVote,
+                  onVote: onVote,
+                ),
               ],
             ),
           ),
@@ -89,7 +101,7 @@ class _AuthorRow extends StatelessWidget {
     return Row(
       children: [
         CircleAvatar(
-          radius: 16,
+          radius: 12,
           backgroundColor: context.primary.withValues(alpha: 0.15),
           backgroundImage:
               post.authorPhotoURL != null ? NetworkImage(post.authorPhotoURL!) : null,
@@ -97,11 +109,11 @@ class _AuthorRow extends StatelessWidget {
               ? Text(
                   (post.authorName.isNotEmpty ? post.authorName : 'A')[0]
                       .toUpperCase(),
-                  style: TextStyle(color: context.primary, fontSize: 13),
+                  style: TextStyle(color: context.primary, fontSize: 11),
                 )
               : null,
         ),
-        const SizedBox(width: AppSpacing.sm),
+        const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,9 +161,9 @@ class _ImageGrid extends StatelessWidget {
           urls.first,
           fit: BoxFit.cover,
           width: double.infinity,
-          height: 200,
+          height: 160,
           errorBuilder: (_, _, _) => Container(
-            height: 200,
+            height: 160,
             color: context.outlineVariant,
             child: const Center(child: Icon(Icons.broken_image_outlined)),
           ),
@@ -187,13 +199,24 @@ class _ImageGrid extends StatelessWidget {
 
 class _FooterRow extends StatelessWidget {
   final CommunityPost post;
-  const _FooterRow({required this.post});
+  final VoteValue myVote;
+  final ValueChanged<VoteValue>? onVote;
+  const _FooterRow({required this.post, required this.myVote, this.onVote});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(Icons.arrow_upward_rounded, size: 18, color: context.textTertiary),
+        _VoteArrow(
+          icon: Icons.arrow_upward_rounded,
+          isActive: myVote == VoteValue.up,
+          color: myVote == VoteValue.up ? Colors.green : context.textTertiary,
+          onTap: onVote == null
+              ? null
+              : () => onVote!(
+                    myVote == VoteValue.up ? VoteValue.none : VoteValue.up,
+                  ),
+        ),
         const SizedBox(width: AppSpacing.xxs),
         Text(
           '${post.score}',
@@ -202,11 +225,19 @@ class _FooterRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.xxs),
-        Icon(Icons.arrow_downward_rounded,
-            size: 18, color: context.textTertiary),
-        const SizedBox(width: AppSpacing.lg),
+        _VoteArrow(
+          icon: Icons.arrow_downward_rounded,
+          isActive: myVote == VoteValue.down,
+          color: myVote == VoteValue.down ? Colors.red : context.textTertiary,
+          onTap: onVote == null
+              ? null
+              : () => onVote!(
+                    myVote == VoteValue.down ? VoteValue.none : VoteValue.down,
+                  ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
         Icon(Icons.chat_bubble_outline_rounded,
-            size: 18, color: context.textTertiary),
+            size: 16, color: context.textTertiary),
         const SizedBox(width: AppSpacing.xxs),
         Text(
           '${post.commentCount}',
@@ -215,6 +246,32 @@ class _FooterRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _VoteArrow extends StatelessWidget {
+  final IconData icon;
+  final bool isActive;
+  final Color color;
+  final VoidCallback? onTap;
+  const _VoteArrow({
+    required this.icon,
+    required this.isActive,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedScale(
+        scale: isActive ? 1.2 : 1.0,
+        duration: 150.ms,
+        child: Icon(icon, size: 18, color: color),
+      ),
     );
   }
 }

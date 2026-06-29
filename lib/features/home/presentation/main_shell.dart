@@ -31,7 +31,7 @@ class MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
-  int _currentIndex = 0;
+  int _currentIndex = 2;
   late final PageController _pageController;
 
   @override
@@ -47,17 +47,17 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   static const _tabs = <_TabItem>[
-    _TabItem(icon: Icons.home_rounded, activeIcon: Icons.home_rounded, label: 'Home'),
     _TabItem(icon: Icons.location_on_outlined, activeIcon: Icons.location_on_rounded, label: 'Saved'),
     _TabItem(icon: Icons.science_outlined, activeIcon: Icons.science_rounded, label: 'Simulate'),
+    _TabItem(icon: Icons.explore_outlined, activeIcon: Icons.explore_rounded, label: 'Trips'),
     _TabItem(icon: Icons.groups_2_outlined, activeIcon: Icons.groups_2_rounded, label: 'Community'),
     _TabItem(icon: Icons.settings_outlined, activeIcon: Icons.settings_rounded, label: 'Settings'),
   ];
 
   final _pages = const <Widget>[
-    _HomeTab(),
     _DestinationsTab(),
     SimulationScreen(),
+    _HomeTab(),
     CommunityFeedTab(),
     SettingsScreen(),
   ];
@@ -95,6 +95,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                   icon: selected ? tab.activeIcon : tab.icon,
                   label: tab.label,
                   selected: selected,
+                  isMiddle: index == 2,
                   onTap: () {
                     _pageController.animateToPage(
                       index,
@@ -116,12 +117,14 @@ class _NavBarItem extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool selected;
+  final bool isMiddle;
   final VoidCallback onTap;
 
   const _NavBarItem({
     required this.icon,
     required this.label,
     required this.selected,
+    this.isMiddle = false,
     required this.onTap,
   });
 
@@ -160,6 +163,67 @@ class _NavBarItemState extends State<_NavBarItem>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    if (widget.isMiddle) {
+      return GestureDetector(
+        onTap: _handleTap,
+        behavior: HitTestBehavior.opaque,
+        child: ScaleTransition(
+          scale: _scaleAnim,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: widget.selected
+                    ? [cs.primary, cs.secondary]
+                    : [
+                        cs.primary.withValues(alpha: 0.3),
+                        cs.secondary.withValues(alpha: 0.3),
+                      ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: widget.selected
+                  ? [
+                      BoxShadow(
+                        color: cs.primary.withValues(alpha: 0.4),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  widget.icon,
+                  size: 28,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.label,
+                  style: AppTypography.caption.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: _handleTap,
       behavior: HitTestBehavior.opaque,
