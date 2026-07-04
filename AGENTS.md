@@ -269,3 +269,142 @@ Add a "Community" tab with Reddit-style posts (create/update/delete), upvote+dow
 - `lib/features/home/presentation/main_shell.dart`: 5-tab nav (Home, Saved, Simulate, Community, Settings).
 - `android/app/google-services.json`: updated with non-empty `oauth_client` (Google Sign-In fix).
 - `pubspec.yaml`: added `cloud_firestore`, `firebase_storage`, `image_picker`.
+
+---
+
+# Session: Multi-waypoint alarm pins — single-stop panel UX fix
+
+## Goal
+- Implement multi-waypoint alarm pins on the map while keeping single-destination flow identical to original. Additional waypoints optional; single destination UI must remain identical when only one pin is placed.
+
+## Constraints & Preferences
+- Additional waypoints must be optional; single destination UI must remain identical when only one pin is placed.
+- Sequential waypoints (A→B→C) that trigger alarms on arrival; trip auto-completes after last stop.
+- Per-pin alert radius; waypoints set before trip only; waypoints persisted in history.
+- Numbered markers (1, 2, 3) on map; current waypoint pulses, past ones show checkmark.
+- Celebration screen on trip completion; saved Destinations available as quick-add chips on planner.
+- Single-stop bottom panel must show old UI (name input + radius chips + Start Trip + Save Only) — not the multi-stop list.
+- User enters multi-stop mode explicitly via "Add another stop" link.
+
+## What was done
+- `Waypoint` model (`lib/features/trip/data/waypoint.dart`) with JSON serialization.
+- `ActiveTrip` model: `List<Waypoint>` replaces single `Destination`; `currentWaypoint` getter, `hasMultipleStops`, `totalStops`.
+- `TripRecord`: `waypointsJson` column, schema v4→v5 migration.
+- `ActiveTripNotifier`: `startTrip(Destination)` backward compat, `startTripWithWaypoints(List<Waypoint>)`, `advanceToNextWaypoint()`, `clearTrip()`.
+- `GeofenceManager`: checks `currentWaypoint` instead of destination.
+- `DestinationSetupScreen`: full rewrite as waypoint planner with single-stop and multi-stop modes.
+- `ActiveTripScreen`: numbered waypoint markers, stop progress overlay.
+- `AlarmScreen`: stop advancement logic (dismiss → next stop or complete).
+- `TripCompleteScreen`: celebration screen with stops list and mini route map.
+- `TripDetailScreen`: numbered waypoint markers on history map, stops section.
+- `SimulationService`: decoupled from `Destination` model (takes lat/lng/name).
+- `MainShell`: trip card shows stop count badge when `waypoints.length > 1`.
+- All route registration (`app.dart`).
+
+### Fix: single-stop panel UX
+- Added `_multiMode` flag (default `false`) to `DestinationSetupScreen`.
+- `_onMapTap` / `_selectSearchResult`: when `!_multiMode` and a waypoint exists, **replaces** the single waypoint (old "move pin" behavior). Only **appends** when in multi-mode.
+- `_buildPlannerBottomSheet` dispatches:
+  - 0 waypoints → empty state
+  - 1 waypoint + `!_multiMode` → `_buildSingleStopPanel()` (old UI)
+  - ≥2 waypoints or `_multiMode` → multi-stop list
+- Added `_buildSingleStopPanel()` with exact old UI: name `AppInput`, radius `ChoiceChip`s, "Start Trip" + "Save Only" buttons, "Add another stop" link.
+- Added `_enterMultiMode()` to set flag and pan to user location.
+- `flutter analyze`: 0 errors, 0 warnings, 5 info.
+
+## Key decisions
+- `_multiMode` stays `true` for the session once user taps "Add another stop".
+- `startTrip(Destination)` kept as backward compat wrapper creating single-element Waypoint list.
+- `SimulationService` changed from `Destination` parameter to individual lat/lng/name params.
+- `completeTrip()` no longer nulls ActiveTrip state; `TripCompleteScreen` reads from provider and calls `clearTrip()` on exit.
+
+## Verification
+- `flutter analyze`: 0 errors, 0 warnings (5 info — 2 `prefer_is_empty`, 2 pre-existing `use_build_context_synchronously`, 1 `unnecessary_underscores`).
+- `flutter build apk --debug`: succeeded.
+
+## Critical Context
+- `_multiMode` default false. Once user taps "Add another stop", stays true for session.
+- `_onMapTap` currently always appends; must check `!_multiMode && _waypoints.length >= 1` to replace instead.
+- `AppInput` accepts `suffix` (Widget) not `suffixIcon`.
+- `AppCard` has no `margin` property; use Padding wrapper.
+- `MapOptions.onTap` signature is `void Function(TapPosition, LatLng)`.
+- `ReorderableListView.onReorder` is deprecated; use `onReorderItem`.
+- `SimulationService.start()` no longer accepts `Destination`.
+
+## Next Steps
+- None (fix complete).
+
+## Relevant Files
+- `lib/features/destination/presentation/destination_setup_screen.dart` — single-stop panel UX fix (`_multiMode`, `_buildSingleStopPanel`, dispatch logic).
+- `lib/features/trip/data/waypoint.dart` — Waypoint model.
+- `lib/features/trip/data/trip_model.dart` — ActiveTrip with waypoints list + currentWaypoint getter.
+- `lib/features/trip/data/trip_providers.dart` — Multi-waypoint engine.
+- `lib/features/trip/data/geofence_manager.dart` — Uses currentWaypoint.
+- `lib/features/trip/presentation/active_trip_screen.dart` — Numbered markers, stop progress overlay.
+- `lib/features/trip/presentation/alarm_screen.dart` — Stop advancement logic.
+- `lib/features/trip/presentation/trip_complete_screen.dart` — Celebration screen.
+- `lib/features/trip/presentation/trip_detail_screen.dart` — Waypoints in history.
+- `lib/features/simulation/data/simulation_service.dart` — Decoupled from Destination.
+- `lib/core/database/database.dart` — Schema v5 with waypointsJson column.
+- `lib/app.dart` — Route registration for /trip-complete.
+
+---
+
+# Session: Multi-waypoint alarm pins — UX compaction & bug fixes
+
+## Goal
+- Limit alarm pins to 5 max, fix persistent action buttons in multi-stop mode, compact/modern font (Google Fonts Inter), fix simulation alarm re-triggering loop and immediate re-trigger on stop advance.
+
+## Constraints & Preferences
+- Max 5 stops per trip.
+- "Save Only" and "Start Trip" buttons always visible in multi-stop mode.
+- Compact modern UI using `AppTypography` (Inter).
+- Alarm must only fire when user has truly left the previous stop's alert zone and arrived at the current stop.
+- Simulation must advance through all stops without looping.
+
+## What was done
+- `AppConstants.maxWaypoints`: 10 → 5; max-limit SnackBar guards in `_onMapTap()` / `_selectSearchResult()`.
+- `_buildWaypointList()` bottom row: unconditional button row (removed `if (length == 1)` guard).
+- `_WaypointRow` compact: 24px circle, 11px number, `AppTypography.secondary` (14px) name, `caption` for radius, 28px icon buttons, 2px vertical padding.
+- `_buildPlannerBottomSheet` `maxHeight`: 0.45 → 0.40.
+- All sheet sections: padding and spacings reduced (sm→xs, xs→xxs, md→sm).
+- Sheet titles: `AppTypography.title` (24px) → `AppTypography.sectionHeader` (18px).
+- Empty planner: icon 40→28, fonts switched to `secondary`/`caption`.
+- `_buildSingleStopPanel`: "Where are you heading?" → "Where to?"; spacing tightened.
+- `_buildEditBottomSheet`: spacing tightened, title "Edit Destination" → "Edit".
+- FAB bottom position: 280 → 260.
+- All raw `Theme.of(context).textTheme.*` replaced with `AppTypography.*`.
+- Search results: raw `bodySmall` → `AppTypography.secondary`.
+- `ChoiceChip`s: added `visualDensity: VisualDensity.compact`.
+- Simulation screen: multi-waypoint selection UI with numbered chips, remove button, up to 5 stops, calls `startTripWithWaypoints()`.
+- `hasLeftPrevZone` alarm gate in `active_trip_screen.dart`: alarm fires only when distance to previous stop > its alert radius AND ≤ current stop's radius.
+- `alarm_screen.dart` `_dismiss()`: immediately repoints simulation to next waypoint (not last stop), stops simulation only on last stop.
+- `trip_complete_screen.dart`: `clearTrip()` on exit, `mounted` guard.
+
+## Key decisions
+- `hasLeftPrevZone` over time-cooldown or `_wasOutsideRadius`: handles close stops and both simulation/real GPS correctly.
+- Simulation repointing in `_dismiss()`: immediate set next waypoint so simulation heads in the right direction while route is being fetched.
+- Option A for simulation tab: picks up planner waypoints via multi-select from saved destinations, converts to `Waypoint`s, calls `startTripWithWaypoints()`.
+- Compact font strategy: `AppTypography.secondary` (14px Inter) for form content, `sectionHeader` (18px) for titles, `caption` (12px) for secondary info.
+
+## Verification
+- `flutter analyze`: 0 errors, 0 warnings (3 pre-existing info — `unnecessary_underscores` in destination_setup_screen, `use_build_context_synchronously` in settings_screen).
+- `flutter build apk --debug`: succeeded.
+
+## Critical Context
+- Bug "stop 2 triggers immediately after dismiss" caused by simulation still heading to old stop + distance already ≤ new stop alert radius. Fixed by `hasLeftPrevZone`.
+- Bug "loops on last stop" caused by completed trip state not being cleared + stale callbacks. Fixed by `clearTrip()` on exit + immediate simulation repointing + `hasLeftPrevZone`.
+- `isLastStop` check in `_dismiss()`: simulation stopped + disabled on last stop only.
+- `_multiMode` default false; once set, stays true for session.
+
+## Next Steps
+- (none — compaction and bug fixes complete)
+- Verify multi-waypoint flow in simulation mode: create 2-3 close stops → start simulation → dismiss each alarm sequentially → trip completes without loops.
+
+## Relevant Files
+- `lib/core/constants/app_constants.dart` — maxWaypoints 10→5.
+- `lib/features/destination/presentation/destination_setup_screen.dart` — max guards, persistent buttons, compact layout, modern fonts, progress bar, reduced spacing, maxHeight 0.40, VisualDensity.compact.
+- `lib/features/trip/presentation/alarm_screen.dart` — simulation repointing on advance, stop on last stop only.
+- `lib/features/trip/presentation/active_trip_screen.dart` — hasLeftPrevZone alarm gate.
+- `lib/features/trip/presentation/trip_complete_screen.dart` — clearTrip() on exit, mounted guard.
+- `lib/features/simulation/presentation/simulation_screen.dart` — multi-waypoint selection UI, startTripWithWaypoints().

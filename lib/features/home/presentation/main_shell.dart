@@ -652,10 +652,11 @@ class _ActiveTripBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final wp = trip.currentWaypoint;
     final distance = trip.currentDistance ?? 0;
     final distanceFormatted = GpsUtils.formatDistance(distance);
-    final progress = distance > 0 && trip.destination.alertRadius > 0
-        ? (distance / trip.destination.alertRadius).clamp(0.0, 1.0)
+    final progress = distance > 0 && wp.alertRadius > 0
+        ? (distance / wp.alertRadius).clamp(0.0, 1.0)
         : 1.0;
 
     return GestureDetector(
@@ -705,9 +706,20 @@ class _ActiveTripBanner extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              trip.destination.name,
+              wp.name,
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: context.textPrimary),
             ),
+            if (trip.hasMultipleStops)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Stop ${trip.currentWaypointIndex + 1} of ${trip.totalStops}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             const SizedBox(height: AppSpacing.xs),
             Hero(
               tag: 'active-trip-distance',
@@ -877,7 +889,7 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
                   : ListView(
                       padding: const EdgeInsets.all(AppSpacing.md),
                       children: destinations.map((dest) {
-                        final isActive = dest.id == activeTrip?.destination.id;
+                        final isActive = dest.id == activeTrip?.currentWaypoint.id;
                         return _DestinationTile(
                           destination: dest,
                           isActive: isActive,
@@ -1215,6 +1227,8 @@ class _TripCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final distanceFormatted = GpsUtils.formatDistance(trip.totalDistance);
+    final waypoints = trip.waypoints;
+    final hasMultipleStops = waypoints.length > 1;
 
     return AppCard(
       onTap: () {
@@ -1256,7 +1270,9 @@ class _TripCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$distanceFormatted · $formattedDuration',
+                  hasMultipleStops
+                      ? '${waypoints.length} stops · $distanceFormatted · $formattedDuration'
+                      : '$distanceFormatted · $formattedDuration',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textSecondary),
                 ),
               ],
@@ -1282,7 +1298,9 @@ class _TripCard extends ConsumerWidget {
                 child: Text(
                   trip.status == TripStatus.alarmTriggered
                       ? 'Alarm'
-                      : trip.status.name[0].toUpperCase() + trip.status.name.substring(1),
+                      : hasMultipleStops
+                          ? '${waypoints.length} stops'
+                          : trip.status.name[0].toUpperCase() + trip.status.name.substring(1),
                   style: AppTypography.caption.copyWith(
                     color: _statusColor(context),
                     fontWeight: FontWeight.w600,

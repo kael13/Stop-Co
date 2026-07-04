@@ -12,6 +12,7 @@ class AppConstants {
   static const double maxSpeedMps = 100;
   static const int routeReFetchIntervalSec = 60;
   static const double routeReFetchMinDistance = 50;
+  static const int maxWaypoints = 5;
   static const int locationPollIntervalMs = 10000;
   static const int geofenceCheckIntervalMs = 15000;
 

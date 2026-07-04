@@ -67,12 +67,14 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      final trip = ref.read(activeTripProvider);
+      if (trip == null || !trip.isActive) return;
       if (ref.read(simulationEnabledProvider)) {
         _startSimulationPolling();
       } else {
         _startPolling();
       }
-    } else {
+    } else if (!ref.read(simulationEnabledProvider)) {
       _pollTimer?.cancel();
     }
   }
@@ -123,18 +125,18 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
 
     _startSimulationPolling();
     _startPeriodicRouteReFetching();
-    WakelockPlus.enable();
   }
 
   void _startForegroundService() {
     final trip = ref.read(activeTripProvider);
     if (trip == null) return;
+    final wp = trip.currentWaypoint;
     ForegroundServiceChannel.startTracking(
-      latitude: trip.destination.latitude,
-      longitude: trip.destination.longitude,
-      radius: trip.destination.alertRadius,
-      destinationName: trip.destination.name,
-      destinationId: trip.destination.id,
+      latitude: wp.latitude,
+      longitude: wp.longitude,
+      radius: wp.alertRadius,
+      destinationName: wp.name,
+      destinationId: wp.id,
     );
   }
 
@@ -192,11 +194,9 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     final updatedTrip = ref.read(activeTripProvider);
     if (position == null || updatedTrip == null) return;
 
+    final wp = updatedTrip.currentWaypoint;
     final from = LatLng(position.latitude, position.longitude);
-    final to = LatLng(
-      updatedTrip.destination.latitude,
-      updatedTrip.destination.longitude,
-    );
+    final to = LatLng(wp.latitude, wp.longitude);
     await _fetchAndStoreRoute(from, to);
 
     if (!mounted) return;
@@ -205,7 +205,9 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
 
     final settings = ref.read(settingsProvider);
     simulationService.start(
-      destination: updatedTrip.destination,
+      destinationLatitude: wp.latitude,
+      destinationLongitude: wp.longitude,
+      destinationName: wp.name,
       startLatitude: position.latitude,
       startLongitude: position.longitude,
       speedMps: settings.simulationSpeedMps,
@@ -218,15 +220,13 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     setState(() => _currentPosition = LatLng(lat, lon));
     final trip = ref.read(activeTripProvider);
     if (trip == null) return;
+    final wp = trip.currentWaypoint;
 
     if (wasNull) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _fitMapBounds());
       if (!_isFetchingRoute) {
         final from = LatLng(lat, lon);
-        final to = LatLng(
-          trip.destination.latitude,
-          trip.destination.longitude,
-        );
+        final to = LatLng(wp.latitude, wp.longitude);
         _fetchAndStoreRoute(from, to);
       }
     }
@@ -238,18 +238,29 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
 
     final distance = GpsUtils.calculateDistance(
       lat, lon,
-      trip.destination.latitude, trip.destination.longitude,
+      wp.latitude, wp.longitude,
     );
 
     ref.read(activeTripProvider.notifier).updateDistance(distance);
     ref.read(activeTripProvider.notifier).addBreadcrumb(LatLng(lat, lon));
 
     _updateForegroundNotification(
-      trip.destination.name,
+      wp.name,
       GpsUtils.formatDistance(distance),
     );
 
-    if (distance <= trip.destination.alertRadius) {
+    bool hasLeftPrevZone = true;
+    if (trip.currentWaypointIndex > 0) {
+      final prevWp = trip.waypoints[trip.currentWaypointIndex - 1];
+      final distToPrev = GpsUtils.calculateDistance(
+        lat, lon, prevWp.latitude, prevWp.longitude,
+      );
+      if (distToPrev <= prevWp.alertRadius) {
+        hasLeftPrevZone = false;
+      }
+    }
+
+    if (distance <= wp.alertRadius && hasLeftPrevZone) {
       HapticFeedback.heavyImpact();
       ref.read(activeTripProvider.notifier).triggerAlarm();
       _subscription?.cancel();
@@ -300,11 +311,9 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
       if (dist < AppConstants.routeReFetchMinDistance) return;
     }
 
+    final wp = trip.currentWaypoint;
     final from = _currentPosition!;
-    final to = LatLng(
-      trip.destination.latitude,
-      trip.destination.longitude,
-    );
+    final to = LatLng(wp.latitude, wp.longitude);
     _fetchAndStoreRoute(from, to);
   }
 
@@ -312,7 +321,8 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     if (_currentPosition == null) return;
     final trip = ref.read(activeTripProvider);
     if (trip == null) return;
-    final dest = LatLng(trip.destination.latitude, trip.destination.longitude);
+    final wp = trip.currentWaypoint;
+    final dest = LatLng(wp.latitude, wp.longitude);
     final lat1 = _currentPosition!.latitude;
     final lng1 = _currentPosition!.longitude;
     final lat2 = dest.latitude;
@@ -399,33 +409,45 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                       height: 36,
                       child: const _PulsingUserMarker(),
                     ),
-                    Marker(
-                      point: LatLng(
-                        trip.destination.latitude,
-                        trip.destination.longitude,
-                      ),
-                      width: 36,
-                      height: 36,
-                      child: _DestinationPinMarker(
-                        withinThreshold:
-                            distance <= trip.destination.alertRadius,
-                      ),
-                    ),
+                    ...trip.waypoints.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final wp = entry.value;
+                      final isCurrent = i == trip.currentWaypointIndex;
+                      final isPast = i < trip.currentWaypointIndex;
+                      if (trip.hasMultipleStops) {
+                        return Marker(
+                          point: LatLng(wp.latitude, wp.longitude),
+                          width: 36,
+                          height: 36,
+                          child: _NumberedWaypointMarker(
+                            number: i + 1,
+                            isCurrent: isCurrent,
+                            isPast: isPast,
+                            withinThreshold:
+                                isCurrent && distance <= wp.alertRadius,
+                          ),
+                        );
+                      }
+                      return Marker(
+                        point: LatLng(wp.latitude, wp.longitude),
+                        width: 36,
+                        height: 36,
+                        child: _DestinationPinMarker(
+                          withinThreshold:
+                              distance <= wp.alertRadius,
+                        ),
+                      );
+                    }),
                   ],
                 ),
                 PolylineLayer(
                   polylines: [
-                    Polyline(
-                      points: routeCoordinates ?? [
-                        _currentPosition!,
-                        LatLng(
-                          trip.destination.latitude,
-                          trip.destination.longitude,
-                        ),
-                      ],
-                      color: context.primary.withValues(alpha: 0.4),
-                      strokeWidth: 3,
-                    ),
+                    if (routeCoordinates != null)
+                      Polyline(
+                        points: routeCoordinates,
+                        color: context.primary.withValues(alpha: 0.4),
+                        strokeWidth: 3,
+                      ),
                   ],
                 ),
                 SimpleAttributionWidget(
@@ -440,29 +462,32 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
           SafeArea(
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: _InfoOverlay(
-                    statusColor: simulationEnabled
-                        ? context.secondary
-                        : _permissionDenied
-                            ? context.error
-                            : context.success,
-                    statusLabel: simulationEnabled
-                        ? 'Simulating to'
-                        : _permissionDenied
-                            ? 'GPS unavailable'
-                            : 'Tracking to',
-                    destinationName: trip.destination.name,
-                    distanceFormatted: distanceFormatted,
-                    speedKmh: speedKmh,
-                    commuteMode: detectedMode,
-                    progressValue: distance > 0 && trip.destination.alertRadius > 0
-                        ? (distance / trip.destination.alertRadius).clamp(0.0, 1.0)
-                        : 1.0,
-                    isSimulation: simulationEnabled,
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    child: _InfoOverlay(
+                      statusColor: simulationEnabled
+                          ? context.secondary
+                          : _permissionDenied
+                              ? context.error
+                              : context.success,
+                      statusLabel: simulationEnabled
+                          ? 'Simulating to'
+                          : _permissionDenied
+                              ? 'GPS unavailable'
+                              : 'Tracking to',
+                      destinationName: trip.currentWaypoint.name,
+                      distanceFormatted: distanceFormatted,
+                      stopLabel: trip.hasMultipleStops
+                          ? 'Stop ${trip.currentWaypointIndex + 1} of ${trip.totalStops}'
+                          : null,
+                      speedKmh: speedKmh,
+                      commuteMode: detectedMode,
+                      progressValue: distance > 0 && trip.currentWaypoint.alertRadius > 0
+                          ? (distance / trip.currentWaypoint.alertRadius).clamp(0.0, 1.0)
+                          : 1.0,
+                      isSimulation: simulationEnabled,
+                    ),
                   ),
-                ),
                 if (_permissionDenied && !simulationEnabled)
                   _PermissionDeniedBanner(),
                 if (simulationEnabled)
@@ -518,6 +543,7 @@ class _InfoOverlay extends StatelessWidget {
   final String statusLabel;
   final String destinationName;
   final String distanceFormatted;
+  final String? stopLabel;
   final String? speedKmh;
   final CommuteMode? commuteMode;
   final double progressValue;
@@ -528,6 +554,7 @@ class _InfoOverlay extends StatelessWidget {
     required this.statusLabel,
     required this.destinationName,
     required this.distanceFormatted,
+    this.stopLabel,
     this.speedKmh,
     this.commuteMode,
     required this.progressValue,
@@ -582,14 +609,28 @@ class _InfoOverlay extends StatelessWidget {
                       .scaleXY(begin: 1.0, end: 1.3, duration: 900.ms),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
-                    child: Text(
-                      '$statusLabel: $destinationName',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: context.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (stopLabel != null)
+                          Text(
+                            stopLabel!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        Text(
+                          '$statusLabel: $destinationName',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: context.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -837,6 +878,77 @@ class _PulsingUserMarkerState extends State<_PulsingUserMarker>
           ),
         );
       },
+    );
+  }
+}
+
+class _NumberedWaypointMarker extends StatelessWidget {
+  final int number;
+  final bool isCurrent;
+  final bool isPast;
+  final bool withinThreshold;
+
+  const _NumberedWaypointMarker({
+    required this.number,
+    required this.isCurrent,
+    required this.isPast,
+    this.withinThreshold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isPast
+        ? context.textTertiary
+        : withinThreshold
+            ? context.error
+            : context.error;
+    final bgColor = isPast
+        ? context.textTertiary.withValues(alpha: 0.3)
+        : context.error;
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (isCurrent && !withinThreshold)
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+          )
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .scaleXY(begin: 0.8, end: 1.15, duration: 800.ms),
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: isPast ? bgColor : bgColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Center(
+            child: isPast
+                ? Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                : Text(
+                    '$number',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -10,6 +10,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../data/trip_record.dart';
 import '../data/trip_model.dart';
+import '../data/waypoint.dart';
 
 class TripDetailScreen extends ConsumerWidget {
   final TripRecord trip;
@@ -73,6 +74,7 @@ class TripDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final traveledPath = trip.gpsBreadcrumbs;
     final plannedRoute = trip.routeCoordinates;
+    final routeWaypoints = trip.waypoints;
     final destinationPoint = traveledPath.isNotEmpty
         ? traveledPath.last
         : plannedRoute.isNotEmpty
@@ -94,6 +96,7 @@ class TripDetailScreen extends ConsumerWidget {
 
     final distanceFormatted = GpsUtils.formatDistance(trip.totalDistance);
     final duration = _formatDuration(trip.duration);
+    final hasMultipleWaypoints = routeWaypoints.length > 1;
 
     return Scaffold(
       appBar: AppBar(
@@ -109,6 +112,7 @@ class TripDetailScreen extends ConsumerWidget {
               mapCenter: mapCenter,
               hasPath: hasPath,
               destinationPoint: destinationPoint,
+              waypoints: routeWaypoints,
             ),
           ),
           Expanded(
@@ -233,6 +237,76 @@ class TripDetailScreen extends ConsumerWidget {
                       end: 0,
                       duration: 280.ms,
                     ),
+                if (hasMultipleWaypoints) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _StatTile(
+                          icon: Icons.flag_rounded,
+                          label: 'Stops',
+                          value: '${routeWaypoints.length}',
+                          color: context.success,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _StatTile(
+                          icon: Icons.route_rounded,
+                          label: 'Planned route',
+                          value: trip.plannedRouteDistance != null
+                              ? GpsUtils.formatDistance(
+                                  trip.plannedRouteDistance!)
+                              : '—',
+                          color: context.success,
+                        ),
+                      ),
+                    ],
+                  ).animate().fadeIn(delay: 280.ms).slideY(
+                        begin: 0.08,
+                        end: 0,
+                        duration: 280.ms,
+                      ),
+                  const SizedBox(height: AppSpacing.sm),
+                  ...routeWaypoints.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final w = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      key: ValueKey('waypoint-$i'),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: context.success.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${i + 1}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: context.success,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            w.name,
+                            style: AppTypography.bodyBold.copyWith(
+                              color: context.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
                 const SizedBox(height: AppSpacing.lg),
                 _DetailRow(
                   icon: Icons.play_arrow_rounded,
@@ -330,6 +404,7 @@ class _AnimatedTripMap extends StatefulWidget {
   final LatLng mapCenter;
   final bool hasPath;
   final LatLng? destinationPoint;
+  final List<Waypoint> waypoints;
 
   const _AnimatedTripMap({
     required this.traveledPath,
@@ -337,6 +412,7 @@ class _AnimatedTripMap extends StatefulWidget {
     required this.mapCenter,
     required this.hasPath,
     required this.destinationPoint,
+    this.waypoints = const [],
   });
 
   @override
@@ -422,42 +498,86 @@ class _AnimatedTripMapState extends State<_AnimatedTripMap>
                   ),
                 ],
               ),
-            if (widget.destinationPoint != null && _progress.value > 0.9)
+            if (_progress.value > 0.9)
               MarkerLayer(
                 markers: [
-                  Marker(
-                    point: widget.destinationPoint!,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: context.error.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+                  if (widget.waypoints.length >= 2)
+                    ...widget.waypoints.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final wp = entry.value;
+                      final isFirst = i == 0;
+                      final isLast = i == widget.waypoints.length - 1;
+                      final color = isFirst
+                          ? context.success
+                          : isLast
+                              ? context.error
+                              : context.primary;
+                      return Marker(
+                        point: LatLng(wp.latitude, wp.longitude),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${i + 1}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    })
+                  else ...[
+                    if (widget.destinationPoint != null)
+                      Marker(
+                        point: widget.destinationPoint!,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: context.error.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            Icons.location_on_rounded,
+                            color: context.error,
+                            size: 30,
+                          ),
+                        ),
                       ),
-                      padding: const EdgeInsets.all(6),
-                      child: Icon(
-                        Icons.location_on_rounded,
-                        color: context.error,
-                        size: 30,
+                    if (widget.traveledPath.length > 1)
+                      Marker(
+                        point: widget.traveledPath.first,
+                        child: Icon(
+                          Icons.trip_origin_rounded,
+                          color: context.success,
+                          size: 26,
+                        ),
+                      )
+                    else if (widget.plannedRoute.length > 1)
+                      Marker(
+                        point: widget.plannedRoute.first,
+                        child: Icon(
+                          Icons.trip_origin_rounded,
+                          color: context.primary,
+                          size: 26,
+                        ),
                       ),
-                    ),
-                  ),
-                  if (widget.traveledPath.length > 1)
-                    Marker(
-                      point: widget.traveledPath.first,
-                      child: Icon(
-                        Icons.trip_origin_rounded,
-                        color: context.success,
-                        size: 26,
-                      ),
-                    )
-                  else if (widget.plannedRoute.length > 1)
-                    Marker(
-                      point: widget.plannedRoute.first,
-                      child: Icon(
-                        Icons.trip_origin_rounded,
-                        color: context.primary,
-                        size: 26,
-                      ),
-                    ),
+                  ],
                 ],
               ),
             SimpleAttributionWidget(

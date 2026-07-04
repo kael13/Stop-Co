@@ -8,6 +8,7 @@ import 'alarm_notification_service.dart';
 import 'trip_model.dart';
 import 'trip_record.dart';
 import 'trip_repository.dart';
+import 'waypoint.dart';
 
 const _uuid = Uuid();
 
@@ -21,8 +22,16 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
   ActiveTripNotifier(this._ref) : super(null);
 
   void startTrip(Destination destination) {
+    final waypoint = Waypoint.fromDestination(destination, 0);
     state = ActiveTrip(
-      destination: destination,
+      waypoints: [waypoint],
+      startedAt: DateTime.now(),
+    );
+  }
+
+  void startTripWithWaypoints(List<Waypoint> waypoints) {
+    state = ActiveTrip(
+      waypoints: waypoints,
       startedAt: DateTime.now(),
     );
   }
@@ -46,6 +55,7 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
 
   void triggerAlarm() {
     if (state == null) return;
+    if (state!.hasAlerted) return;
     state = state!.copyWith(
       status: TripStatus.alarmTriggered,
       hasAlerted: true,
@@ -53,10 +63,26 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
     final alarmType = _ref.read(settingsProvider).alarmType;
     final customSoundPath = _ref.read(settingsProvider).customAlarmSoundPath;
     AlarmNotificationService.showAlarmNotification(
-      destinationName: state!.destination.name,
+      destinationName: state!.currentWaypoint.name,
       distance: state!.currentDistance ?? 0,
       alarmType: alarmType,
       customSoundPath: customSoundPath,
+    );
+  }
+
+  void advanceToNextWaypoint() {
+    if (state == null) return;
+    final nextIndex = state!.currentWaypointIndex + 1;
+    if (nextIndex >= state!.waypoints.length) {
+      completeTrip();
+      return;
+    }
+    state = state!.copyWith(
+      currentWaypointIndex: nextIndex,
+      status: TripStatus.monitoring,
+      hasAlerted: false,
+      routeResult: null,
+      currentDistance: null,
     );
   }
 
@@ -67,9 +93,16 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
   }
 
   void completeTrip() {
-    _persistTrip(state?.status ?? TripStatus.completed);
-    state = null;
+    final finalStatus = state?.status ?? TripStatus.completed;
+    _persistTrip(finalStatus);
     AlarmNotificationService.dismissAlarm();
+    if (state != null) {
+      state = state!.copyWith(status: finalStatus, hasAlerted: true);
+    }
+  }
+
+  void clearTrip() {
+    state = null;
   }
 
   void _persistTrip(TripStatus finalStatus) {
@@ -78,8 +111,8 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
     final repo = _ref.read(tripRepositoryProvider);
     repo.save(TripRecord(
       id: _uuid.v4(),
-      destinationId: trip.destination.id,
-      destinationName: trip.destination.name,
+      destinationId: trip.waypoints.first.id,
+      destinationName: trip.waypoints.first.name,
       status: finalStatus,
       startedAt: trip.startedAt,
       endedAt: DateTime.now(),
@@ -90,6 +123,9 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
           TripRecord.serializeCoordinates(trip.routeResult?.coordinates),
       gpsBreadcrumbsJson:
           TripRecord.serializeCoordinates(trip.gpsBreadcrumbs),
+      waypointsJson: trip.hasMultipleStops
+          ? Waypoint.serializeList(trip.waypoints)
+          : null,
       createdAt: DateTime.now(),
     ));
   }

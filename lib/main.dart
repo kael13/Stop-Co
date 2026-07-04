@@ -38,7 +38,7 @@ Future<void> _initPluginOnce() async {
     initSettings,
     onDidReceiveNotificationResponse: (response) {
       if (response.payload == 'alarm') {
-        navigatorKey.currentState?.pushNamed('/alarm');
+        navigatorKey.currentState?.pushReplacementNamed('/alarm');
       }
     },
   );

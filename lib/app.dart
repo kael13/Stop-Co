@@ -13,6 +13,7 @@ import 'features/onboarding/presentation/brand_intro_screen.dart';
 import 'features/onboarding/presentation/onboarding_screen.dart';
 import 'features/trip/presentation/active_trip_screen.dart';
 import 'features/trip/presentation/alarm_screen.dart';
+import 'features/trip/presentation/trip_complete_screen.dart';
 import 'main.dart';
 
 class StopCoApp extends ConsumerWidget {
@@ -49,6 +50,7 @@ class StopCoApp extends ConsumerWidget {
       routes: {
         '/active-trip': (_) => const ActiveTripScreen(),
         '/alarm': (_) => const AlarmScreen(),
+        '/trip-complete': (_) => const TripCompleteScreen(),
       },
     );
   }

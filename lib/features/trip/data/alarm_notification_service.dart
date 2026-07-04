@@ -9,6 +9,7 @@ class AlarmNotificationService {
     required double distance,
     AlarmType alarmType = AlarmType.soundAndVibration,
     String? customSoundPath,
+    bool fullScreenIntent = true,
   }) async {
     final playSound = alarmType != AlarmType.vibrationOnly;
     final enableVibration = alarmType != AlarmType.soundOnly;
@@ -30,7 +31,7 @@ class AlarmNotificationService {
       playSound: playSound,
       sound: sound,
       enableVibration: enableVibration,
-      fullScreenIntent: true,
+      fullScreenIntent: fullScreenIntent,
       category: AndroidNotificationCategory.alarm,
       visibility: NotificationVisibility.public,
       usesChronometer: true,

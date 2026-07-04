@@ -6,9 +6,11 @@ import 'package:screen_brightness/screen_brightness.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../settings/data/settings_providers.dart';
 import '../../simulation/data/simulation_service.dart';
+import '../../../core/platform/foreground_service_channel.dart';
 import '../data/alarm_notification_service.dart';
 import '../data/trip_providers.dart';
 
@@ -53,10 +55,11 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
 
       if (alarmType != AlarmType.vibrationOnly) {
         AlarmNotificationService.showAlarmNotification(
-          destinationName: currentTrip.destination.name,
+          destinationName: currentTrip.currentWaypoint.name,
           distance: currentTrip.currentDistance ?? 0,
           alarmType: alarmType,
           customSoundPath: settings.customAlarmSoundPath,
+          fullScreenIntent: false,
         );
       }
       if (alarmType != AlarmType.soundOnly) {
@@ -77,13 +80,41 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
     AlarmNotificationService.dismissAlarm();
     ScreenBrightness().resetApplicationScreenBrightness();
     WakelockPlus.disable();
+
+    final trip = ref.read(activeTripProvider);
+    if (trip == null) return;
+
+    final isLastStop = trip.currentWaypointIndex >= trip.waypoints.length - 1;
+
     final simulationEnabled = ref.read(simulationEnabledProvider);
-    if (simulationEnabled) {
-      ref.read(simulationServiceProvider).stop();
-      ref.read(simulationEnabledProvider.notifier).state = false;
+
+    if (isLastStop) {
+      ForegroundServiceChannel.stopTracking();
+      if (simulationEnabled) {
+        ref.read(simulationServiceProvider).stop();
+        ref.read(simulationEnabledProvider.notifier).state = false;
+      }
+      ref.read(activeTripProvider.notifier).completeTrip();
+      Navigator.pushReplacementNamed(context, '/trip-complete');
+    } else {
+      if (simulationEnabled) {
+        final simService = ref.read(simulationServiceProvider);
+        final pos = simService.currentPosition;
+        final nextWp = trip.waypoints[trip.currentWaypointIndex + 1];
+        if (pos != null) {
+          simService.start(
+            destinationLatitude: nextWp.latitude,
+            destinationLongitude: nextWp.longitude,
+            destinationName: nextWp.name,
+            startLatitude: pos.latitude,
+            startLongitude: pos.longitude,
+            speedMps: ref.read(settingsProvider).simulationSpeedMps,
+          );
+        }
+      }
+      ref.read(activeTripProvider.notifier).advanceToNextWaypoint();
+      Navigator.pushReplacementNamed(context, '/active-trip');
     }
-    ref.read(activeTripProvider.notifier).completeTrip();
-    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
   }
 
   void _fireInitialVibration() {
@@ -116,6 +147,7 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
 
     final distance = trip.currentDistance ?? 0;
     final distanceFormatted = GpsUtils.formatDistance(distance);
+    final wp = trip.currentWaypoint;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -156,12 +188,33 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                trip.destination.name,
+                wp.name,
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
+              if (trip.hasMultipleStops)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xxs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: context.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    ),
+                    child: Text(
+                      'Stop ${trip.currentWaypointIndex + 1} of ${trip.totalStops}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
               const SizedBox(height: AppSpacing.lg),
               Text(
                 distanceFormatted,
@@ -171,7 +224,9 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Get ready to get off soon',
+                trip.hasMultipleStops
+                    ? 'Next stop ahead'
+                    : 'Get ready to get off soon',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 ),

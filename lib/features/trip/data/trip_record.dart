@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:latlong2/latlong.dart';
 import 'trip_model.dart';
+import 'waypoint.dart';
 
 class TripRecord {
   final String id;
@@ -14,6 +15,7 @@ class TripRecord {
   final double? plannedRouteDuration;
   final String? routeCoordinatesJson;
   final String? gpsBreadcrumbsJson;
+  final String? waypointsJson;
   final DateTime createdAt;
 
   const TripRecord({
@@ -28,12 +30,15 @@ class TripRecord {
     this.plannedRouteDuration,
     this.routeCoordinatesJson,
     this.gpsBreadcrumbsJson,
+    this.waypointsJson,
     required this.createdAt,
   });
 
   List<LatLng> get routeCoordinates => _deserializeCoordinates(routeCoordinatesJson);
 
   List<LatLng> get gpsBreadcrumbs => _deserializeCoordinates(gpsBreadcrumbsJson);
+
+  List<Waypoint> get waypoints => Waypoint.deserializeList(waypointsJson);
 
   Duration get duration => endedAt.difference(startedAt);
 

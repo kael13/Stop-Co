@@ -14,6 +14,7 @@ import '../../settings/data/settings_providers.dart';
 import '../../trip/data/trip_model.dart';
 import '../../trip/data/trip_providers.dart';
 import '../../trip/data/routing_service.dart';
+import '../../trip/data/waypoint.dart';
 import '../data/simulation_service.dart';
 
 class SimulationScreen extends ConsumerStatefulWidget {
@@ -24,8 +25,10 @@ class SimulationScreen extends ConsumerStatefulWidget {
 }
 
 class _SimulationScreenState extends ConsumerState<SimulationScreen> {
-  Destination? _selectedDestination;
+  final List<Destination> _selectedWaypoints = [];
   bool _isSimulating = false;
+
+  bool get _canAddWaypoint => _selectedWaypoints.length < 5;
 
   @override
   Widget build(BuildContext context) {
@@ -74,10 +77,71 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
           ),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
-              title: 'Select Destination',
+              title: 'Stops (${_selectedWaypoints.length}/5)',
               accentColor: const Color(0xFF0066FF),
             ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
+          if (_selectedWaypoints.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ..._selectedWaypoints.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final wp = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: i == 0
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.error,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${i + 1}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              wp.name,
+                              style: AppTypography.secondary.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.remove_circle_outline_rounded,
+                                size: 18, color: context.error),
+                            onPressed: () {
+                              setState(() => _selectedWaypoints.removeAt(i));
+                            },
+                            constraints: const BoxConstraints(
+                                minWidth: 28, minHeight: 28),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
           if (destinationsAsync.isLoading)
             const Center(child: CircularProgressIndicator())
           else if (destinationsAsync.hasError)
@@ -92,9 +156,15 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
           else
             _DestinationList(
               destinations: destinationsAsync.valueOrNull ?? [],
-              selectedId: _selectedDestination?.id,
+              selectedIds: _selectedWaypoints.map((w) => w.id).toSet(),
               onSelect: (dest) {
-                setState(() => _selectedDestination = dest);
+                setState(() {
+                  if (_selectedWaypoints.any((w) => w.id == dest.id)) {
+                    _selectedWaypoints.removeWhere((w) => w.id == dest.id);
+                  } else if (_canAddWaypoint) {
+                    _selectedWaypoints.add(dest);
+                  }
+                });
               },
             ),
           const SizedBox(height: AppSpacing.lg),
@@ -134,7 +204,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             AppButton(
               label: 'Start Simulation',
               icon: Icons.play_arrow_rounded,
-              onPressed: _selectedDestination != null
+              onPressed: _selectedWaypoints.isNotEmpty
                   ? () {
                       _startSimulation(simulationService, settings);
                     }
@@ -147,17 +217,33 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   }
 
   void _startSimulation(SimulationService service, AppSettings settings) {
-    if (_selectedDestination == null) return;
+    if (_selectedWaypoints.isEmpty) return;
 
+    final first = _selectedWaypoints.first;
     service.start(
-      destination: _selectedDestination!,
-      startLatitude: _selectedDestination!.latitude + 0.01,
-      startLongitude: _selectedDestination!.longitude,
+      destinationLatitude: first.latitude,
+      destinationLongitude: first.longitude,
+      destinationName: first.name,
+      startLatitude: first.latitude + 0.01,
+      startLongitude: first.longitude,
       speedMps: settings.simulationSpeedMps,
     );
 
     ref.read(simulationEnabledProvider.notifier).state = true;
-    ref.read(activeTripProvider.notifier).startTrip(_selectedDestination!);
+
+    final waypoints = _selectedWaypoints
+        .asMap()
+        .entries
+        .map((e) => Waypoint(
+              id: e.value.id,
+              name: e.value.name,
+              latitude: e.value.latitude,
+              longitude: e.value.longitude,
+              alertRadius: e.value.alertRadius,
+              orderIndex: e.key,
+            ))
+        .toList();
+    ref.read(activeTripProvider.notifier).startTripWithWaypoints(waypoints);
 
     setState(() => _isSimulating = true);
 
@@ -165,24 +251,27 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   }
 
   Future<void> _fetchRouteAndStart(SimulationService service, AppSettings settings) async {
-    if (_selectedDestination == null) return;
+    if (_selectedWaypoints.isEmpty) return;
 
+    final first = _selectedWaypoints.first;
     final from = LatLng(
-      _selectedDestination!.latitude + 0.01,
-      _selectedDestination!.longitude,
+      first.latitude + 0.01,
+      first.longitude,
     );
     final to = LatLng(
-      _selectedDestination!.latitude,
-      _selectedDestination!.longitude,
+      first.latitude,
+      first.longitude,
     );
 
     final routingService = ref.read(routingServiceProvider);
     final route = await routingService.fetchRoute(from, to);
     if (route != null) {
       service.start(
-        destination: _selectedDestination!,
-        startLatitude: _selectedDestination!.latitude + 0.01,
-        startLongitude: _selectedDestination!.longitude,
+        destinationLatitude: first.latitude,
+        destinationLongitude: first.longitude,
+        destinationName: first.name,
+        startLatitude: first.latitude + 0.01,
+        startLongitude: first.longitude,
         speedMps: settings.simulationSpeedMps,
         routeCoordinates: route.coordinates,
       );
@@ -231,12 +320,12 @@ class _SectionHeader extends StatelessWidget {
 
 class _DestinationList extends StatelessWidget {
   final List<Destination> destinations;
-  final String? selectedId;
+  final Set<String> selectedIds;
   final ValueChanged<Destination> onSelect;
 
   const _DestinationList({
     required this.destinations,
-    required this.selectedId,
+    required this.selectedIds,
     required this.onSelect,
   });
 
@@ -262,7 +351,7 @@ class _DestinationList extends StatelessWidget {
     return Column(
       children: destinations.asMap().entries.map((entry) {
         final dest = entry.value;
-        final selected = dest.id == selectedId;
+        final selected = selectedIds.contains(dest.id);
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.xs),
           child: AnimatedScale(

@@ -34,16 +34,17 @@ class GeofenceManager {
     if (trip == null || !trip.isActive) return;
     if (!locationService.isPositionValid(position)) return;
 
+    final wp = trip.currentWaypoint;
     final distance = locationService.calculateDistanceTo(
-      trip.destination.latitude,
-      trip.destination.longitude,
+      wp.latitude,
+      wp.longitude,
       currentLat: position.latitude,
       currentLon: position.longitude,
     );
 
     _ref.read(activeTripProvider.notifier).updateDistance(distance);
 
-    if (distance <= trip.destination.alertRadius) {
+    if (distance <= wp.alertRadius) {
       _ref.read(activeTripProvider.notifier).triggerAlarm();
       stopMonitoring();
     }

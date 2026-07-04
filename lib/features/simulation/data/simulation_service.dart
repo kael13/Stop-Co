@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/utils/gps_utils.dart';
-import '../../destination/data/destination_model.dart';
 
 class SimulatedPosition {
   final double latitude;
@@ -20,7 +19,8 @@ class SimulatedPosition {
 class SimulationService {
   Timer? _timer;
   SimulatedPosition? _currentPosition;
-  Destination? _destination;
+  double _destLat = 0;
+  double _destLon = 0;
   double _speedMps = 1.4;
   bool _isRunning = false;
 
@@ -35,14 +35,17 @@ class SimulationService {
   double get speedMps => _speedMps;
 
   void start({
-    required Destination destination,
+    required double destinationLatitude,
+    required double destinationLongitude,
+    String? destinationName,
     required double startLatitude,
     required double startLongitude,
     required double speedMps,
     List<LatLng>? routeCoordinates,
   }) {
     stop();
-    _destination = destination;
+    _destLat = destinationLatitude;
+    _destLon = destinationLongitude;
     _speedMps = speedMps;
     _currentPosition = SimulatedPosition(
       latitude: startLatitude,
@@ -79,7 +82,6 @@ class SimulationService {
     _timer?.cancel();
     _timer = null;
     _isRunning = false;
-    _destination = null;
     _currentPosition = null;
     _routeCoordinates = null;
     _cumulativeDistances = [];
@@ -89,7 +91,7 @@ class SimulationService {
   }
 
   void _tick() {
-    if (_destination == null || _currentPosition == null) return;
+    if (_currentPosition == null) return;
 
     if (_routeCoordinates != null && _routeCoordinates!.length >= 2) {
       _tickAlongRoute();
@@ -99,19 +101,17 @@ class SimulationService {
   }
 
   void _tickStraightLine() {
-    final destLat = _destination!.latitude;
-    final destLon = _destination!.longitude;
     final curLat = _currentPosition!.latitude;
     final curLon = _currentPosition!.longitude;
 
-    final dLat = destLat - curLat;
-    final dLon = destLon - curLon;
+    final dLat = _destLat - curLat;
+    final dLon = _destLon - curLon;
     final distance = sqrt(dLat * dLat + dLon * dLon);
 
     if (distance < 0.00001) {
       _currentPosition = SimulatedPosition(
-        latitude: destLat,
-        longitude: destLon,
+        latitude: _destLat,
+        longitude: _destLon,
       );
       return;
     }
@@ -135,8 +135,8 @@ class SimulationService {
 
     if (_distanceTraveled >= _totalRouteDistance) {
       _currentPosition = SimulatedPosition(
-        latitude: _destination!.latitude,
-        longitude: _destination!.longitude,
+        latitude: _destLat,
+        longitude: _destLon,
       );
       return;
     }

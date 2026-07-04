@@ -1080,6 +1080,17 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, TripsRow> {
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _waypointsJsonMeta = const VerificationMeta(
+    'waypointsJson',
+  );
+  @override
+  late final GeneratedColumn<String> waypointsJson = GeneratedColumn<String>(
+    'waypoints_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1104,6 +1115,7 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, TripsRow> {
     plannedRouteDuration,
     routeCoordinatesJson,
     gpsBreadcrumbsJson,
+    waypointsJson,
     createdAt,
   ];
   @override
@@ -1216,6 +1228,15 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, TripsRow> {
         ),
       );
     }
+    if (data.containsKey('waypoints_json')) {
+      context.handle(
+        _waypointsJsonMeta,
+        waypointsJson.isAcceptableOrUnknown(
+          data['waypoints_json']!,
+          _waypointsJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1277,6 +1298,10 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, TripsRow> {
         DriftSqlType.string,
         data['${effectivePrefix}gps_breadcrumbs_json'],
       ),
+      waypointsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}waypoints_json'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1302,6 +1327,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
   final double? plannedRouteDuration;
   final String? routeCoordinatesJson;
   final String? gpsBreadcrumbsJson;
+  final String? waypointsJson;
   final DateTime createdAt;
   const TripsRow({
     required this.id,
@@ -1315,6 +1341,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
     this.plannedRouteDuration,
     this.routeCoordinatesJson,
     this.gpsBreadcrumbsJson,
+    this.waypointsJson,
     required this.createdAt,
   });
   @override
@@ -1338,6 +1365,9 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
     }
     if (!nullToAbsent || gpsBreadcrumbsJson != null) {
       map['gps_breadcrumbs_json'] = Variable<String>(gpsBreadcrumbsJson);
+    }
+    if (!nullToAbsent || waypointsJson != null) {
+      map['waypoints_json'] = Variable<String>(waypointsJson);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -1364,6 +1394,9 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
       gpsBreadcrumbsJson: gpsBreadcrumbsJson == null && nullToAbsent
           ? const Value.absent()
           : Value(gpsBreadcrumbsJson),
+      waypointsJson: waypointsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(waypointsJson),
       createdAt: Value(createdAt),
     );
   }
@@ -1393,6 +1426,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
       gpsBreadcrumbsJson: serializer.fromJson<String?>(
         json['gpsBreadcrumbsJson'],
       ),
+      waypointsJson: serializer.fromJson<String?>(json['waypointsJson']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1411,6 +1445,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
       'plannedRouteDuration': serializer.toJson<double?>(plannedRouteDuration),
       'routeCoordinatesJson': serializer.toJson<String?>(routeCoordinatesJson),
       'gpsBreadcrumbsJson': serializer.toJson<String?>(gpsBreadcrumbsJson),
+      'waypointsJson': serializer.toJson<String?>(waypointsJson),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1427,6 +1462,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
     Value<double?> plannedRouteDuration = const Value.absent(),
     Value<String?> routeCoordinatesJson = const Value.absent(),
     Value<String?> gpsBreadcrumbsJson = const Value.absent(),
+    Value<String?> waypointsJson = const Value.absent(),
     DateTime? createdAt,
   }) => TripsRow(
     id: id ?? this.id,
@@ -1448,6 +1484,9 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
     gpsBreadcrumbsJson: gpsBreadcrumbsJson.present
         ? gpsBreadcrumbsJson.value
         : this.gpsBreadcrumbsJson,
+    waypointsJson: waypointsJson.present
+        ? waypointsJson.value
+        : this.waypointsJson,
     createdAt: createdAt ?? this.createdAt,
   );
   TripsRow copyWithCompanion(TripsCompanion data) {
@@ -1477,6 +1516,9 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
       gpsBreadcrumbsJson: data.gpsBreadcrumbsJson.present
           ? data.gpsBreadcrumbsJson.value
           : this.gpsBreadcrumbsJson,
+      waypointsJson: data.waypointsJson.present
+          ? data.waypointsJson.value
+          : this.waypointsJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1495,6 +1537,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
           ..write('plannedRouteDuration: $plannedRouteDuration, ')
           ..write('routeCoordinatesJson: $routeCoordinatesJson, ')
           ..write('gpsBreadcrumbsJson: $gpsBreadcrumbsJson, ')
+          ..write('waypointsJson: $waypointsJson, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1513,6 +1556,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
     plannedRouteDuration,
     routeCoordinatesJson,
     gpsBreadcrumbsJson,
+    waypointsJson,
     createdAt,
   );
   @override
@@ -1530,6 +1574,7 @@ class TripsRow extends DataClass implements Insertable<TripsRow> {
           other.plannedRouteDuration == this.plannedRouteDuration &&
           other.routeCoordinatesJson == this.routeCoordinatesJson &&
           other.gpsBreadcrumbsJson == this.gpsBreadcrumbsJson &&
+          other.waypointsJson == this.waypointsJson &&
           other.createdAt == this.createdAt);
 }
 
@@ -1545,6 +1590,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
   final Value<double?> plannedRouteDuration;
   final Value<String?> routeCoordinatesJson;
   final Value<String?> gpsBreadcrumbsJson;
+  final Value<String?> waypointsJson;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const TripsCompanion({
@@ -1559,6 +1605,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
     this.plannedRouteDuration = const Value.absent(),
     this.routeCoordinatesJson = const Value.absent(),
     this.gpsBreadcrumbsJson = const Value.absent(),
+    this.waypointsJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1574,6 +1621,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
     this.plannedRouteDuration = const Value.absent(),
     this.routeCoordinatesJson = const Value.absent(),
     this.gpsBreadcrumbsJson = const Value.absent(),
+    this.waypointsJson = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1596,6 +1644,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
     Expression<double>? plannedRouteDuration,
     Expression<String>? routeCoordinatesJson,
     Expression<String>? gpsBreadcrumbsJson,
+    Expression<String>? waypointsJson,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1615,6 +1664,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
         'route_coordinates_json': routeCoordinatesJson,
       if (gpsBreadcrumbsJson != null)
         'gps_breadcrumbs_json': gpsBreadcrumbsJson,
+      if (waypointsJson != null) 'waypoints_json': waypointsJson,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1632,6 +1682,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
     Value<double?>? plannedRouteDuration,
     Value<String?>? routeCoordinatesJson,
     Value<String?>? gpsBreadcrumbsJson,
+    Value<String?>? waypointsJson,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -1647,6 +1698,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
       plannedRouteDuration: plannedRouteDuration ?? this.plannedRouteDuration,
       routeCoordinatesJson: routeCoordinatesJson ?? this.routeCoordinatesJson,
       gpsBreadcrumbsJson: gpsBreadcrumbsJson ?? this.gpsBreadcrumbsJson,
+      waypointsJson: waypointsJson ?? this.waypointsJson,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1694,6 +1746,9 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
     if (gpsBreadcrumbsJson.present) {
       map['gps_breadcrumbs_json'] = Variable<String>(gpsBreadcrumbsJson.value);
     }
+    if (waypointsJson.present) {
+      map['waypoints_json'] = Variable<String>(waypointsJson.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1717,6 +1772,7 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
           ..write('plannedRouteDuration: $plannedRouteDuration, ')
           ..write('routeCoordinatesJson: $routeCoordinatesJson, ')
           ..write('gpsBreadcrumbsJson: $gpsBreadcrumbsJson, ')
+          ..write('waypointsJson: $waypointsJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2254,6 +2310,7 @@ typedef $$TripsTableCreateCompanionBuilder =
       Value<double?> plannedRouteDuration,
       Value<String?> routeCoordinatesJson,
       Value<String?> gpsBreadcrumbsJson,
+      Value<String?> waypointsJson,
       required DateTime createdAt,
       Value<int> rowid,
     });
@@ -2270,6 +2327,7 @@ typedef $$TripsTableUpdateCompanionBuilder =
       Value<double?> plannedRouteDuration,
       Value<String?> routeCoordinatesJson,
       Value<String?> gpsBreadcrumbsJson,
+      Value<String?> waypointsJson,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -2335,6 +2393,11 @@ class $$TripsTableFilterComposer
 
   ColumnFilters<String> get gpsBreadcrumbsJson => $composableBuilder(
     column: $table.gpsBreadcrumbsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get waypointsJson => $composableBuilder(
+    column: $table.waypointsJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2408,6 +2471,11 @@ class $$TripsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get waypointsJson => $composableBuilder(
+    column: $table.waypointsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2470,6 +2538,11 @@ class $$TripsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get waypointsJson => $composableBuilder(
+    column: $table.waypointsJson,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
@@ -2513,6 +2586,7 @@ class $$TripsTableTableManager
                 Value<double?> plannedRouteDuration = const Value.absent(),
                 Value<String?> routeCoordinatesJson = const Value.absent(),
                 Value<String?> gpsBreadcrumbsJson = const Value.absent(),
+                Value<String?> waypointsJson = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TripsCompanion(
@@ -2527,6 +2601,7 @@ class $$TripsTableTableManager
                 plannedRouteDuration: plannedRouteDuration,
                 routeCoordinatesJson: routeCoordinatesJson,
                 gpsBreadcrumbsJson: gpsBreadcrumbsJson,
+                waypointsJson: waypointsJson,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -2543,6 +2618,7 @@ class $$TripsTableTableManager
                 Value<double?> plannedRouteDuration = const Value.absent(),
                 Value<String?> routeCoordinatesJson = const Value.absent(),
                 Value<String?> gpsBreadcrumbsJson = const Value.absent(),
+                Value<String?> waypointsJson = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => TripsCompanion.insert(
@@ -2557,6 +2633,7 @@ class $$TripsTableTableManager
                 plannedRouteDuration: plannedRouteDuration,
                 routeCoordinatesJson: routeCoordinatesJson,
                 gpsBreadcrumbsJson: gpsBreadcrumbsJson,
+                waypointsJson: waypointsJson,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

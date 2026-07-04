@@ -1,12 +1,13 @@
 import 'package:collection/collection.dart';
 import 'package:latlong2/latlong.dart';
-import '../../destination/data/destination_model.dart';
 import '../domain/route_result.dart';
+import 'waypoint.dart';
 
 enum TripStatus { monitoring, alarmTriggered, cancelled, completed }
 
 class ActiveTrip {
-  final Destination destination;
+  final List<Waypoint> waypoints;
+  final int currentWaypointIndex;
   final TripStatus status;
   final DateTime startedAt;
   final double? currentDistance;
@@ -15,7 +16,8 @@ class ActiveTrip {
   final List<LatLng> gpsBreadcrumbs;
 
   const ActiveTrip({
-    required this.destination,
+    required this.waypoints,
+    this.currentWaypointIndex = 0,
     this.status = TripStatus.monitoring,
     required this.startedAt,
     this.currentDistance,
@@ -24,8 +26,15 @@ class ActiveTrip {
     this.gpsBreadcrumbs = const [],
   });
 
+  Waypoint get currentWaypoint => waypoints[currentWaypointIndex];
+
+  bool get hasMultipleStops => waypoints.length > 1;
+
+  int get totalStops => waypoints.length;
+
   ActiveTrip copyWith({
-    Destination? destination,
+    List<Waypoint>? waypoints,
+    int? currentWaypointIndex,
     TripStatus? status,
     DateTime? startedAt,
     double? currentDistance,
@@ -34,7 +43,8 @@ class ActiveTrip {
     List<LatLng>? gpsBreadcrumbs,
   }) {
     return ActiveTrip(
-      destination: destination ?? this.destination,
+      waypoints: waypoints ?? this.waypoints,
+      currentWaypointIndex: currentWaypointIndex ?? this.currentWaypointIndex,
       status: status ?? this.status,
       startedAt: startedAt ?? this.startedAt,
       currentDistance: currentDistance ?? this.currentDistance,
@@ -50,7 +60,9 @@ class ActiveTrip {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is ActiveTrip &&
-        other.destination.id == destination.id &&
+        const DeepCollectionEquality()
+            .equals(other.waypoints.map((w) => w.id).toList(), waypoints.map((w) => w.id).toList()) &&
+        other.currentWaypointIndex == currentWaypointIndex &&
         other.status == status &&
         other.hasAlerted == hasAlerted &&
         const DeepCollectionEquality()
@@ -58,5 +70,10 @@ class ActiveTrip {
   }
 
   @override
-  int get hashCode => Object.hash(destination.id, status, hasAlerted);
+  int get hashCode => Object.hash(
+    Object.hashAll(waypoints.map((w) => w.id)),
+    currentWaypointIndex,
+    status,
+    hasAlerted,
+  );
 }

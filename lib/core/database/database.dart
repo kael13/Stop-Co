@@ -55,6 +55,7 @@ class Trips extends Table {
   RealColumn get plannedRouteDuration => real().nullable()();
   TextColumn get routeCoordinatesJson => text().nullable()();
   TextColumn get gpsBreadcrumbsJson => text().nullable()();
+  TextColumn get waypointsJson => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
   @override
@@ -66,7 +67,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -82,6 +83,9 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 4) {
         await migrator.addColumn(trips, trips.gpsBreadcrumbsJson);
+      }
+      if (from < 5) {
+        await migrator.addColumn(trips, trips.waypointsJson);
       }
     },
   );
@@ -221,6 +225,7 @@ class LocalDatabase extends _$LocalDatabase {
       plannedRouteDuration: Value.absentIfNull(trip.plannedRouteDuration),
       routeCoordinatesJson: Value.absentIfNull(trip.routeCoordinatesJson),
       gpsBreadcrumbsJson: Value.absentIfNull(trip.gpsBreadcrumbsJson),
+      waypointsJson: Value.absentIfNull(trip.waypointsJson),
       createdAt: Value(trip.createdAt),
     ));
   }
@@ -246,6 +251,7 @@ class LocalDatabase extends _$LocalDatabase {
       plannedRouteDuration: row.plannedRouteDuration,
       routeCoordinatesJson: row.routeCoordinatesJson,
       gpsBreadcrumbsJson: row.gpsBreadcrumbsJson,
+      waypointsJson: row.waypointsJson,
       createdAt: row.createdAt,
     );
   }

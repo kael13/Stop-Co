@@ -6,12 +6,13 @@ import 'package:uuid/uuid.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_input.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../trip/data/location_service.dart';
 import '../../trip/data/trip_providers.dart';
+import '../../trip/data/waypoint.dart';
 import '../data/destination_model.dart';
 import '../data/destination_repository.dart';
 import '../data/geocoding_service.dart';
@@ -34,70 +35,34 @@ class _DestinationSetupScreenState
   final _geocoding = GeocodingService();
   final _uuid = const Uuid();
 
-  LatLng? _selectedLocation;
   LatLng? _userLocation;
   List<GeocodingResult> _searchResults = [];
-  bool _isSearching = false;
-  double _alertRadius = AppConstants.defaultAlertRadius;
   bool _isSaving = false;
   bool _isStartingTrip = false;
   bool _isDeleting = false;
   String? _saveError;
 
-  bool _isGettingLocation = false;
-  bool _locationPermissionDenied = false;
+  List<Waypoint> _waypoints = [];
+
+  double _editRadius = AppConstants.defaultAlertRadius;
+  String _editName = '';
+  int? _editingIndex;
+
+  bool _multiMode = false;
 
   bool get _isEditing => widget.existingDestination != null;
-
-  static const _initialCenter = LatLng(51.505, -0.09);
-  static const _initialZoom = 13.0;
 
   @override
   void initState() {
     super.initState();
-    final existing = widget.existingDestination;
-    if (existing != null) {
-      _selectedLocation = LatLng(existing.latitude, existing.longitude);
-      _nameController.text = existing.name;
-      _alertRadius = existing.alertRadius;
-    }
-    _getUserLocation();
-  }
-
-  Future<void> _getUserLocation() async {
-    setState(() {
-      _isGettingLocation = true;
-      _locationPermissionDenied = false;
-    });
-
-    final locationService = ref.read(locationServiceProvider);
-    final hasPerm = await locationService.ensurePermissions();
-    if (!hasPerm) {
-      if (mounted) {
-        setState(() {
-          _isGettingLocation = false;
-          _locationPermissionDenied = true;
-        });
-      }
-      return;
-    }
-
-    try {
-      final position = await locationService.getCurrentPosition();
-      if (position != null && mounted) {
-        final latLng = LatLng(position.latitude, position.longitude);
-        setState(() {
-          _userLocation = latLng;
-          _isGettingLocation = false;
-        });
-        if (!_isEditing) {
-          _mapController.move(latLng, _initialZoom);
-        } else {
-          _mapController.move(_selectedLocation!, _initialZoom);
-        }
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isGettingLocation = false);
+    if (_isEditing) {
+      final d = widget.existingDestination!;
+      _waypoints = [Waypoint.fromDestination(d, 0)];
+      _editName = d.name;
+      _editRadius = d.alertRadius;
+      _nameController.text = _editName;
+    } else {
+      _getUserLocation();
     }
   }
 
@@ -105,158 +70,167 @@ class _DestinationSetupScreenState
   void dispose() {
     _searchController.dispose();
     _nameController.dispose();
-    _mapController.dispose();
     super.dispose();
   }
 
-  Future<void> _searchLocation() async {
-    final query = _searchController.text.trim();
-    if (query.isEmpty) return;
-
-    setState(() => _isSearching = true);
-
-    try {
-      final results = await _geocoding.search(query);
-      setState(() => _searchResults = results);
-    } catch (_) {
-      setState(() => _searchResults = []);
-    } finally {
-      if (mounted) setState(() => _isSearching = false);
+  Future<void> _getUserLocation() async {
+    final locationService = ref.read(locationServiceProvider);
+    final hasPerm = await locationService.ensurePermissions();
+    if (!hasPerm) {
+      if (mounted) {
+        // permission denied
+      }
+    } else {
+      final pos = await locationService.getCurrentPosition();
+      if (mounted && pos != null) {
+        setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));
+        _mapController.move(_userLocation!, 13);
+      }
     }
   }
 
-  void _selectSearchResult(GeocodingResult result) {
-    final latLng = LatLng(result.latitude, result.longitude);
-    setState(() {
-      _selectedLocation = latLng;
-      _searchResults = [];
-      if (_nameController.text.isEmpty) {
-        _nameController.text = result.displayName.split(',').first;
+  void _onMapTap(LatLng latLng) {
+    if (_editingIndex != null) {
+      _showEditSheet(_editingIndex!, latLng: latLng);
+      return;
+    }
+    if (!_multiMode && _waypoints.isNotEmpty) {
+      setState(() {
+        _waypoints[0] = _waypoints[0].copyWith(
+          latitude: latLng.latitude,
+          longitude: latLng.longitude,
+        );
+        _editName = _waypoints[0].name;
+      });
+      return;
+    }
+    if (_waypoints.length >= AppConstants.maxWaypoints) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Maximum 5 stops allowed')),
+        );
       }
+      return;
+    }
+    final waypoint = Waypoint(
+      id: _uuid.v4(),
+      name: 'Stop ${_waypoints.length + 1}',
+      latitude: latLng.latitude,
+      longitude: latLng.longitude,
+      alertRadius: AppConstants.defaultAlertRadius,
+      orderIndex: _waypoints.length,
+    );
+    setState(() {
+      _waypoints.add(waypoint);
     });
-    _mapController.move(latLng, _mapController.camera.zoom);
+    if (_waypoints.length == 1) {
+      _editName = waypoint.name;
+      _editRadius = waypoint.alertRadius;
+      _nameController.text = _editName;
+    }
   }
 
-  void _onMapTap(TapPosition tap, LatLng latLng) {
-    setState(() => _selectedLocation = latLng);
+  void _editWaypointName(int index, String name) {
+    setState(() {
+      _waypoints[index] = _waypoints[index].copyWith(name: name);
+      if (index == 0 && !_waypoints[index].name.startsWith('Stop ')) {
+        _editName = name;
+      }
+    });
+  }
+
+  void _editWaypointRadius(int index, double radius) {
+    setState(() {
+      _waypoints[index] = _waypoints[index].copyWith(alertRadius: radius);
+      if (index == 0) _editRadius = radius;
+    });
+  }
+
+  void _removeWaypoint(int index) {
+    if (_waypoints.length <= 1) return;
+    setState(() {
+      _waypoints.removeAt(index);
+      for (int i = 0; i < _waypoints.length; i++) {
+        _waypoints[i] = _waypoints[i].copyWith(orderIndex: i);
+      }
+    });
+  }
+
+  void _reorderWaypoint(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) newIndex -= 1;
+      final item = _waypoints.removeAt(oldIndex);
+      _waypoints.insert(newIndex, item);
+      for (int i = 0; i < _waypoints.length; i++) {
+        _waypoints[i] = _waypoints[i].copyWith(orderIndex: i);
+      }
+    });
+  }
+
+  bool get _hasValidWaypoints =>
+      _waypoints.isNotEmpty && _waypoints.every((w) => w.name.trim().isNotEmpty);
+
+  Future<void> _saveAndStartTrip() async {
+    if (!_hasValidWaypoints) {
+      setState(() => _saveError = 'Please name each stop');
+      return;
+    }
+    setState(() => _isStartingTrip = true);
+
+    if (_waypoints.length == 1) {
+      final d = widget.existingDestination;
+      if (d != null) {
+        final updated = d.copyWith(
+          name: _waypoints.first.name,
+          alertRadius: _waypoints.first.alertRadius,
+        );
+        await ref.read(destinationRepositoryProvider).update(updated);
+      }
+    }
+
+    ref.read(activeTripProvider.notifier).startTripWithWaypoints(_waypoints);
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/active-trip');
+    }
   }
 
   Future<void> _saveDestination() async {
-    if (_selectedLocation == null) return;
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      setState(() => _saveError = 'Please enter a destination name');
+    if (!_hasValidWaypoints) {
+      setState(() => _saveError = 'Please name the destination');
       return;
     }
+    final wp = _waypoints.first;
+    setState(() => _isSaving = true);
+    final repo = ref.read(destinationRepositoryProvider);
 
-    setState(() {
-      _isSaving = true;
-      _saveError = null;
-    });
-
-    try {
-      final repo = ref.read(destinationRepositoryProvider);
-
-      if (_isEditing) {
-        final updated = widget.existingDestination!.copyWith(
-          name: name,
-          latitude: _selectedLocation!.latitude,
-          longitude: _selectedLocation!.longitude,
-          alertRadius: _alertRadius,
-        );
-        await repo
-            .update(updated)
-            .timeout(
-              const Duration(seconds: 15),
-              onTimeout: () {
-                throw Exception('Save timed out. Check your connection.');
-              },
-            );
-      } else {
-        final destination = Destination(
-          id: _uuid.v4(),
-          name: name,
-          latitude: _selectedLocation!.latitude,
-          longitude: _selectedLocation!.longitude,
-          alertRadius: _alertRadius,
-          createdAt: DateTime.now(),
-        );
-        await repo
-            .save(destination)
-            .timeout(
-              const Duration(seconds: 15),
-              onTimeout: () {
-                throw Exception('Save timed out. Check your connection.');
-              },
-            );
-      }
-
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _saveError = e.toString().replaceAll('Exception: ', '');
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  Future<void> _saveAndStartTrip() async {
-    if (_selectedLocation == null) return;
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      setState(() => _saveError = 'Please enter a destination name');
-      return;
-    }
-
-    setState(() {
-      _isStartingTrip = true;
-      _saveError = null;
-    });
-
-    try {
-      final repo = ref.read(destinationRepositoryProvider);
-      final destination = Destination(
-        id: _uuid.v4(),
-        name: name,
-        latitude: _selectedLocation!.latitude,
-        longitude: _selectedLocation!.longitude,
-        alertRadius: _alertRadius,
+    if (widget.existingDestination != null) {
+      final updated = widget.existingDestination!.copyWith(
+        name: wp.name,
+        latitude: wp.latitude,
+        longitude: wp.longitude,
+        alertRadius: wp.alertRadius,
+      );
+      await repo.update(updated);
+    } else {
+      final dest = Destination(
+        id: wp.id,
+        name: wp.name,
+        latitude: wp.latitude,
+        longitude: wp.longitude,
+        alertRadius: wp.alertRadius,
         createdAt: DateTime.now(),
       );
-      await repo
-          .save(destination)
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw Exception('Save timed out. Check your connection.');
-            },
-          );
-
-      if (mounted) {
-        ref.read(activeTripProvider.notifier).startTrip(destination);
-        Navigator.pushReplacementNamed(context, '/active-trip');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _saveError = e.toString().replaceAll('Exception: ', '');
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _isStartingTrip = false);
+      await repo.save(dest);
     }
+    if (mounted) Navigator.pop(context, true);
   }
 
   Future<void> _deleteDestination() async {
-    if (!_isEditing) return;
-
+    if (widget.existingDestination == null) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete "${widget.existingDestination!.name}"?'),
+        title: const Text('Delete this destination?'),
         content: const Text('This destination will be permanently removed.'),
         actions: [
           TextButton(
@@ -265,248 +239,609 @@ class _DestinationSetupScreenState
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
+            style: TextButton.styleFrom(foregroundColor: ctx.error),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
-
-    if (confirmed != true) return;
-
-    setState(() => _isDeleting = true);
-
-    try {
-      final repo = ref.read(destinationRepositoryProvider);
-      await repo
-          .delete(widget.existingDestination!.id)
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw Exception('Delete timed out. Check your connection.');
-            },
-          );
+    if (confirmed == true) {
+      setState(() => _isDeleting = true);
+      await ref.read(destinationRepositoryProvider).delete(
+        widget.existingDestination!.id,
+      );
       if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isDeleting = false);
     }
+  }
+
+  void _showEditSheet(int index, {LatLng? latLng}) {
+    final wp = _waypoints[index];
+    _editName = wp.name;
+    _editRadius = wp.alertRadius;
+    _editingIndex = index;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => _WaypointEditSheet(
+        initialName: wp.name,
+        initialRadius: wp.alertRadius,
+        onSave: (name, radius) {
+          _editWaypointName(index, name);
+          _editWaypointRadius(index, radius);
+          Navigator.pop(ctx);
+          setState(() => _editingIndex = null);
+        },
+        latLng: latLng,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDisabled = _isSaving || _isStartingTrip || _isDeleting;
-
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Destination' : 'Set Destination'),
-        actions: [
-          if (_isEditing)
-            IconButton(
-              icon: _isDeleting
-                  ? SizedBox(
+      body: Stack(
+        children: [
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _isEditing && widget.existingDestination != null
+                  ? LatLng(
+                      widget.existingDestination!.latitude,
+                      widget.existingDestination!.longitude,
+                    )
+                  : (_userLocation ?? const LatLng(14.5995, 120.9842)),
+              initialZoom: 13,
+              onTap: (_, latLng) => _onMapTap(latLng),
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: AppConstants.tileUrlTemplate,
+                userAgentPackageName: 'com.stopco.app',
+              ),
+              MarkerLayer(
+                markers: [
+                  if (_userLocation != null)
+                    Marker(
+                      point: _userLocation!,
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Theme.of(context).colorScheme.error,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+                              blurRadius: 4,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
                       ),
-                    )
-                  : const Icon(Icons.delete_outline_rounded),
-              onPressed: isDisabled ? null : _deleteDestination,
-              tooltip: 'Delete',
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter:
-                        _selectedLocation ?? _userLocation ?? _initialCenter,
-                    initialZoom: _initialZoom,
-                    onTap: _onMapTap,
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate: AppConstants.tileUrlTemplate,
-                      userAgentPackageName: 'com.stopco.app',
                     ),
-                    if (_userLocation != null)
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: _userLocation!,
-                            width: 24,
-                            height: 24,
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.primary.withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 2.5,
+                  ..._waypoints.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final wp = entry.value;
+                    final isFirst = i == 0;
+                    final number = i + 1;
+                    return Marker(
+                      point: LatLng(wp.latitude, wp.longitude),
+                      width: 36,
+                      height: 36,
+                      child: GestureDetector(
+                        onTap: () => _showEditSheet(i),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            if (_waypoints.length > 1)
+                              Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: isFirst
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.error,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.4),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              child: Center(
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    shape: BoxShape.circle,
+                                child: Center(
+                                  child: Text(
+                                    '$number',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    if (_selectedLocation != null)
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: _selectedLocation!,
-                            width: 40,
-                            height: 40,
-                            child: Icon(
-                              Icons.location_on_rounded,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 40,
-                            ),
-                          ),
-                        ],
-                      ),
-                    SimpleAttributionWidget(
-                      source: const Text('© OpenStreetMap contributors'),
-                      alignment: Alignment.bottomRight,
-                    ),
-                  ],
-                ),
-                Positioned(
-                  top: AppSpacing.sm,
-                  left: AppSpacing.sm,
-                  right: AppSpacing.sm,
-                  child: Column(
-                    children: [
-                      AppInput(
-                        hint: 'Search for a place...',
-                        controller: _searchController,
-                        prefixIcon: Icons.search_rounded,
-                        suffix: _isSearching
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
                                 ),
                               )
-                            : IconButton(
-                                icon: const Icon(Icons.search_rounded),
-                                onPressed: isDisabled ? null : _searchLocation,
-                              ),
-                        onSubmitted: _searchLocation,
-                      ),
-                      if (_searchResults.isNotEmpty)
-                        AppCard(
-                          padding: EdgeInsets.zero,
-                          child: Column(
-                            children: _searchResults.map((result) {
-                              return ListTile(
-                                dense: true,
-                                title: Text(
-                                  result.displayName,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.secondary,
-                                ),
-                                leading: Icon(
-                                  Icons.location_on_outlined,
-                                  size: 20,
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.4),
-                                ),
-                                onTap: () => _selectSearchResult(result),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      if (_locationPermissionDenied)
-                        AppCard(
-                          color: AppColors.warning.withValues(alpha: 0.1),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.warning_amber_rounded,
-                                color: AppColors.warning,
-                                size: 20,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: Text(
-                                  'Location permission denied. Tap here to enable in settings.',
-                                  style: AppTypography.caption.copyWith(
-                                    color: AppColors.warning,
+                            else
+                              Icon(
+                                Icons.location_on_rounded,
+                                color: Theme.of(context).colorScheme.error,
+                                size: 30,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withValues(alpha: 0.25),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
+                          ],
                         ),
-                    ],
-                  ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+              SimpleAttributionWidget(
+                source: const Text('© OSM contributors'),
+                alignment: Alignment.bottomRight,
+              ),
+            ],
+          ),
+
+          Positioned(
+            top: MediaQuery.of(context).padding.top + AppSpacing.sm,
+            left: AppSpacing.sm,
+            right: AppSpacing.sm,
+            child: Column(
+              children: [
+                _SearchBar(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  onClear: () {
+                    _searchController.clear();
+                    setState(() => _searchResults = []);
+                  },
                 ),
-                Positioned(
-                  bottom: AppSpacing.sm,
-                  right: AppSpacing.sm,
-                  child: FloatingActionButton.small(
-                    heroTag: 'my_location',
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    foregroundColor: Theme.of(context).colorScheme.primary,
-                    onPressed: _isGettingLocation ? null : _getUserLocation,
-                    child: _isGettingLocation
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.my_location_rounded),
+                if (_searchResults.isNotEmpty)
+                  _SearchResultsDropdown(
+                    results: _searchResults,
+                    onSelect: _selectSearchResult,
                   ),
-                ),
               ],
             ),
           ),
-          _BottomPanel(
-            selectedLocation: _selectedLocation,
-            radius: _alertRadius,
-            nameController: _nameController,
-            error: _saveError,
-            isEditing: _isEditing,
-            onRadiusChanged: (r) => setState(() => _alertRadius = r),
-            onSave: isDisabled ? null : _saveDestination,
-            onSaveAndStart: isDisabled ? null : _saveAndStartTrip,
-            isSaving: _isSaving,
-            isStartingTrip: _isStartingTrip,
+
+          if (_userLocation != null)
+            Positioned(
+              bottom: 260,
+              right: AppSpacing.sm,
+              child: FloatingActionButton.small(
+                heroTag: 'my-location',
+                onPressed: () {
+                  if (_userLocation != null) {
+                    _mapController.move(_userLocation!, 15);
+                  }
+                },
+                child: const Icon(Icons.my_location_rounded),
+              ),
+            ),
+        ],
+      ),
+      bottomSheet: _isEditing
+          ? _buildEditBottomSheet()
+          : _buildPlannerBottomSheet(),
+    );
+  }
+
+  void _onSearchChanged(String query) async {
+    if (query.length < 3) {
+      setState(() => _searchResults = []);
+      return;
+    }
+    final results = await _geocoding.search(query);
+    if (mounted) {
+      setState(() {
+        _searchResults = results;
+      });
+    }
+  }
+
+  void _selectSearchResult(GeocodingResult result) {
+    final latLng = LatLng(result.latitude, result.longitude);
+    if (!_multiMode && _waypoints.isNotEmpty) {
+      setState(() {
+        _waypoints[0] = _waypoints[0].copyWith(
+          latitude: result.latitude,
+          longitude: result.longitude,
+          name: result.displayName,
+        );
+        _editName = result.displayName;
+        _nameController.text = _editName;
+        _searchResults = [];
+        _searchController.clear();
+      });
+      _mapController.move(latLng, 15);
+      return;
+    }
+    if (_waypoints.length >= AppConstants.maxWaypoints) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Maximum 5 stops allowed')),
+        );
+      }
+      return;
+    }
+    final waypoint = Waypoint(
+      id: _uuid.v4(),
+      name: result.displayName,
+      latitude: latLng.latitude,
+      longitude: latLng.longitude,
+      alertRadius: AppConstants.defaultAlertRadius,
+      orderIndex: _waypoints.length,
+    );
+    setState(() {
+      _waypoints.add(waypoint);
+      _searchResults = [];
+      _searchController.clear();
+    });
+    _mapController.move(latLng, 15);
+    if (_waypoints.length == 1) {
+      _editName = waypoint.name;
+      _nameController.text = _editName;
+    }
+  }
+
+  void _enterMultiMode() {
+    setState(() => _multiMode = true);
+    if (_userLocation != null) {
+      _mapController.move(_userLocation!, 13);
+    }
+  }
+
+  Widget _buildPlannerBottomSheet() {
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.40,
+      ),
+      child: _waypoints.isEmpty
+          ? _buildEmptyPlanner()
+          : (_waypoints.length == 1 && !_multiMode)
+              ? _buildSingleStopPanel()
+              : _buildWaypointList(),
+    );
+  }
+
+  Widget _buildSingleStopPanel() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Where to?',
+            style: AppTypography.sectionHeader.copyWith(color: context.textPrimary),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          AppInput(
+            controller: _nameController,
+            hint: 'Destination name',
+            prefixIcon: Icons.edit_location_rounded,
+            onChanged: (v) {
+              setState(() => _editName = v);
+              _editWaypointName(0, v);
+            },
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Alert Radius',
+            style: AppTypography.caption.copyWith(color: context.textTertiary),
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          Wrap(
+            spacing: AppSpacing.xs,
+            children: AppConstants.alertRadiusOptions.map((r) {
+              final selected = _editRadius == r;
+              return ChoiceChip(
+                label: Text('${r.round()}m'),
+                selected: selected,
+                onSelected: (_) {
+                  setState(() => _editRadius = r);
+                  _editWaypointRadius(0, r);
+                },
+                selectedColor: context.primary.withValues(alpha: 0.15),
+                visualDensity: VisualDensity.compact,
+              );
+            }).toList(),
+          ),
+          if (_saveError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xxs),
+              child: Text(
+                _saveError!,
+                style: AppTypography.caption.copyWith(color: context.error),
+              ),
+            ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: _saveDestination,
+                  child: const Text('Save Only'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                flex: 2,
+                child: AppButton(
+                  label: 'Start Trip',
+                  icon: Icons.near_me_rounded,
+                  isLoading: _isStartingTrip,
+                  onPressed: _saveAndStartTrip,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Center(
+            child: TextButton.icon(
+              onPressed: _enterMultiMode,
+              icon: const Icon(Icons.add_location_alt_rounded, size: 16),
+              label: const Text('Add another stop'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyPlanner() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.touch_app_rounded, size: 28, color: context.textTertiary),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Tap the map to add your first stop',
+            style: AppTypography.secondary.copyWith(color: context.textTertiary),
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            'Or search above to find a location',
+            style: AppTypography.caption.copyWith(color: context.textTertiary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWaypointList() {
+    final remaining = AppConstants.maxWaypoints - _waypoints.length;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${_waypoints.length}/${AppConstants.maxWaypoints} stops',
+                      style: AppTypography.secondary.copyWith(
+                        color: context.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (remaining > 0)
+                    TextButton.icon(
+                      onPressed: () {
+                        if (_userLocation != null) {
+                          _mapController.move(_userLocation!, 13);
+                        }
+                      },
+                      icon: const Icon(Icons.add_location_alt_rounded, size: 16),
+                      label: const Text('+ Add'),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    )
+                  else
+                    Text(
+                      'Max (5)',
+                      style: AppTypography.caption.copyWith(
+                        color: context.textTertiary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: _waypoints.length / AppConstants.maxWaypoints,
+                  minHeight: 3,
+                  backgroundColor: context.outlineVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Flexible(
+          child: ReorderableListView.builder(
+            shrinkWrap: true,
+            itemCount: _waypoints.length,
+            onReorderItem: _reorderWaypoint,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            itemBuilder: (context, index) {
+              final wp = _waypoints[index];
+              final number = index + 1;
+              return _WaypointRow(
+                key: ValueKey(wp.id),
+                number: number,
+                name: wp.name,
+                radius: wp.alertRadius,
+                isFirst: index == 0,
+                canRemove: _waypoints.length > 1,
+                onEdit: () => _showEditSheet(index),
+                onRemove: () => _removeWaypoint(index),
+                onChangeName: (name) => _editWaypointName(index, name),
+              );
+            },
+          ),
+        ),
+        if (_saveError != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Text(
+              _saveError!,
+              style: AppTypography.caption.copyWith(color: context.error),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.sm, AppSpacing.xxs, AppSpacing.sm, AppSpacing.xs,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: _saveDestination,
+                  child: const Text('Save Only'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                flex: 2,
+                child: AppButton(
+                  label: _waypoints.length == 1
+                      ? 'Start Trip'
+                      : 'Start Trip (${_waypoints.length} stops)',
+                  icon: Icons.near_me_rounded,
+                  isLoading: _isStartingTrip,
+                  onPressed: _saveAndStartTrip,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditBottomSheet() {
+    if (widget.existingDestination == null) return const SizedBox();
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, 0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Edit',
+                  style: AppTypography.sectionHeader.copyWith(color: context.textPrimary),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                AppInput(
+                  controller: _nameController..text = _editName,
+                  hint: 'Destination name',
+                  prefixIcon: Icons.edit_location_rounded,
+                  onChanged: (v) {
+                    setState(() => _editName = v);
+                    _editWaypointName(0, v);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Alert Radius',
+                  style: AppTypography.caption.copyWith(color: context.textTertiary),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  children: AppConstants.alertRadiusOptions.map((r) {
+                    final selected = _editRadius == r;
+                    return ChoiceChip(
+                      label: Text('${r.round()}m'),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() => _editRadius = r);
+                        _editWaypointRadius(0, r);
+                      },
+                      selectedColor: context.primary.withValues(alpha: 0.15),
+                      visualDensity: VisualDensity.compact,
+                    );
+                  }).toList(),
+                ),
+                if (_saveError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                    child: Text(
+                      _saveError!,
+                      style: AppTypography.caption.copyWith(color: context.error),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    label: 'Update',
+                    isLoading: _isSaving,
+                    onPressed: _saveDestination,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                IconButton(
+                  icon: Icon(Icons.delete_outline_rounded, color: context.error),
+                  onPressed: _isDeleting ? null : _deleteDestination,
+                  tooltip: 'Delete',
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -514,134 +849,268 @@ class _DestinationSetupScreenState
   }
 }
 
-class _BottomPanel extends StatelessWidget {
-  final LatLng? selectedLocation;
-  final double radius;
-  final TextEditingController nameController;
-  final String? error;
-  final bool isEditing;
-  final ValueChanged<double> onRadiusChanged;
-  final VoidCallback? onSave;
-  final VoidCallback? onSaveAndStart;
-  final bool isSaving;
-  final bool isStartingTrip;
+class _SearchBar extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
 
-  const _BottomPanel({
-    this.selectedLocation,
-    required this.radius,
-    required this.nameController,
-    this.error,
-    this.isEditing = false,
-    required this.onRadiusChanged,
-    required this.onSave,
-    this.onSaveAndStart,
-    required this.isSaving,
-    this.isStartingTrip = false,
+  const _SearchBar({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
+    return AppInput(
+      controller: controller,
+      hint: 'Search location',
+      prefixIcon: Icons.search_rounded,
+      suffix: controller.text.isNotEmpty
+          ? IconButton(
+              icon: const Icon(Icons.clear_rounded, size: 18),
+              onPressed: onClear,
+            )
+          : null,
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _SearchResultsDropdown extends StatelessWidget {
+  final List<GeocodingResult> results;
+  final ValueChanged<GeocodingResult> onSelect;
+
+  const _SearchResultsDropdown({
+    required this.results,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xxs),
+      child: AppCard(
+      padding: EdgeInsets.zero,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 200),
+        child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: results.length,
+          separatorBuilder: (_, __) => Divider(height: 1, color: context.outlineVariant),
+          itemBuilder: (context, index) {
+            final result = results[index];
+            return ListTile(
+              dense: true,
+              leading: Icon(Icons.location_on_rounded, size: 16, color: context.primary),
+              title: Text(
+                result.displayName,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.secondary,
+              ),
+              onTap: () => onSelect(result              ),
+            );
+          },
+        ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      ),
+    );
+  }
+}
+
+class _WaypointRow extends StatelessWidget {
+  final int number;
+  final String name;
+  final double radius;
+  final bool isFirst;
+  final bool canRemove;
+  final VoidCallback onEdit;
+  final VoidCallback onRemove;
+  final ValueChanged<String> onChangeName;
+
+  const _WaypointRow({
+    super.key,
+    required this.number,
+    required this.name,
+    required this.radius,
+    required this.isFirst,
+    required this.canRemove,
+    required this.onEdit,
+    required this.onRemove,
+    required this.onChangeName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
         children: [
-          AppInput(
-            hint: 'Destination name',
-            controller: nameController,
-            prefixIcon: Icons.edit_location_alt_rounded,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Alert Radius', style: AppTypography.secondary),
-              const SizedBox(height: AppSpacing.xs),
-              Wrap(
-                spacing: AppSpacing.xs,
-                runSpacing: AppSpacing.xs,
-                children: AppConstants.alertRadiusOptions.map((r) {
-                  final selected = r == radius;
-                  return ChoiceChip(
-                    label: Text(
-                      '${r.round()}m',
-                      style: AppTypography.caption.copyWith(
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                      ),
-                    ),
-                    selected: selected,
-                    onSelected: (_) => onRadiusChanged(r),
-                    selectedColor: Theme.of(context).colorScheme.primary,
-                    labelStyle: TextStyle(
-                      color: selected
-                          ? Theme.of(context).colorScheme.surface
-                          : null,
-                    ),
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerLow,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                      side: BorderSide.none,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-          if (error != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              error!,
-              style: AppTypography.caption.copyWith(
-                color: Theme.of(context).colorScheme.error,
-              ),
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: isFirst
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
+                  : Theme.of(context).colorScheme.error.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
             ),
-          ],
-          const SizedBox(height: AppSpacing.sm),
-          if (selectedLocation != null && !isEditing) ...[
-            AppButton(
-              label: 'Start Trip',
-              icon: Icons.navigation_rounded,
-              onPressed: onSaveAndStart,
-              isLoading: isStartingTrip,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: onSave,
-                child: Text(
-                  'Save Only',
-                  style: AppTypography.secondary.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.4),
-                  ),
+            child: Center(
+              child: Text(
+                '$number',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isFirst
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.error,
                 ),
               ),
             ),
-          ] else
-            AppButton(
-              label: selectedLocation != null
-                  ? 'Update Destination'
-                  : 'Tap map to select location',
-              onPressed: onSave,
-              isLoading: isSaving,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: AppTypography.secondary.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${radius.round()}m radius',
+                  style: AppTypography.caption.copyWith(
+                    color: context.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.edit_rounded, size: 16, color: context.primary),
+            onPressed: onEdit,
+            tooltip: 'Edit',
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            padding: EdgeInsets.zero,
+          ),
+          if (canRemove)
+            IconButton(
+              icon: Icon(Icons.remove_circle_outline_rounded, size: 16, color: context.error),
+              onPressed: onRemove,
+              tooltip: 'Remove',
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              padding: EdgeInsets.zero,
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _WaypointEditSheet extends StatefulWidget {
+  final String initialName;
+  final double initialRadius;
+  final void Function(String name, double radius) onSave;
+  final LatLng? latLng;
+
+  const _WaypointEditSheet({
+    required this.initialName,
+    required this.initialRadius,
+    required this.onSave,
+    this.latLng,
+  });
+
+  @override
+  State<_WaypointEditSheet> createState() => _WaypointEditSheetState();
+}
+
+class _WaypointEditSheetState extends State<_WaypointEditSheet> {
+  late TextEditingController _nameController;
+  late double _selectedRadius;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _selectedRadius = widget.initialRadius;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Edit Stop',
+              style: AppTypography.title.copyWith(color: context.textPrimary),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppInput(
+              controller: _nameController,
+              hint: 'Stop name',
+              prefixIcon: Icons.edit_location_rounded,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Alert Radius',
+              style: AppTypography.caption.copyWith(color: context.textTertiary),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              children: AppConstants.alertRadiusOptions.map((r) {
+                final selected = _selectedRadius == r;
+                return ChoiceChip(
+                  label: Text('${r.round()}m'),
+                  selected: selected,
+                  onSelected: (_) => setState(() => _selectedRadius = r),
+                  selectedColor: context.primary.withValues(alpha: 0.15),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                label: 'Save',
+                onPressed: () {
+                  final name = _nameController.text.trim();
+                  if (name.isEmpty) return;
+                  widget.onSave(name, _selectedRadius);
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
