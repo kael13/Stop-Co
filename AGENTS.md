@@ -408,3 +408,63 @@ Add a "Community" tab with Reddit-style posts (create/update/delete), upvote+dow
 - `lib/features/trip/presentation/active_trip_screen.dart` — hasLeftPrevZone alarm gate.
 - `lib/features/trip/presentation/trip_complete_screen.dart` — clearTrip() on exit, mounted guard.
 - `lib/features/simulation/presentation/simulation_screen.dart` — multi-waypoint selection UI, startTripWithWaypoints().
+
+---
+
+# Session: Lock-screen alarm & lifecycle fix — no loop, no screen wake on repeat, CPU alive
+
+## Goal
+- Fix trip completion loop on lock screen (alarm kept re-triggering until app unlocked/reopened)
+- Minimize app to notification bar on lock (no activity overlay when no alarm is active)
+- Keep CPU alive during tracking (PARTIAL_WAKE_LOCK) but let screen turn off normally
+- Alarm repeats on lock screen every 3s until dismissed, without re-waking the device
+
+## Constraints & Preferences
+- Alarm must wake device and show alarm UI (`fullScreenIntent: true`) on first fire
+- Repeating alarms (every 3s) should have sound/vibration but no screen-wake
+- App must NOT render over lock screen when no alarm is active
+- Lock screen should show trip info (destination + distance) when tracking
+- Both real GPS and simulation tracking must work on lock screen
+- CPU must stay alive during lock (PARTIAL_WAKE_LOCK), but screen must turn off normally
+- WakelockPlus must be removed from Dart (was keeping screen on)
+
+## What was done
+1. Guarded `didChangeAppLifecycleState` polling restart with `trip.isActive` check — prevents `_updateDistance()` re-firing alarm on resume
+2. Made `triggerAlarm()` idempotent (`if (state!.hasAlerted) return;`) — both GeofenceManager and `_updateDistance` can call it, only first fires
+3. Simulation `_pollTimer` no longer cancelled on pause — keeps running in background
+4. Removed all `WakelockPlus.enable()` calls from `active_trip_screen.dart`
+5. Added native `PARTIAL_WAKE_LOCK` in `TrackingForegroundService.kt` (CPU-on, screen-off)
+6. Removed `showWhenLocked` + `turnScreenOn` from `AndroidManifest.xml` lines 26-27
+7. Added `VISIBILITY_PUBLIC` to tracking notification in `TrackingForegroundService.kt`
+8. Added `ForegroundServiceChannel.stopTracking()` call in `AlarmScreen._dismiss()` for trip completion
+9. Changed notification response handler in `main.dart` from `pushNamed` to `pushReplacementNamed`
+10. Added `fullScreenIntent` parameter to `AlarmNotificationService.showAlarmNotification()` — defaults `true` for initial wake
+11. Repeating alarm in `AlarmScreen._startRepeatingAlarm()` calls with `fullScreenIntent: false` (sound/vibration only)
+12. Removed `WidgetsBindingObserver` from `AlarmScreen` — repeating timer stays alive on lock screen until dismissed
+
+## Verification
+- `flutter analyze`: 0 errors, 3 info (pre-existing)
+- `flutter build apk --debug`: succeeded
+
+## Key decisions
+- Native `PARTIAL_WAKE_LOCK` over `WakelockPlus` for reliable CPU-keepalive (screen-off)
+- `showWhenLocked`/`turnScreenOn` removed because `fullScreenIntent` on notifications is the sole wake mechanism
+- Initial alarm = `fullScreenIntent: true` (wake device), repeating = `fullScreenIntent: false` (sound only)
+- `WidgetsBindingObserver` removed from AlarmScreen; timer runs unconditionally on lock screen
+- `triggerAlarm()` idempotent guard prevents duplicate notifications from parallel GPS listeners
+
+## Critical Context
+- Two parallel GPS listeners: `GeofenceManager._checkPosition()` + `ActiveTripScreen._updateDistance()` — both can call `triggerAlarm()`.
+- `TrackingForegroundService.kt` is the single service for real + simulation tracking; acquires `PARTIAL_WAKE_LOCK` in `onCreate`, releases in `onDestroy`.
+- `fullScreenIntent: true` on alarm notification is the ONLY mechanism that brings app over lock screen.
+- For simulation: `_pollTimer` keeps running in background; for real GPS it's cancelled and GeofenceManager handles detection.
+- `AlarmScreen._dismiss()` for last stop calls `ForegroundServiceChannel.stopTracking()` which kills the wakelock.
+
+## Relevant Files
+- `android/app/src/main/AndroidManifest.xml` — removed `showWhenLocked`/`turnScreenOn`
+- `android/app/src/main/kotlin/com/stopco/stop_co/TrackingForegroundService.kt` — added PARTIAL_WAKE_LOCK + VISIBILITY_PUBLIC
+- `lib/features/trip/presentation/active_trip_screen.dart` — lifecycle guard, simulation bg polling, removed WakelockPlus
+- `lib/features/trip/presentation/alarm_screen.dart` — removed WidgetsBindingObserver, fullScreenIntent:false on repeat, ForegroundServiceChannel.stopTracking
+- `lib/features/trip/data/alarm_notification_service.dart` — fullScreenIntent parameter
+- `lib/features/trip/data/trip_providers.dart` — idempotent triggerAlarm()
+- `lib/main.dart` — pushReplacementNamed for notification response
