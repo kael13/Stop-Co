@@ -43,7 +43,7 @@ class _AppButtonState extends State<AppButton>
       duration: const Duration(milliseconds: 100),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.97).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -98,7 +98,8 @@ class _AppButtonState extends State<AppButton>
           foregroundColor: widget.isDestructive
               ? colorScheme.error
               : colorScheme.primary,
-          shape: shape,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          minimumSize: minSize,
         ),
         child: _buildContent(),
       );
@@ -109,7 +110,7 @@ class _AppButtonState extends State<AppButton>
         onPressed: isEnabled ? widget.onPressed : null,
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          side: BorderSide(color: colorScheme.primary, width: 1),
+          side: BorderSide(color: colorScheme.primary, width: 0.5),
           shape: shape,
           minimumSize: minSize,
         ),
@@ -149,10 +150,10 @@ class _AppButtonState extends State<AppButton>
 
   Widget _buildContent() {
     if (widget.isLoading) {
-      return const SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(strokeWidth: 2.5),
+      return SizedBox(
+        width: 20,
+        height: 20,
+        child: const CircularProgressIndicator(strokeWidth: 2),
       );
     }
 
@@ -160,7 +161,7 @@ class _AppButtonState extends State<AppButton>
       mainAxisSize: MainAxisSize.min,
       children: [
         if (widget.icon != null) ...[
-          Icon(widget.icon, size: 20),
+          Icon(widget.icon, size: 18),
           const SizedBox(width: AppSpacing.xs),
         ],
         Text(widget.label, style: AppTypography.button),

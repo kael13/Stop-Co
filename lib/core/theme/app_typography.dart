@@ -6,72 +6,72 @@ class AppTypography {
 
   static const String _fontFamily = '.SF Pro Display';
 
-  static String getInterFamily({FontWeight? weight}) {
-    return GoogleFonts.inter(fontWeight: weight).fontFamily ?? _fontFamily;
+  static String getJakartaFamily({FontWeight? weight}) {
+    return GoogleFonts.plusJakartaSans(fontWeight: weight).fontFamily ?? _fontFamily;
   }
 
-  static TextStyle get largeTitle => GoogleFonts.inter(
-        fontSize: 34,
+  static TextStyle get largeTitle => GoogleFonts.plusJakartaSans(
+        fontSize: 30,
         fontWeight: FontWeight.w700,
         height: 1.1,
         letterSpacing: -0.5,
       );
 
-  static TextStyle get title => GoogleFonts.inter(
-        fontSize: 24,
+  static TextStyle get title => GoogleFonts.plusJakartaSans(
+        fontSize: 22,
         fontWeight: FontWeight.w600,
         height: 1.2,
         letterSpacing: -0.3,
       );
 
-  static TextStyle get sectionHeader => GoogleFonts.inter(
-        fontSize: 18,
+  static TextStyle get sectionHeader => GoogleFonts.plusJakartaSans(
+        fontSize: 16,
         fontWeight: FontWeight.w600,
         height: 1.3,
         letterSpacing: -0.2,
       );
 
-  static TextStyle get body => GoogleFonts.inter(
-        fontSize: 16,
+  static TextStyle get body => GoogleFonts.plusJakartaSans(
+        fontSize: 15,
         fontWeight: FontWeight.w400,
         height: 1.5,
       );
 
-  static TextStyle get bodyBold => GoogleFonts.inter(
-        fontSize: 16,
+  static TextStyle get bodyBold => GoogleFonts.plusJakartaSans(
+        fontSize: 15,
         fontWeight: FontWeight.w600,
         height: 1.5,
       );
 
-  static TextStyle get secondary => GoogleFonts.inter(
-        fontSize: 14,
+  static TextStyle get secondary => GoogleFonts.plusJakartaSans(
+        fontSize: 13,
         fontWeight: FontWeight.w400,
         height: 1.4,
         letterSpacing: 0.1,
       );
 
-  static TextStyle get caption => GoogleFonts.inter(
-        fontSize: 12,
+  static TextStyle get caption => GoogleFonts.plusJakartaSans(
+        fontSize: 11,
         fontWeight: FontWeight.w400,
         height: 1.3,
         letterSpacing: 0.2,
       );
 
-  static TextStyle get button => GoogleFonts.inter(
-        fontSize: 17,
-        fontWeight: FontWeight.w600,
+  static TextStyle get button => GoogleFonts.plusJakartaSans(
+        fontSize: 15,
+        fontWeight: FontWeight.w500,
         height: 1.2,
-        letterSpacing: -0.2,
+        letterSpacing: 0,
       );
 
-  static TextStyle get alarm => GoogleFonts.inter(
+  static TextStyle get alarm => GoogleFonts.plusJakartaSans(
         fontSize: 48,
         fontWeight: FontWeight.w700,
         height: 1.0,
         letterSpacing: -1.5,
       );
 
-  static TextStyle get distance => GoogleFonts.inter(
+  static TextStyle get distance => GoogleFonts.plusJakartaSans(
         fontSize: 64,
         fontWeight: FontWeight.w200,
         height: 1.0,
@@ -80,7 +80,7 @@ class AppTypography {
 
   static const TextStyle largeTitleFallback = TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 34,
+    fontSize: 30,
     fontWeight: FontWeight.w700,
     height: 1.1,
     letterSpacing: -0.5,
@@ -88,7 +88,7 @@ class AppTypography {
 
   static const TextStyle titleFallback = TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: FontWeight.w600,
     height: 1.2,
     letterSpacing: -0.3,
@@ -96,7 +96,7 @@ class AppTypography {
 
   static const TextStyle sectionHeaderFallback = TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: FontWeight.w600,
     height: 1.3,
     letterSpacing: -0.2,
@@ -104,21 +104,21 @@ class AppTypography {
 
   static const TextStyle bodyFallback = TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: FontWeight.w400,
     height: 1.5,
   );
 
   static const TextStyle bodyBoldFallback = TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: FontWeight.w600,
     height: 1.5,
   );
 
   static const TextStyle secondaryFallback = TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: FontWeight.w400,
     height: 1.4,
     letterSpacing: 0.1,
@@ -126,7 +126,7 @@ class AppTypography {
 
   static const TextStyle captionFallback = TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: FontWeight.w400,
     height: 1.3,
     letterSpacing: 0.2,
@@ -134,10 +134,10 @@ class AppTypography {
 
   static const TextStyle buttonFallback = TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 17,
-    fontWeight: FontWeight.w600,
+    fontSize: 15,
+    fontWeight: FontWeight.w500,
     height: 1.2,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
   );
 
   static const TextStyle alarmFallback = TextStyle(

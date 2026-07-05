@@ -11,7 +11,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../auth/data/auth_providers.dart';
-import '../../community/presentation/community_feed_tab.dart';
 import '../../destination/data/destination_model.dart';
 import '../../destination/data/destination_providers.dart';
 import '../../destination/data/destination_repository.dart';
@@ -50,7 +49,6 @@ class _MainShellState extends ConsumerState<MainShell> {
     _TabItem(icon: Icons.location_on_outlined, activeIcon: Icons.location_on_rounded, label: 'Saved'),
     _TabItem(icon: Icons.science_outlined, activeIcon: Icons.science_rounded, label: 'Simulate'),
     _TabItem(icon: Icons.explore_outlined, activeIcon: Icons.explore_rounded, label: 'Trips'),
-    _TabItem(icon: Icons.groups_2_outlined, activeIcon: Icons.groups_2_rounded, label: 'Community'),
     _TabItem(icon: Icons.settings_outlined, activeIcon: Icons.settings_rounded, label: 'Settings'),
   ];
 
@@ -58,7 +56,6 @@ class _MainShellState extends ConsumerState<MainShell> {
     _DestinationsTab(),
     SimulationScreen(),
     _HomeTab(),
-    CommunityFeedTab(),
     SettingsScreen(),
   ];
 
@@ -1167,21 +1164,6 @@ class _RecentTripsSection extends ConsumerWidget {
                 formattedDuration: _formatDuration(entry.value.duration),
               ).fadeSlideUp(delay: Duration(milliseconds: 60 * entry.key)),
             )),
-        if (trips.length > 5) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Center(
-            child: TextButton.icon(
-              onPressed: () {
-                // Future: navigate to full trips list
-              },
-              icon: const Icon(Icons.list_alt_rounded, size: 18),
-              label: Text(
-                'View all ${trips.length} trips',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }

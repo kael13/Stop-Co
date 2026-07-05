@@ -468,3 +468,87 @@ Add a "Community" tab with Reddit-style posts (create/update/delete), upvote+dow
 - `lib/features/trip/data/alarm_notification_service.dart` — fullScreenIntent parameter
 - `lib/features/trip/data/trip_providers.dart` — idempotent triggerAlarm()
 - `lib/main.dart` — pushReplacementNamed for notification response
+
+---
+
+# Session: Font compaction — Plus Jakarta Sans, reduced sizes, VisualDensity, modern buttons
+
+## Goal
+- Compact the app spacing, replace Inter with Plus Jakarta Sans, and modernize button styling for a minimal look.
+
+## Constraints & Preferences
+- Font: Plus Jakarta Sans (switched from Manrope after initially choosing it)
+- Compaction level: Moderate (button 56→48px, card padding 16→12, input 56→48, section gaps 24→16, global VisualDensity -1)
+- All button types get the reduced height
+- Font sizes reduced: body 16→15, secondary 14→13, caption 12→11, sectionHeader 18→16, title 24→22, largeTitle 34→30
+- Button style: 15px w500 font, 18px icons, 0.5px outlined border, 0.98 scale animation, loading spinner 20px
+
+## What was done
+- Switched `app_typography.dart` from `GoogleFonts.inter()` to `GoogleFonts.plusJakartaSans()` with reduced font sizes and w500 button weight
+- Compacted `app_spacing.dart` tokens (xs=6, sm=10, md=12, lg=16, xl=24, xxl=36, buttonHeight/inputHeight=48, iconButtonSize/minTapTarget=44)
+- Added `visualDensity: VisualDensity(horizontal: -1, vertical: -1)` to both light/dark themes in `app_theme.dart`
+- Updated outlined button border from 1.5px→0.5px and text button theme (removed minimumSize, added padding)
+- Modernized `app_button.dart`: scale 0.97→0.98, icon 20→18, outlined border 1→0.5, loading spinner 24→20 with stroke 2.5→2, removed shape from TextButton
+- Removed 2 redundant `VisualDensity.compact` overrides in `destination_setup_screen.dart`
+- Removed `VisualDensity(-2,-1)` override in `community_feed_tab.dart`
+- Tightened button-area padding in 4 screens (`auth_screen.dart`, `alarm_screen.dart`, `trip_complete_screen.dart`, `onboarding_screen.dart`)
+
+## Key decisions
+- **Plus Jakarta Sans over Inter**: More contemporary geometric sans-serif that pairs well with compact spacing.
+- **Moderate over light/aggressive compaction**: Balances density with readability; avoids negative effects of more aggressive density.
+- **All buttons compacted uniformly**: Consistent visual language across primary, secondary, tonal, and text variants.
+- **TextButton without explicit minimumSize**: Minimal appearance, padding-only for tap target; inherits height from content and density.
+
+## Next Steps
+- Monitor runtime font download for Plus Jakarta Sans (loaded via `google_fonts` at first launch)
+- Verify layout of any screen with hardcoded inline paddings not using `AppSpacing` tokens
+
+## Pending: Tile consistency pass
+A comprehensive inventory revealed inconsistent border radii across all tappable surfaces. AppButton is the reference at **14px** flat, but nothing else aligns:
+
+| Component | Current Radius | Target |
+|---|---|---|
+| **AppButton** (reference) | 14px | — |
+| ChoiceChips (dest_setup) | ~20px pill (default M3) | 14px |
+| ChoiceChips (settings) | 8px | 14px |
+| ChoiceChips (simulation) | 8px | 14px |
+| **AppCard** (all tiles) | 16px (radiusLg) | 14px |
+| PostCard | 12px + 0.5 elev | 14px, flat |
+| CoordinateChip | 8px | 14px |
+| SimulationBadge pills | 8px | 14px |
+| SegmentedButtons | ~12px (M3 default) | 14px |
+| ResetButton (settings) | raw TextButton | AppButton(isText) |
+
+### To do before this pass
+1. Decide: should tappable tiles (AppCard onTap, PostCard, etc.) get the scale 0.98 + haptic treatment, or stay as plain InkWell ripple?
+2. Decide: should PostCard keep its unique 0.5 elevation or go flat?
+
+### Changes needed
+- Add `AppSpacing.tileRadius = 14` token
+- Update AppButton to reference `AppSpacing.tileRadius`
+- Add custom `shape` to ChoiceChips in `destination_setup_screen.dart` (3 locations: single-stop, edit sheet, waypoint edit sheet)
+- Update ChoiceChip shape in `settings_screen.dart` (radiusSm → tileRadius)
+- Update ChoiceChip shape in `simulation_screen.dart` (radiusSm → tileRadius)
+- Change `AppCard` theme radius from `radiusLg=16` → `tileRadius=14`
+- Update PostCard radius from `radiusMd=12` → `tileRadius=14`; remove 0.5 elevation
+- Update CoordinateChip from `radiusSm` → `tileRadius`
+- Update SimulationBadge speed pills from `radiusSm` → `tileRadius`
+- Override SegmentedButton shapes in settings and community to use `tileRadius`
+- Replace raw `TextButton` in `settings_screen.dart` `_ResetButton` with `AppButton(isText: true)`
+
+## Critical Context
+- All three `AppTypography` getters are non-`const` (runtime `GoogleFonts.plusJakartaSans()` calls), so fallback const text styles are retained for scenarios needing const
+- `flutter analyze` passes with 0 errors (3 pre-existing info warnings only)
+- `flutter build apk --debug` succeeds
+
+## Relevant Files
+- `lib/core/theme/app_typography.dart`: All text styles — font family, sizes, weights, fallbacks
+- `lib/core/theme/app_spacing.dart`: All spacing tokens (padding, gaps, button/input heights, radii)
+- `lib/core/theme/app_theme.dart`: Light and dark theme data, button themes, global VisualDensity
+- `lib/core/components/app_button.dart`: FilledButton/OutlinedButton/TextButton/FilledButton.tonal wrappers with scale animation, loading state, icon support
+- `lib/features/auth/presentation/auth_screen.dart`: Button-area padding tightened
+- `lib/features/trip/presentation/alarm_screen.dart`: Button-area padding tightened
+- `lib/features/trip/presentation/trip_complete_screen.dart`: Button-area padding tightened
+- `lib/features/onboarding/presentation/onboarding_screen.dart`: Button-area padding tightened
+- `lib/features/destination/presentation/destination_setup_screen.dart`: Removed redundant VisualDensity overrides on ChoiceChips
+- `lib/features/community/presentation/community_feed_tab.dart`: Removed redundant VisualDensity override on SegmentedButton

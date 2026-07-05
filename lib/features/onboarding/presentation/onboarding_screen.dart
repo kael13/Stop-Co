@@ -99,10 +99,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final isLast = _currentPage == _slides.length - 1;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.sm,
         AppSpacing.md,
         AppSpacing.lg,
-        AppSpacing.xl,
       ),
       child: AppButton(
         label: isLast ? 'Get Started' : 'Next',

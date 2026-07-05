@@ -26,6 +26,7 @@ class AppTheme {
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.offWhite,
       colorScheme: colorScheme,
+      visualDensity: VisualDensity(horizontal: -1, vertical: -1),
       textTheme: TextTheme(
         displayLarge: AppTypography.largeTitle,
         headlineLarge: AppTypography.title,
@@ -59,7 +60,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
-          side: BorderSide(color: colorScheme.primary, width: 1.5),
+          side: BorderSide(color: colorScheme.primary, width: 0.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
@@ -69,7 +70,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           textStyle: AppTypography.button.copyWith(color: colorScheme.primary),
         ),
       ),
@@ -144,6 +145,7 @@ class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.deepSlate,
       colorScheme: colorScheme,
+      visualDensity: VisualDensity(horizontal: -1, vertical: -1),
       textTheme: TextTheme(
         displayLarge: AppTypography.largeTitle,
         headlineLarge: AppTypography.title,
@@ -177,7 +179,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
-          side: BorderSide(color: colorScheme.primary, width: 1.5),
+          side: BorderSide(color: colorScheme.primary, width: 0.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
@@ -187,7 +189,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           textStyle: AppTypography.button.copyWith(color: colorScheme.primary),
         ),
       ),

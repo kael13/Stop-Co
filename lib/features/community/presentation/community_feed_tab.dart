@@ -97,9 +97,7 @@ class _SortChips extends StatelessWidget {
             .toList(),
         selected: {current},
         onSelectionChanged: (set) => onChanged(set.first),
-        style: const ButtonStyle(
-          visualDensity: VisualDensity(horizontal: -2, vertical: -1),
-        ),
+        style: const ButtonStyle(),
       ),
     )
         .animate()

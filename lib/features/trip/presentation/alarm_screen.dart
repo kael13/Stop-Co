@@ -153,7 +153,7 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             children: [
               const Spacer(flex: 2),

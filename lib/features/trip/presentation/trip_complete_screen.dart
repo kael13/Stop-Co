@@ -171,7 +171,7 @@ class TripCompleteScreen extends ConsumerWidget {
 
               const Spacer(),
               Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   children: [
                     SizedBox(

@@ -284,10 +284,10 @@ class _FormCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
         AppSpacing.lg,
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.md,
       ),
       decoration: BoxDecoration(
         color: context.surface,

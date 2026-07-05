@@ -567,7 +567,6 @@ class _DestinationSetupScreenState
                   _editWaypointRadius(0, r);
                 },
                 selectedColor: context.primary.withValues(alpha: 0.15),
-                visualDensity: VisualDensity.compact,
               );
             }).toList(),
           ),
@@ -806,7 +805,6 @@ class _DestinationSetupScreenState
                         _editWaypointRadius(0, r);
                       },
                       selectedColor: context.primary.withValues(alpha: 0.15),
-                      visualDensity: VisualDensity.compact,
                     );
                   }).toList(),
                 ),
