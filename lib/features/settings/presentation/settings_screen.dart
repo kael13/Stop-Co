@@ -603,7 +603,8 @@ class _CustomAlarmSoundTile extends ConsumerWidget {
 
   String get _displayName {
     if (currentPath == null) return 'Default';
-    if (currentPath!.startsWith('content://')) {
+    if (currentPath!.startsWith('content://') ||
+        currentPath!.contains('/alarms/')) {
       return 'Custom sound';
     }
     final segments = currentPath!.split('/');

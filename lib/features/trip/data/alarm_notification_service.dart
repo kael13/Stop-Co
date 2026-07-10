@@ -16,7 +16,8 @@ class AlarmNotificationService {
 
     AndroidNotificationSound? sound;
     if (playSound && customSoundPath != null) {
-      final uri = customSoundPath.startsWith('content://')
+      final uri = customSoundPath.startsWith('content://') ||
+              customSoundPath.startsWith('file://')
           ? customSoundPath
           : 'file://$customSoundPath';
       sound = UriAndroidNotificationSound(uri);

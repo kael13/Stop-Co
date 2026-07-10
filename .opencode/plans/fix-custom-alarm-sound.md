@@ -1,3 +1,19 @@
+# Fix: Custom alarm sound — revert to content:// URI with channel-level fix
+
+## Root cause
+The custom sound was only applied **per-notification** (via `AndroidNotificationDetails.sound`). On Android 12+, the notification channel's sound is locked at creation time — per-notification overrides are ignored. The sound was also routed through `USAGE_NOTIFICATION` instead of `USAGE_ALARM`, making it subject to DnD suppression.
+
+## The real fix (already applied in Dart files)
+- **`main.dart`**: `_createAlarmChannel()` now accepts `customSoundPath`, sets it as the **channel-level** default sound via `AndroidNotificationChannel.sound`, with `audioAttributesUsage: AudioAttributesUsage.alarm` for alarm stream routing. Channel is deleted+recreated with the new sound.
+- **`settings_providers.dart`**: Calls `recreateAlarmChannel()` when the user changes the custom sound.
+- **`alarm_notification_service.dart`**: Per-notification sound kept as backup; URI logic handles `content://` paths.
+
+## Only change needed: Revert MainActivity.kt
+The previous edit replaced `content://` URI return with internal-storage copy. That `file://` approach won't work because the notification system (`system_server` process) can't read app-private `file://` URIs. The original `content://` with `takePersistableUriPermission()` is correct — the notification system CAN access `content://` URIs through the permission grant.
+
+### Exact `MainActivity.kt` content to restore:
+
+```kotlin
 package com.stopco.stop_co
 
 import android.app.Activity
@@ -8,7 +24,6 @@ import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import java.io.File
 
 class MainActivity : FlutterActivity() {
 
@@ -101,8 +116,11 @@ class MainActivity : FlutterActivity() {
             if (resultCode == Activity.RESULT_OK && data?.data != null) {
                 val uri = data.data!!
                 try {
-                    val internalPath = copyToInternalStorage(uri)
-                    filePickerResult?.success(internalPath)
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                    filePickerResult?.success(uri.toString())
                 } catch (e: Exception) {
                     filePickerResult?.success("")
                 }
@@ -113,45 +131,21 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun copyToInternalStorage(uri: android.net.Uri): String {
-        val inputStream = contentResolver.openInputStream(uri)
-            ?: throw Exception("Cannot open selected file")
-
-        val extension = detectExtension(uri)
-
-        val alarmsDir = File(filesDir, "alarms").also { it.mkdirs() }
-
-        alarmsDir.listFiles()?.forEach { it.delete() }
-
-        val outputFile = File(alarmsDir, "alarm_sound$extension")
-        inputStream.use { input ->
-            outputFile.outputStream().use { output ->
-                input.copyTo(output)
-            }
-        }
-
-        return outputFile.absolutePath
-    }
-
-    private fun detectExtension(uri: android.net.Uri): String {
-        val mimeType = contentResolver.getType(uri) ?: ""
-        return when {
-            mimeType.contains("wav") || mimeType.contains("x-wav") -> ".wav"
-            mimeType.contains("mp3") || mimeType.contains("mpeg") -> ".mp3"
-            mimeType.contains("ogg") -> ".ogg"
-            mimeType.contains("aac") -> ".aac"
-            mimeType.contains("flac") -> ".flac"
-            mimeType.contains("m4a") -> ".m4a"
-            mimeType.contains("webm") -> ".weba"
-            else -> {
-                val ext = uri.lastPathSegment?.substringAfterLast('.', "")
-                if (ext != null && ext.isNotEmpty()) ".$ext" else ".audio"
-            }
-        }
-    }
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
     }
 }
+```
+
+### Dart files — no changes needed (already correct):
+- `lib/main.dart` — channel-level sound + `AudioAttributesUsage.alarm` ✓
+- `lib/features/settings/data/settings_providers.dart` — calls `recreateAlarmChannel()` ✓
+- `lib/features/trip/data/alarm_notification_service.dart` — URI logic handles `content://` ✓
+- `lib/features/settings/presentation/settings_screen.dart` — `_displayName` handles `content://` ✓
+
+## Verification
+```bash
+flutter analyze
+flutter build apk --debug
+```

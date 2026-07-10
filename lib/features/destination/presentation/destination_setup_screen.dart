@@ -1,3 +1,4 @@
+import 'dart:math' show Point;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -30,6 +31,7 @@ class DestinationSetupScreen extends ConsumerStatefulWidget {
 class _DestinationSetupScreenState
     extends ConsumerState<DestinationSetupScreen> {
   final _mapController = MapController();
+  final _mapKey = GlobalKey();
   final _searchController = TextEditingController();
   final _nameController = TextEditingController();
   final _geocoding = GeocodingService();
@@ -49,6 +51,8 @@ class _DestinationSetupScreenState
   int? _editingIndex;
 
   bool _multiMode = false;
+
+  int? _draggingIndex;
 
   bool get _isEditing => widget.existingDestination != null;
 
@@ -277,12 +281,37 @@ class _DestinationSetupScreenState
     );
   }
 
+  void _onLongPressStart(int index) {
+    setState(() => _draggingIndex = index);
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    if (_draggingIndex == null) return;
+    final renderBox = _mapKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final localPos = renderBox.globalToLocal(details.globalPosition);
+    final latLng = _mapController.camera.pointToLatLng(
+      Point(localPos.dx, localPos.dy),
+    );
+    setState(() {
+      _waypoints[_draggingIndex!] = _waypoints[_draggingIndex!].copyWith(
+        latitude: latLng.latitude,
+        longitude: latLng.longitude,
+      );
+    });
+  }
+
+  void _onDragEnd(DragEndDetails _) {
+    setState(() => _draggingIndex = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
           FlutterMap(
+            key: _mapKey,
             mapController: _mapController,
             options: MapOptions(
               initialCenter: _isEditing && widget.existingDestination != null
@@ -332,9 +361,28 @@ class _DestinationSetupScreenState
                       height: 36,
                       child: GestureDetector(
                         onTap: () => _showEditSheet(i),
+                        onLongPressStart: (_) => _onLongPressStart(i),
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.35),
+                                    blurRadius: _draggingIndex == i ? 10 : 4,
+                                    spreadRadius: _draggingIndex == i ? 3 : 1,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: _draggingIndex == i
+                                  ? const Icon(Icons.drag_indicator_rounded, color: Colors.white54, size: 24)
+                                  : null,
+                            ),
                             if (_waypoints.length > 1)
                               Container(
                                 width: 30,
@@ -347,7 +395,9 @@ class _DestinationSetupScreenState
                                   border: Border.all(color: Colors.white, width: 2),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.4),
+                                      color: isFirst
+                                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
+                                          : Theme.of(context).colorScheme.error.withValues(alpha: 0.4),
                                       blurRadius: 4,
                                       offset: const Offset(0, 2),
                                     ),
@@ -414,6 +464,14 @@ class _DestinationSetupScreenState
             ),
           ),
 
+          if (_draggingIndex != null)
+            Positioned.fill(
+              child: GestureDetector(
+                onPanUpdate: _onDragUpdate,
+                onPanEnd: _onDragEnd,
+                child: Container(color: Colors.transparent),
+              ),
+            ),
           if (_userLocation != null)
             Positioned(
               bottom: 260,
@@ -441,7 +499,11 @@ class _DestinationSetupScreenState
       setState(() => _searchResults = []);
       return;
     }
-    final results = await _geocoding.search(query);
+    final results = await _geocoding.search(
+      query,
+      nearLat: _userLocation?.latitude,
+      nearLon: _userLocation?.longitude,
+    );
     if (mounted) {
       setState(() {
         _searchResults = results;

@@ -15,14 +15,20 @@ class GeocodingResult {
 }
 
 class GeocodingService {
-  Future<List<GeocodingResult>> search(String query) async {
-    final uri = Uri.parse(
-      '${AppConstants.nominatimBaseUrl}/search'
+  Future<List<GeocodingResult>> search(String query, {double? nearLat, double? nearLon}) async {
+    var url = '${AppConstants.nominatimBaseUrl}/search'
       '?q=${Uri.encodeComponent(query)}'
       '&format=json'
       '&limit=5'
-      '&addressdetails=0',
-    );
+      '&addressdetails=0';
+    if (nearLat != null && nearLon != null) {
+      final minLon = (nearLon - 1.0).toStringAsFixed(4);
+      final minLat = (nearLat - 1.0).toStringAsFixed(4);
+      final maxLon = (nearLon + 1.0).toStringAsFixed(4);
+      final maxLat = (nearLat + 1.0).toStringAsFixed(4);
+      url += '&viewbox=$minLon,$minLat,$maxLon,$maxLat';
+    }
+    final uri = Uri.parse(url);
 
     final response = await http.get(
       uri,

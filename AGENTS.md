@@ -552,3 +552,57 @@ A comprehensive inventory revealed inconsistent border radii across all tappable
 - `lib/features/onboarding/presentation/onboarding_screen.dart`: Button-area padding tightened
 - `lib/features/destination/presentation/destination_setup_screen.dart`: Removed redundant VisualDensity overrides on ChoiceChips
 - `lib/features/community/presentation/community_feed_tab.dart`: Removed redundant VisualDensity override on SegmentedButton
+
+---
+
+# Session: POI markers (abandoned) + Nominatim search location bias fix
+
+## Goal
+- Add tappable landmark POI markers on Flutter Map (OpenStreetMap) using Overpass API, with drag-to-adjust pins and location-biased search
+
+## Constraints & Preferences
+- Use Overpass API (free, no key) for POI data
+- POIs must be tappable → add as waypoint in destination planner
+- POI markers show emoji + name label, limited to 5 results, prioritized by landmark tier
+- Pin can be long-pressed and dragged to adjust location
+- Search results biased near user's GPS location
+- API limits must be respected — final decision: remove POI overlay entirely due to Overpass 406/429/403 issues (even after User-Agent fix)
+
+## Progress
+### Done
+- Created POI data layer (model, Overpass service with fallback servers, Riverpod providers)
+- Created POI UI (emoji+name marker widget, info bottom sheet)
+- Integrated POI markers into destination_setup_screen, active_trip_screen, trip_detail_screen
+- Added long-press drag to reposition waypoint pins
+- Swapped marker z-order so waypoints render on top of POI labels
+- Biased Nominatim search results near user location via `&viewbox=` param
+- Fixed Overpass 406 errors with raw string body, Accept header, User-Agent, GET fallback, 12s timeout
+- Limited POI results to 5 with priority sorting (tier 1 landmarks first)
+- Removed all POI watching/markers/imports from all three screens to stop API calls
+
+### In Progress
+- (none)
+
+### Blocked
+- (none)
+
+## Key Decisions
+- Removed POI overlay entirely: Overpass servers persistently returned 406/429/403 even with proper User-Agent and fallback chain — not worth the API burden
+- POI source files kept in project (poi/ directory with model, service, providers, UI) for future re-enablement if a more reliable POI source is chosen
+- Long-press drag kept — unrelated to POI, still useful for pin adjustment
+- Location-biased search kept — uses existing Nominatim 1 req/s call, no extra API cost
+- `viewbox` parameter over `lat`/`lon`: `lat`/`lon` are display hints only, `viewbox` (2° × 2° bounding box around user, no `bounded=1`) actually biases search scores toward nearby results with out-of-area fallback
+
+## Next Steps
+- (none — POI abandoned, search bias fixed)
+
+## Critical Context
+- Overpass error log: all 3 servers failed — `POST overpass-api.de → 406`, `POST kumi.systems → 429`, `POST bplaced.net → 403`; even GET + User-Agent didn't resolve fully
+- Overpass daily limit: ~10k req/IP with User-Agent
+- Nominatim rate limit: 1 req/s (unchanged)
+- OSRM routing: unlimited for non-commercial
+- User-Agent string used: `AppConstants.userAgent` → value from `.env` (default `StopCo/1.0`)
+
+## Relevant Files
+- `lib/features/poi/`: entire POI feature — data/poi.dart (model), data/overpass_service.dart (service with fallback), data/poi_providers.dart (Riverpod + priority sort), presentation/poi_marker_layer.dart (emoji+name labels), presentation/poi_bottom_sheet.dart (info sheet) — all kept but not imported by any screen
+- `lib/features/destination/data/geocoding_service.dart`: changed `lat`/`lon` → `viewbox=$minLon,$minLat,$maxLon,$maxLat` for actual location-biased search

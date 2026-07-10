@@ -44,15 +44,26 @@ Future<void> _initPluginOnce() async {
   );
 }
 
-Future<void> _createAlarmChannel() async {
+Future<void> _createAlarmChannel({String? customSoundPath}) async {
+  AndroidNotificationSound? sound;
+  if (customSoundPath != null) {
+    final uri = customSoundPath.startsWith('content://') ||
+            customSoundPath.startsWith('file://')
+        ? customSoundPath
+        : 'file://$customSoundPath';
+    sound = UriAndroidNotificationSound(uri);
+  }
+
   final androidChannel = AndroidNotificationChannel(
     AppConstants.alarmChannelId,
     AppConstants.alarmChannelName,
     description: AppConstants.alarmChannelDesc,
     importance: Importance.max,
     playSound: true,
+    sound: sound,
     enableVibration: true,
     vibrationPattern: Int64List.fromList([0, 500, 250, 500, 250, 500]),
+    audioAttributesUsage: AudioAttributesUsage.alarm,
   );
 
   final androidPlugin = notificationsPlugin
@@ -63,9 +74,13 @@ Future<void> _createAlarmChannel() async {
   await androidPlugin?.createNotificationChannel(androidChannel);
 }
 
-Future<void> _initNotifications() async {
+Future<void> _initNotifications({String? customSoundPath}) async {
   await _initPluginOnce();
-  await _createAlarmChannel();
+  await _createAlarmChannel(customSoundPath: customSoundPath);
+}
+
+Future<void> recreateAlarmChannel({String? soundPath}) async {
+  await _createAlarmChannel(customSoundPath: soundPath);
 }
 
 void main() async {
@@ -75,7 +90,8 @@ void main() async {
 
   final db = LocalDatabase();
 
-  await _initNotifications();
+  final settings = await db.getAppSettings();
+  await _initNotifications(customSoundPath: settings?.customAlarmSoundPath);
 
   runApp(
     ProviderScope(

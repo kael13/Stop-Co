@@ -106,7 +106,7 @@ class TripDetailScreen extends ConsumerWidget {
         children: [
           Expanded(
             flex: 3,
-            child: _AnimatedTripMap(
+              child: _AnimatedTripMap(
               traveledPath: traveledPath,
               plannedRoute: plannedRoute,
               mapCenter: mapCenter,
