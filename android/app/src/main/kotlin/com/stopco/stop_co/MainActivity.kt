@@ -1,9 +1,12 @@
 package com.stopco.stop_co
 
 import android.app.Activity
+import android.content.ContentValues
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -100,9 +103,20 @@ class MainActivity : FlutterActivity() {
         if (requestCode == FILE_PICKER_REQUEST_CODE) {
             if (resultCode == Activity.RESULT_OK && data?.data != null) {
                 val uri = data.data!!
+
                 try {
-                    val internalPath = copyToInternalStorage(uri)
-                    filePickerResult?.success(internalPath)
+                    // Keep a local copy for in-app audioplayers playback
+                    copyToInternalStorage(uri)
+
+                    val resultPath = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        // API 29+: copy to MediaStore so the notification system can read it
+                        copyToMediaStore(uri)
+                    } else {
+                        // Pre-Q: return file path (audioplayers test works, notification default fallback)
+                        File(filesDir, "alarms").listFiles()?.firstOrNull()?.absolutePath ?: ""
+                    }
+
+                    filePickerResult?.success(resultPath)
                 } catch (e: Exception) {
                     filePickerResult?.success("")
                 }
@@ -113,7 +127,43 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun copyToInternalStorage(uri: android.net.Uri): String {
+    private fun copyToMediaStore(uri: android.net.Uri): String {
+        val mimeType = contentResolver.getType(uri) ?: "audio/mpeg"
+        val extension = detectExtension(uri)
+
+        // Remove previous entry
+        contentResolver.delete(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            "${MediaStore.Audio.Media.DISPLAY_NAME} = ?",
+            arrayOf("stopco_alarm$extension")
+        )
+
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Audio.Media.DISPLAY_NAME, "stopco_alarm$extension")
+            put(MediaStore.Audio.Media.MIME_TYPE, mimeType)
+            put(MediaStore.Audio.Media.TITLE, "StopCo Alarm")
+            put(MediaStore.Audio.Media.IS_ALARM, true)
+            put(MediaStore.Audio.Media.IS_NOTIFICATION, true)
+            put(MediaStore.Audio.Media.IS_MUSIC, false)
+            put(MediaStore.Audio.Media.IS_RINGTONE, false)
+            put(MediaStore.Audio.Media.RELATIVE_PATH, Environment.DIRECTORY_ALARMS)
+        }
+
+        val mediaUri = contentResolver.insert(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            contentValues
+        ) ?: throw Exception("Failed to create MediaStore entry")
+
+        contentResolver.openInputStream(uri)?.use { input ->
+            contentResolver.openOutputStream(mediaUri)?.use { output ->
+                input.copyTo(output)
+            } ?: throw Exception("Failed to write to MediaStore")
+        } ?: throw Exception("Failed to read source file")
+
+        return mediaUri.toString()
+    }
+
+    private fun copyToInternalStorage(uri: android.net.Uri) {
         val inputStream = contentResolver.openInputStream(uri)
             ?: throw Exception("Cannot open selected file")
 
@@ -129,8 +179,6 @@ class MainActivity : FlutterActivity() {
                 input.copyTo(output)
             }
         }
-
-        return outputFile.absolutePath
     }
 
     private fun detectExtension(uri: android.net.Uri): String {

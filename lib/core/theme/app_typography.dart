@@ -14,21 +14,18 @@ class AppTypography {
         fontSize: 30,
         fontWeight: FontWeight.w700,
         height: 1.1,
-        letterSpacing: -0.5,
       );
 
   static TextStyle get title => GoogleFonts.plusJakartaSans(
         fontSize: 22,
         fontWeight: FontWeight.w600,
         height: 1.2,
-        letterSpacing: -0.3,
       );
 
   static TextStyle get sectionHeader => GoogleFonts.plusJakartaSans(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         height: 1.3,
-        letterSpacing: -0.2,
       );
 
   static TextStyle get body => GoogleFonts.plusJakartaSans(
@@ -47,21 +44,18 @@ class AppTypography {
         fontSize: 13,
         fontWeight: FontWeight.w400,
         height: 1.4,
-        letterSpacing: 0.1,
       );
 
   static TextStyle get caption => GoogleFonts.plusJakartaSans(
         fontSize: 11,
         fontWeight: FontWeight.w400,
         height: 1.3,
-        letterSpacing: 0.2,
       );
 
   static TextStyle get button => GoogleFonts.plusJakartaSans(
         fontSize: 15,
         fontWeight: FontWeight.w500,
         height: 1.2,
-        letterSpacing: 0,
       );
 
   static TextStyle get alarm => GoogleFonts.plusJakartaSans(
@@ -83,7 +77,6 @@ class AppTypography {
     fontSize: 30,
     fontWeight: FontWeight.w700,
     height: 1.1,
-    letterSpacing: -0.5,
   );
 
   static const TextStyle titleFallback = TextStyle(
@@ -91,7 +84,6 @@ class AppTypography {
     fontSize: 22,
     fontWeight: FontWeight.w600,
     height: 1.2,
-    letterSpacing: -0.3,
   );
 
   static const TextStyle sectionHeaderFallback = TextStyle(
@@ -99,7 +91,6 @@ class AppTypography {
     fontSize: 16,
     fontWeight: FontWeight.w600,
     height: 1.3,
-    letterSpacing: -0.2,
   );
 
   static const TextStyle bodyFallback = TextStyle(
@@ -121,7 +112,6 @@ class AppTypography {
     fontSize: 13,
     fontWeight: FontWeight.w400,
     height: 1.4,
-    letterSpacing: 0.1,
   );
 
   static const TextStyle captionFallback = TextStyle(
@@ -129,7 +119,6 @@ class AppTypography {
     fontSize: 11,
     fontWeight: FontWeight.w400,
     height: 1.3,
-    letterSpacing: 0.2,
   );
 
   static const TextStyle buttonFallback = TextStyle(
@@ -137,7 +126,6 @@ class AppTypography {
     fontSize: 15,
     fontWeight: FontWeight.w500,
     height: 1.2,
-    letterSpacing: 0,
   );
 
   static const TextStyle alarmFallback = TextStyle(

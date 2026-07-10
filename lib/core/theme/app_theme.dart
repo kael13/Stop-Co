@@ -8,8 +8,8 @@ class AppTheme {
 
   static ThemeData get light {
     final colorScheme = ColorScheme.light(
-      primary: AppColors.electricBlue,
-      secondary: AppColors.teal,
+      primary: AppColors.primary,
+      secondary: AppColors.taupe,
       error: AppColors.error,
       surface: AppColors.white,
       onPrimary: AppColors.white,
@@ -49,11 +49,10 @@ class AppTheme {
           foregroundColor: colorScheme.onPrimary,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
           ),
           textStyle: AppTypography.button.copyWith(color: colorScheme.onPrimary),
           elevation: 0,
-          shadowColor: colorScheme.primary.withValues(alpha: 0.3),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -62,7 +61,7 @@ class AppTheme {
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
           side: BorderSide(color: colorScheme.primary, width: 0.5),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
           ),
           textStyle: AppTypography.button.copyWith(color: colorScheme.primary),
         ),
@@ -108,7 +107,8 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: colorScheme.surface,
-        elevation: 0,
+        elevation: 2,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         ),
@@ -127,23 +127,24 @@ class AppTheme {
 
   static ThemeData get dark {
     final colorScheme = ColorScheme.dark(
-      primary: AppColors.electricBlue,
-      secondary: AppColors.teal,
+      primary: AppColors.primaryDark,
+      secondary: AppColors.taupe,
       error: AppColors.error,
-      surface: AppColors.softCharcoal,
+      surface: const Color(0xFF2E2E32),
       onPrimary: AppColors.white,
       onSecondary: AppColors.white,
       onSurface: AppColors.offWhite,
       onError: AppColors.white,
     ).copyWith(
-      surfaceContainerLow: AppColors.grey800,
-      surfaceContainerHigh: const Color(0xFF3A3A3C),
+      surfaceContainerLow: const Color(0xFF38383C),
+      surfaceContainerHigh: const Color(0xFF424246),
+      outlineVariant: const Color(0xFF424246),
     );
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.deepSlate,
+      scaffoldBackgroundColor: const Color(0xFF26262A),
       colorScheme: colorScheme,
       visualDensity: VisualDensity(horizontal: -1, vertical: -1),
       textTheme: TextTheme(
@@ -168,11 +169,10 @@ class AppTheme {
           foregroundColor: colorScheme.onPrimary,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
           ),
           textStyle: AppTypography.button.copyWith(color: colorScheme.onPrimary),
           elevation: 0,
-          shadowColor: colorScheme.primary.withValues(alpha: 0.3),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -181,7 +181,7 @@ class AppTheme {
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
           side: BorderSide(color: colorScheme.primary, width: 0.5),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
           ),
           textStyle: AppTypography.button.copyWith(color: colorScheme.primary),
         ),
@@ -227,7 +227,8 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: colorScheme.surface,
-        elevation: 0,
+        elevation: 2,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         ),
@@ -237,7 +238,7 @@ class AppTheme {
         ),
       ),
       dividerTheme: DividerThemeData(
-        color: colorScheme.outlineVariant,
+        color: colorScheme.onSurface.withValues(alpha: 0.12),
         thickness: 1,
         space: 1,
       ),

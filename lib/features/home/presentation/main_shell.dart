@@ -10,7 +10,7 @@ import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
-import '../../auth/data/auth_providers.dart';
+import '../../../features/profile/data/profile_providers.dart';
 import '../../destination/data/destination_model.dart';
 import '../../destination/data/destination_providers.dart';
 import '../../destination/data/destination_repository.dart';
@@ -69,10 +69,11 @@ class _MainShellState extends ConsumerState<MainShell> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
+          color: context.surface,
           border: Border(
             top: BorderSide(
               color: context.outlineVariant,
-              width: 1,
+              width: 0.5,
             ),
           ),
         ),
@@ -92,7 +93,6 @@ class _MainShellState extends ConsumerState<MainShell> {
                   icon: selected ? tab.activeIcon : tab.icon,
                   label: tab.label,
                   selected: selected,
-                  isMiddle: index == 2,
                   onTap: () {
                     _pageController.animateToPage(
                       index,
@@ -114,14 +114,12 @@ class _NavBarItem extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool selected;
-  final bool isMiddle;
   final VoidCallback onTap;
 
   const _NavBarItem({
     required this.icon,
     required this.label,
     required this.selected,
-    this.isMiddle = false,
     required this.onTap,
   });
 
@@ -141,7 +139,7 @@ class _NavBarItemState extends State<_NavBarItem>
       duration: const Duration(milliseconds: 110),
       vsync: this,
     );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.88).animate(
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.92).animate(
       CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
     );
   }
@@ -152,82 +150,18 @@ class _NavBarItemState extends State<_NavBarItem>
     super.dispose();
   }
 
-  void _handleTap() {
-    HapticFeedback.lightImpact();
-    _scaleController.forward().then((_) => _scaleController.reverse());
-    widget.onTap();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    if (widget.isMiddle) {
-      return GestureDetector(
-        onTap: _handleTap,
-        behavior: HitTestBehavior.opaque,
-        child: ScaleTransition(
-          scale: _scaleAnim,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: widget.selected
-                    ? [cs.primary, cs.secondary]
-                    : [
-                        cs.primary.withValues(alpha: 0.3),
-                        cs.secondary.withValues(alpha: 0.3),
-                      ],
-              ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: widget.selected
-                  ? [
-                      BoxShadow(
-                        color: cs.primary.withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  widget.icon,
-                  size: 28,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.label,
-                  style: AppTypography.caption.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return GestureDetector(
-      onTap: _handleTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _scaleController.forward().then((_) => _scaleController.reverse());
+        widget.onTap();
+      },
       behavior: HitTestBehavior.opaque,
       child: ScaleTransition(
         scale: _scaleAnim,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+        child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm,
             vertical: AppSpacing.sm,
@@ -240,13 +174,23 @@ class _NavBarItemState extends State<_NavBarItem>
                 size: 24,
                 color: widget.selected ? context.primary : context.textTertiary,
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Text(
                 widget.label,
                 style: AppTypography.caption.copyWith(
                   fontSize: 11,
                   fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
                   color: widget.selected ? context.primary : context.textTertiary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                width: widget.selected ? 6 : 0,
+                height: widget.selected ? 6 : 0,
+                decoration: BoxDecoration(
+                  color: context.primary,
+                  shape: BoxShape.circle,
                 ),
               ),
             ],
@@ -274,7 +218,6 @@ class _HomeTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
     final activeTrip = ref.watch(activeTripProvider);
 
     return Scaffold(
@@ -282,7 +225,7 @@ class _HomeTab extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _HomeTabHeader(authState: authState.valueOrNull)
+            const _HomeTabHeader()
                 .animate()
                 .fadeIn(duration: 320.ms, curve: Curves.easeOutCubic)
                 .slideY(begin: -0.04, end: 0, duration: 320.ms),
@@ -429,9 +372,8 @@ class _RecentTripsSkeleton extends StatelessWidget {
   }
 }
 
-class _HomeTabHeader extends StatelessWidget {
-  final UserSignedIn? authState;
-  const _HomeTabHeader({this.authState});
+class _HomeTabHeader extends ConsumerWidget {
+  const _HomeTabHeader();
 
   String _greeting() {
     final h = DateTime.now().hour;
@@ -443,7 +385,8 @@ class _HomeTabHeader extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final nickname = ref.watch(nicknameProvider).valueOrNull;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -484,9 +427,9 @@ class _HomeTabHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
-          if (authState?.displayName != null)
+          if (nickname != null)
             Text(
-              'Hi, ${authState!.displayName}',
+              'Hi, $nickname',
               style: Theme.of(context).textTheme.displayLarge?.copyWith(color: context.textPrimary),
             )
           else

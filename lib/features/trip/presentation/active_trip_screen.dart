@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -407,7 +405,7 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                       point: _currentPosition!,
                       width: 36,
                       height: 36,
-                      child: const _PulsingUserMarker(),
+                      child: const _UserMarker(),
                     ),
                     ...trip.waypoints.asMap().entries.map((entry) {
                       final i = entry.key;
@@ -449,10 +447,6 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                         strokeWidth: 3,
                       ),
                   ],
-                ),
-                SimpleAttributionWidget(
-                  source: const Text('© OSM contributors · Routing by OSRM'),
-                  alignment: Alignment.bottomRight,
                 ),
               ],
             )
@@ -563,76 +557,62 @@ class _InfoOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDark;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-            AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: Border.all(
-              color: statusColor.withValues(alpha: 0.25),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: context.surface.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: statusColor.withValues(alpha: 0.5),
-                          blurRadius: 6,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                  )
-                      .animate(onPlay: (c) => c.repeat(reverse: true))
-                      .scaleXY(begin: 1.0, end: 1.3, duration: 900.ms),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (stopLabel != null)
-                          Text(
-                            stopLabel!,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: context.textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        Text(
-                          '$statusLabel: $destinationName',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: context.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
                   ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (stopLabel != null)
+                      Text(
+                        stopLabel!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    Text(
+                      '$statusLabel: $destinationName',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: context.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
                 ],
               ),
               const SizedBox(height: AppSpacing.xs),
@@ -686,8 +666,6 @@ class _InfoOverlay extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }
@@ -806,78 +784,20 @@ class _SimulationBadge extends StatelessWidget {
   }
 }
 
-class _PulsingUserMarker extends StatefulWidget {
-  const _PulsingUserMarker();
-
-  @override
-  State<_PulsingUserMarker> createState() => _PulsingUserMarkerState();
-}
-
-class _PulsingUserMarkerState extends State<_PulsingUserMarker>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1600),
-      vsync: this,
-    )..repeat();
-    _pulse = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class _UserMarker extends StatelessWidget {
+  const _UserMarker();
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, _) {
-        return SizedBox(
-          width: 36,
-          height: 36,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Transform.scale(
-                scale: 0.4 + _pulse.value * 1.2,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: primary.withValues(alpha: 0.25 * (1 - _pulse.value)),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: primary,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primary.withValues(alpha: 0.6),
-                      blurRadius: 4,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    return Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(
+        color: primary,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+      ),
     );
   }
 }
@@ -917,9 +837,7 @@ class _NumberedWaypointMarker extends StatelessWidget {
               color: color.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
-          )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .scaleXY(begin: 0.8, end: 1.15, duration: 800.ms),
+          ),
         Container(
           width: 28,
           height: 28,
@@ -959,36 +877,11 @@ class _DestinationPinMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = withinThreshold
-        ? Theme.of(context).colorScheme.error
-        : Theme.of(context).colorScheme.error;
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        if (withinThreshold)
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.18),
-              shape: BoxShape.circle,
-            ),
-          )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .scaleXY(begin: 0.8, end: 1.15, duration: 800.ms),
-        Icon(
-          Icons.location_on_rounded,
-          color: color,
-          size: 30,
-          shadows: [
-            Shadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-      ],
+    final color = Theme.of(context).colorScheme.error;
+    return Icon(
+      Icons.location_on_rounded,
+      color: color,
+      size: 30,
     );
   }
 }

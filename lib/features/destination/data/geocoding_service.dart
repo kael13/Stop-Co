@@ -26,7 +26,7 @@ class GeocodingService {
       final minLat = (nearLat - 1.0).toStringAsFixed(4);
       final maxLon = (nearLon + 1.0).toStringAsFixed(4);
       final maxLat = (nearLat + 1.0).toStringAsFixed(4);
-      url += '&viewbox=$minLon,$minLat,$maxLon,$maxLat';
+      url += '&viewbox=$minLon,$minLat,$maxLon,$maxLat&bounded=1';
     }
     final uri = Uri.parse(url);
 

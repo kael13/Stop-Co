@@ -9,9 +9,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/theme_providers.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/components/app_button.dart';
-import '../../auth/data/auth_action_providers.dart';
-import '../../auth/data/auth_providers.dart';
+import '../../../core/components/app_input.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../profile/data/profile_providers.dart';
 import '../data/settings_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -117,7 +117,7 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: AppSpacing.lg),
-          _SignOutSection(settingsProvider: settingsProvider),
+          const _ProfileSection(),
         ],
       ),
     );
@@ -538,54 +538,73 @@ class _ResetButton extends StatelessWidget {
   }
 }
 
-class _SignOutSection extends ConsumerWidget {
-  final dynamic settingsProvider;
-
-  const _SignOutSection({required this.settingsProvider});
+class _ProfileSection extends ConsumerWidget {
+  const _ProfileSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateProvider).valueOrNull;
-
-    if (user == null) return const SizedBox.shrink();
+    final nicknameAsync = ref.watch(nicknameProvider);
 
     return Column(
       children: [
         _SectionHeader(
-          title: 'Account',
-          accentColor: context.error,
+          title: 'Profile',
+          accentColor: Theme.of(context).colorScheme.primary,
         ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
         const SizedBox(height: AppSpacing.sm),
-        AppButton(
-          label: 'Sign Out',
-          icon: Icons.logout_rounded,
-          isDestructive: true,
-          onPressed: () async {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Sign Out'),
-                content: const Text('Are you sure you want to sign out?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Cancel'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: context.error,
-                    ),
-                    child: const Text('Sign Out'),
-                  ),
-                ],
+        nicknameAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
+          data: (nickname) => AppCard(
+            child: ListTile(
+              leading: Icon(
+                Icons.person_rounded,
+                color: Theme.of(context).colorScheme.primary,
               ),
-            );
-            if (confirmed != true) return;
-            await ref.read(signOutActionProvider.future);
-          },
-        ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+              title: Text(
+                nickname ?? 'No nickname',
+                style: AppTypography.body.copyWith(color: context.onSurface),
+              ),
+              subtitle: nickname == null
+                  ? null
+                  : const Text('Tap to change'),
+              trailing: const Icon(Icons.edit_rounded, size: 18),
+              contentPadding: EdgeInsets.zero,
+              onTap: () => _showChangeDialog(context, ref, nickname ?? ''),
+            ),
+          ),
+        ),
       ],
+    );
+  }
+
+  void _showChangeDialog(BuildContext context, WidgetRef ref, String current) {
+    final controller = TextEditingController(text: current);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Change nickname'),
+        content: AppInput(
+          controller: controller,
+          hint: 'New nickname',
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.length < 2 || text.length > 20) return;
+              ref.read(updateNicknameActionProvider(text).future);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 }

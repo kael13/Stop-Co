@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' show Point;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,9 +37,12 @@ class _DestinationSetupScreenState
   final _nameController = TextEditingController();
   final _geocoding = GeocodingService();
   final _uuid = const Uuid();
+  Timer? _searchDebounce;
+  String _lastSearchQuery = '';
 
   LatLng? _userLocation;
   List<GeocodingResult> _searchResults = [];
+  bool _isSearching = false;
   bool _isSaving = false;
   bool _isStartingTrip = false;
   bool _isDeleting = false;
@@ -72,6 +76,7 @@ class _DestinationSetupScreenState
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _nameController.dispose();
     super.dispose();
@@ -365,7 +370,8 @@ class _DestinationSetupScreenState
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            Container(
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
@@ -389,10 +395,13 @@ class _DestinationSetupScreenState
                                 height: 30,
                                 decoration: BoxDecoration(
                                   color: isFirst
-                                      ? Theme.of(context).colorScheme.primary
+                                      ? (Theme.of(context).colorScheme.primary)
                                       : Theme.of(context).colorScheme.error,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 2),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: isFirst
@@ -406,7 +415,7 @@ class _DestinationSetupScreenState
                                 child: Center(
                                   child: Text(
                                     '$number',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
@@ -434,10 +443,6 @@ class _DestinationSetupScreenState
                   }),
                 ],
               ),
-              SimpleAttributionWidget(
-                source: const Text('© OSM contributors'),
-                alignment: Alignment.bottomRight,
-              ),
             ],
           ),
 
@@ -451,11 +456,70 @@ class _DestinationSetupScreenState
                   controller: _searchController,
                   onChanged: _onSearchChanged,
                   onClear: () {
+                    _searchDebounce?.cancel();
                     _searchController.clear();
-                    setState(() => _searchResults = []);
+                    setState(() {
+                      _searchResults = [];
+                      _isSearching = false;
+                      _lastSearchQuery = '';
+                    });
                   },
                 ),
-                if (_searchResults.isNotEmpty)
+                if (_draggingIndex != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                    child: AppCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.swap_vert_rounded,
+                            size: 16,
+                            color: context.primary,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              'Drag it to your preferred location',
+                              style: AppTypography.secondary.copyWith(
+                                color: context.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (_isSearching && _searchResults.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                    child: AppCard(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: context.primary,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text('Searching…',
+                                style: AppTypography.secondary),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else if (_searchResults.isNotEmpty)
                   _SearchResultsDropdown(
                     results: _searchResults,
                     onSelect: _selectSearchResult,
@@ -494,21 +558,30 @@ class _DestinationSetupScreenState
     );
   }
 
-  void _onSearchChanged(String query) async {
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
     if (query.length < 3) {
-      setState(() => _searchResults = []);
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
       return;
     }
-    final results = await _geocoding.search(
-      query,
-      nearLat: _userLocation?.latitude,
-      nearLon: _userLocation?.longitude,
-    );
-    if (mounted) {
-      setState(() {
-        _searchResults = results;
-      });
-    }
+    setState(() => _isSearching = true);
+    _lastSearchQuery = query;
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
+      final results = await _geocoding.search(
+        query,
+        nearLat: _userLocation?.latitude,
+        nearLon: _userLocation?.longitude,
+      );
+      if (mounted && _lastSearchQuery == query) {
+        setState(() {
+          _searchResults = results;
+          _isSearching = false;
+        });
+      }
+    });
   }
 
   void _selectSearchResult(GeocodingResult result) {

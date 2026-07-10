@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,8 +29,54 @@ class SimulationScreen extends ConsumerStatefulWidget {
 class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   final List<Destination> _selectedWaypoints = [];
   bool _isSimulating = false;
+  bool _isPlayingTest = false;
+  AudioPlayer? _audioPlayer;
+  StreamSubscription? _playerCompleteSub;
 
   bool get _canAddWaypoint => _selectedWaypoints.length < 5;
+
+  @override
+  void dispose() {
+    _playerCompleteSub?.cancel();
+    _audioPlayer?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _testAlarmSound(String? path) async {
+    if (path == null || path.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No custom alarm sound selected')),
+      );
+      return;
+    }
+
+    if (_isPlayingTest) {
+      await _audioPlayer?.stop();
+      setState(() => _isPlayingTest = false);
+      return;
+    }
+
+    _audioPlayer ??= AudioPlayer();
+    setState(() => _isPlayingTest = true);
+
+    try {
+      final source = path.startsWith('content://')
+          ? UrlSource(path) as Source
+          : DeviceFileSource(path.startsWith('file://') ? path.substring(7) : path);
+      await _audioPlayer!.play(source);
+      _playerCompleteSub?.cancel();
+      _playerCompleteSub = _audioPlayer!.onPlayerComplete.listen((_) {
+        if (mounted) setState(() => _isPlayingTest = false);
+      });
+    } catch (e) {
+      setState(() => _isPlayingTest = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not play audio: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -178,6 +226,51 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             onChanged: (mode) {
               ref.read(settingsProvider.notifier).setCommuteMode(mode);
             },
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _SectionHeader(
+            title: 'Sound',
+            accentColor: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          AppCard(
+            child: Row(
+              children: [
+                Icon(
+                  _isPlayingTest ? Icons.volume_up_rounded : Icons.music_note_outlined,
+                  color: context.primary,
+                  size: 24,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Alarm Sound', style: AppTypography.bodyBold),
+                      Text(
+                        settings.customAlarmSoundPath != null
+                            ? 'Custom sound selected'
+                            : 'Default · Set a custom sound in Settings',
+                        style: AppTypography.caption.copyWith(color: context.textTertiary),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    _isPlayingTest
+                        ? Icons.stop_circle_outlined
+                        : Icons.play_circle_outline_rounded,
+                    color: context.primary,
+                    size: 32,
+                  ),
+                  onPressed: settings.customAlarmSoundPath != null
+                      ? () => _testAlarmSound(settings.customAlarmSoundPath)
+                      : null,
+                  tooltip: _isPlayingTest ? 'Stop' : 'Test Alarm Sound',
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           if (_isSimulating) ...[

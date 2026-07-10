@@ -84,7 +84,7 @@ class _AppButtonState extends State<AppButton>
   Widget _buildButton(BuildContext context, bool isEnabled) {
     final colorScheme = Theme.of(context).colorScheme;
     final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
     );
     final minSize = Size(
       widget.width ?? double.infinity,

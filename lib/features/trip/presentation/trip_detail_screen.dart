@@ -580,11 +580,6 @@ class _AnimatedTripMapState extends State<_AnimatedTripMap>
                   ],
                 ],
               ),
-            SimpleAttributionWidget(
-              source:
-                  const Text('© OSM contributors · Routing by OSRM'),
-              alignment: Alignment.bottomRight,
-            ),
           ],
         );
       },

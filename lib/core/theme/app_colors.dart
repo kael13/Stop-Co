@@ -3,15 +3,13 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  static const Color offWhite = Color(0xFFF5F5F0);
+  static const Color offWhite = Color(0xFFFAFAF8);
   static const Color softCharcoal = Color(0xFF2C2C2E);
   static const Color deepSlate = Color(0xFF1C1C1E);
 
-  static const Color electricBlue = Color(0xFF0066FF);
-  static const Color indigo = Color(0xFF3F51B5);
-  static const Color cobalt = Color(0xFF0047AB);
-  static const Color teal = Color(0xFF00A896);
-  static const Color deepOrange = Color(0xFFFF6B35);
+  static const Color primary = Color(0xFF4A90B0);
+  static const Color primaryDark = Color(0xFF3A7A9A);
+  static const Color taupe = Color(0xFF8B7E74);
 
   static const Color success = Color(0xFF34C759);
   static const Color warning = Color(0xFFFFB340);
