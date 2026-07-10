@@ -606,3 +606,55 @@ A comprehensive inventory revealed inconsistent border radii across all tappable
 ## Relevant Files
 - `lib/features/poi/`: entire POI feature — data/poi.dart (model), data/overpass_service.dart (service with fallback), data/poi_providers.dart (Riverpod + priority sort), presentation/poi_marker_layer.dart (emoji+name labels), presentation/poi_bottom_sheet.dart (info sheet) — all kept but not imported by any screen
 - `lib/features/destination/data/geocoding_service.dart`: changed `lat`/`lon` → `viewbox=$minLon,$minLat,$maxLon,$maxLat` for actual location-biased search
+
+---
+
+# Session: Airbnb redesign + custom alarm notification fix + alarm test in Simulation
+
+## Goal
+- Implement Airbnb-style travel/navigation redesign (new primary color, soft dark mode, flattened nav, pill buttons, card shadows)
+- Add alarm sound testing to Simulation screen
+- Fix custom alarm notification playback on Android (system_server can't read app-private URIs)
+
+## Constraints & Preferences
+- Final primary color: warm teal-blue `#4A90B0` (light) / `#3A7A9A` (dark)
+- Dark mode softened: scaffold `#26262A`, surface `#2E2E32`, containers `#38383C`/`#424246`
+- Bottom nav: uniform 4 tabs, no gradient pill, coral active dot, opaque surface, 0.5px top border
+- All buttons pill-shaped (`pillRadius = 100`)
+- Font letterSpacing all `0` (except display styles)
+- Custom alarm fix: copy selected audio to MediaStore (API 29+) so system_server can read it
+- No new Android permissions needed
+
+## What was done
+1. **Airbnb redesign**: `app_colors.dart` (primary=#4A90B0, primaryDark=#3A7A9A, taupe=#8B7E74), `app_spacing.dart` (pillRadius=100), `app_typography.dart` (letterSpacing all 0), `app_theme.dart` (teal-blue primary, taupe secondary, card elevation 2, pill buttons), `app_button.dart` (pill shape), `app_card.dart` (elevation from cardTheme), `main_shell.dart` (flattened nav, coral dot, opaque bg, 0.5px border)
+2. **Softened dark mode**: lighter surface/container colors, outlineVariant=#424246, divider at 12% opacity
+3. **audioplayers** dependency added
+4. **Test Alarm Sound** button in Simulation screen — plays custom sound in-app via audioplayers
+5. **Fixed custom alarm notification**: `MainActivity.kt` — `copyToMediaStore()` (API 29+) returns MediaStore `content://` URI that system_server can read; internal copy kept for audioplayers test; `copyToInternalStorage` return type → `Unit`
+
+## Verification
+- `flutter analyze`: 0 errors, 3 pre-existing info warnings
+- `flutter build apk --debug`: succeeds
+
+## Key decisions
+- **MediaStore over FileProvider/grantUriPermission**: Most reliable approach — `system_server` (UID 1000) can always read MediaStore URIs; no new Android permissions needed on API 29+
+- **Internal copy retained**: audioplayers `UrlSource` can read app-private files (same UID) — keeps in-app test working
+- **No Android permissions needed**: `takePersistableUriPermission` is programmatic; MediaStore access on API 29+ doesn't require `WRITE_EXTERNAL_STORAGE`
+- **Pill buttons**: unified look via `AppSpacing.pillRadius = 100` on all button types
+
+## Critical Context
+- `system_server` (UID 1000) cannot read `file://` in app-private storage or document-picker `content://` URIs — fix copies to MediaStore on API 29+
+- On API 24–28, notification falls back to default sound (audioplayers test still works with file path)
+- To test: must re-pick alarm sound in Settings after installing (old file paths stored before fix won't work)
+
+## Relevant Files
+- `lib/core/theme/app_colors.dart` — primary=#4A90B0, primaryDark=#3A7A9A, taupe=#8B7E74
+- `lib/core/theme/app_spacing.dart` — pillRadius=100
+- `lib/core/theme/app_theme.dart` — teal-blue ColorScheme, card elevation 2, pill shapes
+- `lib/core/theme/app_typography.dart` — all letterSpacing set to 0
+- `lib/core/components/app_button.dart` — pill shape via AppSpacing.pillRadius
+- `lib/core/components/app_card.dart` — elevation from cardTheme
+- `lib/features/home/presentation/main_shell.dart` — flattened nav, coral dot, opaque bg, 0.5px border
+- `lib/features/simulation/presentation/simulation_screen.dart` — "Sound" section + Test Alarm button
+- `android/app/src/main/kotlin/com/stopco/stop_co/MainActivity.kt` — `copyToMediaStore()`, `detectExtension()`
+- `pubspec.yaml` — added `audioplayers: ^6.1.0`
