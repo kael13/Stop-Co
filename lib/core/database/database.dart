@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/destination/data/destination_model.dart';
+import '../../features/scheduled_trip/data/scheduled_trip.dart';
 import '../../features/settings/data/settings_providers.dart';
 import '../../features/trip/data/trip_record.dart';
 import '../../features/trip/data/trip_model.dart';
@@ -62,12 +63,26 @@ class Trips extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Destinations, AppSettingsTable, Trips])
+@DataClassName('ScheduledTripsRow')
+class ScheduledTrips extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get waypointsJson => text()();
+  DateTimeColumn get scheduledStartTime => dateTime()();
+  TextColumn get status => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Destinations, AppSettingsTable, Trips, ScheduledTrips])
 class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -86,6 +101,9 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 5) {
         await migrator.addColumn(trips, trips.waypointsJson);
+      }
+      if (from < 6) {
+        await migrator.createTable(scheduledTrips);
       }
     },
   );
@@ -252,6 +270,63 @@ class LocalDatabase extends _$LocalDatabase {
       routeCoordinatesJson: row.routeCoordinatesJson,
       gpsBreadcrumbsJson: row.gpsBreadcrumbsJson,
       waypointsJson: row.waypointsJson,
+      createdAt: row.createdAt,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // ScheduledTrips DAO
+  // ---------------------------------------------------------------------------
+
+  Stream<List<ScheduledTrip>> watchAllScheduledTrips() {
+    return (select(scheduledTrips)
+          ..orderBy([(t) => OrderingTerm(
+              expression: t.scheduledStartTime, mode: OrderingMode.asc)]))
+        .watch()
+        .map((rows) => rows.map(_toScheduledTrip).toList());
+  }
+
+  Future<List<ScheduledTrip>> getAllScheduledTrips() async {
+    final rows = await (select(scheduledTrips)
+          ..orderBy([(t) => OrderingTerm(
+              expression: t.scheduledStartTime, mode: OrderingMode.asc)])
+          ..orderBy([(t) => OrderingTerm(
+              expression: t.createdAt, mode: OrderingMode.asc)]))
+        .get();
+    return rows.map(_toScheduledTrip).toList();
+  }
+
+  Future<void> saveScheduledTrip(ScheduledTrip trip) {
+    return into(scheduledTrips).insert(ScheduledTripsCompanion(
+      id: Value(trip.id),
+      name: Value(trip.name),
+      description: Value.absentIfNull(trip.description),
+      waypointsJson: Value(trip.waypointsJson),
+      scheduledStartTime: Value(trip.scheduledStartTime),
+      status: Value(trip.status.name),
+      createdAt: Value(trip.createdAt),
+    ));
+  }
+
+  Future<void> updateScheduledTripStatus(String id, ScheduledTripStatus status) {
+    return (update(scheduledTrips)..where((t) => t.id.equals(id)))
+        .write(ScheduledTripsCompanion(
+      status: Value(status.name),
+    ));
+  }
+
+  Future<void> deleteScheduledTrip(String id) {
+    return (delete(scheduledTrips)..where((t) => t.id.equals(id))).go();
+  }
+
+  ScheduledTrip _toScheduledTrip(ScheduledTripsRow row) {
+    return ScheduledTrip(
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      waypointsJson: row.waypointsJson,
+      scheduledStartTime: row.scheduledStartTime,
+      status: ScheduledTripStatus.values.firstWhere((s) => s.name == row.status),
       createdAt: row.createdAt,
     );
   }

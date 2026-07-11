@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/platform/file_picker_channel.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/theme_providers.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/components/app_input.dart';
@@ -28,47 +27,14 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
+          const _ProfileSection(),
+          const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
             title: 'Alert Preferences',
             accentColor: const Color(0xFF0066FF),
           ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
-          _DefaultRadiusSection(
-            currentRadius: settings.defaultAlertRadius,
-            onChanged: (radius) {
-              ref.read(settingsProvider.notifier).setDefaultAlertRadius(radius);
-            },
-          ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
-          const SizedBox(height: AppSpacing.md),
-          _AlarmTypeSection(
-            currentType: settings.alarmType,
-            onChanged: (type) {
-              ref.read(settingsProvider.notifier).setAlarmType(type);
-            },
-          ).animate().fadeIn(delay: 120.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
-          const SizedBox(height: AppSpacing.md),
-          AppCard(
-            child: SwitchListTile(
-              title: const Text('Repeated Alarm'),
-              subtitle: const Text('Alarm loops until deactivated'),
-              value: settings.repeatedAlarm,
-              onChanged: (_) {
-                ref.read(settingsProvider.notifier).toggleRepeatedAlarm();
-              },
-              activeThumbColor: Theme.of(context).colorScheme.primary,
-              contentPadding: EdgeInsets.zero,
-            ),
-          ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
-          const SizedBox(height: AppSpacing.md),
-          _CustomAlarmSoundTile(
-            currentPath: settings.customAlarmSoundPath,
-            onSelected: (path) {
-              ref.read(settingsProvider.notifier).setCustomAlarmSound(path);
-            },
-            onClear: () {
-              ref.read(settingsProvider.notifier).clearCustomAlarmSound();
-            },
-          ).animate().fadeIn(delay: 240.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+          const _AlertPreferencesGroup().animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
             title: 'Nap Mode',
@@ -77,6 +43,7 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sm),
           AppCard(
             child: SwitchListTile(
+              secondary: Icon(Icons.bedtime_rounded, color: Theme.of(context).colorScheme.primary),
               title: const Text('Enable Nap Mode'),
               subtitle: const Text('Dims screen and extends vibration when active'),
               value: settings.napModeEnabled,
@@ -89,13 +56,6 @@ class SettingsScreen extends ConsumerWidget {
           ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
-            title: 'Appearance',
-            accentColor: const Color(0xFF3F51B5),
-          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
-          const SizedBox(height: AppSpacing.sm),
-          _ThemeModeSection().animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
-          const SizedBox(height: AppSpacing.lg),
-          _SectionHeader(
             title: 'Commute Mode',
             accentColor: const Color(0xFF00A896),
           ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
@@ -103,6 +63,13 @@ class SettingsScreen extends ConsumerWidget {
           _CommuteModeSection(
             currentMode: settings.commuteMode,
           ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+          const SizedBox(height: AppSpacing.lg),
+          _SectionHeader(
+            title: 'Appearance',
+            accentColor: const Color(0xFF3F51B5),
+          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
+          const SizedBox(height: AppSpacing.sm),
+          _ThemeModeSection().animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
             title: 'About',
@@ -117,7 +84,6 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: AppSpacing.lg),
-          const _ProfileSection(),
         ],
       ),
     );
@@ -158,49 +124,87 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _DefaultRadiusSection extends StatelessWidget {
-  final double currentRadius;
-  final ValueChanged<double> onChanged;
-
-  const _DefaultRadiusSection({
-    required this.currentRadius,
-    required this.onChanged,
-  });
+class _AlertPreferencesGroup extends ConsumerWidget {
+  const _AlertPreferencesGroup();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final notifier = ref.read(settingsProvider.notifier);
+    final cs = Theme.of(context).colorScheme;
+
     return AppCard(
+      child: Column(
+        children: [
+          _buildRadiusSection(context, settings, notifier, cs),
+          const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+          _buildAlarmTypeSection(context, settings, notifier, cs),
+          const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+          SwitchListTile(
+            secondary: Icon(Icons.replay_rounded, color: cs.primary, size: 20),
+            title: const Text('Repeated Alarm'),
+            subtitle: const Text('Alarm loops until deactivated'),
+            value: settings.repeatedAlarm,
+            onChanged: (_) => notifier.toggleRepeatedAlarm(),
+            activeThumbColor: cs.primary,
+            contentPadding: EdgeInsets.zero,
+          ),
+          const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+          ListTile(
+            leading: Icon(Icons.music_note_rounded, color: cs.primary, size: 20),
+            title: const Text('Alarm Sound'),
+            subtitle: Text(
+              _soundDisplayName(settings.customAlarmSoundPath),
+              style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.4)),
+            ),
+            trailing: settings.customAlarmSoundPath != null
+                ? IconButton(
+                    icon: Icon(Icons.close_rounded, color: cs.error, size: 18),
+                    onPressed: () => notifier.clearCustomAlarmSound(),
+                    tooltip: 'Reset to default',
+                  )
+                : Icon(Icons.chevron_right_rounded, color: cs.onSurface.withValues(alpha: 0.4)),
+            onTap: () => _pickAlarmSound(context, ref, notifier),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRadiusSection(BuildContext context, AppSettings settings, SettingsNotifier notifier, ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Default Alert Radius',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          Row(
+            children: [
+              Icon(Icons.straighten_rounded, size: 18, color: cs.primary),
+              const SizedBox(width: AppSpacing.xs),
+              Text('Default Alert Radius', style: AppTypography.bodyBold.copyWith(color: cs.onSurface)),
+            ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'The default radius for new destinations',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-            ),
+            style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.4)),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
             children: AppConstants.alertRadiusOptions.map((radius) {
-              final selected = radius == currentRadius;
+              final selected = radius == settings.defaultAlertRadius;
               return ChoiceChip(
                 label: Text('${radius.round()}m'),
                 selected: selected,
-                onSelected: (_) => onChanged(radius),
-                selectedColor: Theme.of(context).colorScheme.primary,
+                onSelected: (_) => notifier.setDefaultAlertRadius(radius),
+                selectedColor: cs.primary,
                 labelStyle: TextStyle(
-                  color: selected ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurface,
+                  color: selected ? cs.surface : cs.onSurface,
                 ),
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+                backgroundColor: cs.surfaceContainerLow,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   side: BorderSide.none,
@@ -212,66 +216,55 @@ class _DefaultRadiusSection extends StatelessWidget {
       ),
     );
   }
-}
 
-class _AlarmTypeSection extends StatelessWidget {
-  final AlarmType currentType;
-  final ValueChanged<AlarmType> onChanged;
-
-  const _AlarmTypeSection({
-    required this.currentType,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildAlarmTypeSection(BuildContext context, AppSettings settings, SettingsNotifier notifier, ColorScheme cs) {
     final colors = <AlarmType, Color>{
       AlarmType.soundAndVibration: const Color(0xFF0066FF),
       AlarmType.soundOnly: const Color(0xFFFF6B35),
       AlarmType.vibrationOnly: const Color(0xFF8E8E93),
     };
 
-    return AppCard(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.xs, AppSpacing.sm, AppSpacing.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Alarm Type',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          Row(
+            children: [
+              Icon(Icons.notifications_active_rounded, size: 18, color: cs.primary),
+              const SizedBox(width: AppSpacing.xs),
+              Text('Alarm Type', style: AppTypography.bodyBold.copyWith(color: cs.onSurface)),
+            ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'How you want to be alerted',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-            ),
+            style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.4)),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           SegmentedButton<AlarmType>(
             segments: AlarmType.values
                 .map(
                   (type) => ButtonSegment<AlarmType>(
                     value: type,
                     label: Text(type.label),
-                    icon: Icon(_getAlarmIcon(type), size: 16),
+                    icon: Icon(_alarmTypeIcon(type), size: 16),
                   ),
                 )
                 .toList(),
-            selected: {currentType},
-            onSelectionChanged: (selected) => onChanged(selected.first),
+            selected: {settings.alarmType},
+            onSelectionChanged: (selected) => notifier.setAlarmType(selected.first),
             showSelectedIcon: false,
             style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: colors[currentType],
+              selectedBackgroundColor: colors[settings.alarmType],
               selectedForegroundColor: Colors.white,
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
           Text(
-            _getAlarmDescription(currentType),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colors[currentType],
+            _alarmTypeDescription(settings.alarmType),
+            style: AppTypography.caption.copyWith(
+              color: colors[settings.alarmType],
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -280,7 +273,7 @@ class _AlarmTypeSection extends StatelessWidget {
     );
   }
 
-  IconData _getAlarmIcon(AlarmType type) {
+  IconData _alarmTypeIcon(AlarmType type) {
     switch (type) {
       case AlarmType.soundAndVibration:
         return Icons.vibration_rounded;
@@ -291,7 +284,7 @@ class _AlarmTypeSection extends StatelessWidget {
     }
   }
 
-  String _getAlarmDescription(AlarmType type) {
+  String _alarmTypeDescription(AlarmType type) {
     switch (type) {
       case AlarmType.soundAndVibration:
         return 'Full alert with sound and vibration';
@@ -300,6 +293,66 @@ class _AlarmTypeSection extends StatelessWidget {
       case AlarmType.vibrationOnly:
         return 'Vibration alert only (silent)';
     }
+  }
+
+  String _soundDisplayName(String? currentPath) {
+    if (currentPath == null) return 'Default';
+    if (currentPath.startsWith('content://') || currentPath.contains('/alarms/')) {
+      return 'Custom sound';
+    }
+    final segments = currentPath.split('/');
+    final fileName = segments.last;
+    return fileName.length > 24 ? '${fileName.substring(0, 21)}...' : fileName;
+  }
+
+  Future<void> _pickAlarmSound(BuildContext context, WidgetRef ref, SettingsNotifier notifier) async {
+    try {
+      final nativePath = await FilePickerChannel.pickAudioFile();
+      if (nativePath != null && nativePath.isNotEmpty) {
+        notifier.setCustomAlarmSound(nativePath);
+        return;
+      }
+      if (nativePath == '') return;
+    } on MissingPluginException {
+      // platform not supported, fall through to manual dialog
+    }
+
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Alarm Sound Path'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: '/storage/emulated/0/Music/alert.mp3',
+            labelText: 'File path',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.isEmpty) return;
+
+    final sourceFile = File(result);
+    if (!await sourceFile.exists()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('File not found')),
+      );
+      return;
+    }
+
+    notifier.setCustomAlarmSound(result);
   }
 }
 
@@ -439,44 +492,32 @@ class _CommuteModeSection extends StatelessWidget {
 }
 
 class _AboutSection extends StatelessWidget {
+  const _AboutSection();
+
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.notifications_active_rounded,
-                color: Theme.of(context).colorScheme.primary,
-                size: 24,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                AppConstants.appName,
-                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                   color: Theme.of(context).colorScheme.onSurface,
-                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Version 1.0.0',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'A minimalist GPS-based destination alarm app for commuters.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      ),
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Icon(Icons.notifications_active_rounded, color: cs.primary.withValues(alpha: 0.5), size: 32),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          AppConstants.appName,
+          style: AppTypography.title.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
+        ),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          'Version 1.0.0',
+          style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.35)),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          'A minimalist GPS-based destination alarm app for commuters.',
+          style: AppTypography.secondary.copyWith(color: cs.onSurface.withValues(alpha: 0.45)),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }
@@ -541,36 +582,64 @@ class _ResetButton extends StatelessWidget {
 class _ProfileSection extends ConsumerWidget {
   const _ProfileSection();
 
+  String _initials(String? nickname) {
+    if (nickname == null || nickname.isEmpty) return '?';
+    final parts = nickname.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2 && parts.first.isNotEmpty && parts.last.isNotEmpty) {
+      return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    }
+    return nickname[0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final nicknameAsync = ref.watch(nicknameProvider);
+    final cs = Theme.of(context).colorScheme;
 
     return Column(
       children: [
         _SectionHeader(
           title: 'Profile',
-          accentColor: Theme.of(context).colorScheme.primary,
+          accentColor: cs.primary,
         ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
         const SizedBox(height: AppSpacing.sm),
         nicknameAsync.when(
           loading: () => const SizedBox.shrink(),
           error: (_, _) => const SizedBox.shrink(),
           data: (nickname) => AppCard(
-            child: ListTile(
-              leading: Icon(
-                Icons.person_rounded,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              title: Text(
-                nickname ?? 'No nickname',
-                style: AppTypography.body.copyWith(color: context.onSurface),
-              ),
-              subtitle: nickname == null
-                  ? null
-                  : const Text('Tap to change'),
-              trailing: const Icon(Icons.edit_rounded, size: 18),
-              contentPadding: EdgeInsets.zero,
-              onTap: () => _showChangeDialog(context, ref, nickname ?? ''),
+            onTap: () => _showChangeDialog(context, ref, nickname ?? ''),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: cs.primary,
+                  child: Text(
+                    _initials(nickname),
+                    style: AppTypography.sectionHeader.copyWith(
+                      color: cs.onPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        nickname ?? 'Set a nickname',
+                        style: AppTypography.bodyBold.copyWith(color: cs.onSurface),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        nickname == null ? 'Tap to set' : 'Tap to change',
+                        style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.4)),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.edit_rounded, size: 20, color: cs.onSurface.withValues(alpha: 0.35)),
+              ],
             ),
           ),
         ),
@@ -604,113 +673,6 @@ class _ProfileSection extends ConsumerWidget {
             child: const Text('Save'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CustomAlarmSoundTile extends ConsumerWidget {
-  final String? currentPath;
-  final ValueChanged<String> onSelected;
-  final VoidCallback onClear;
-
-  const _CustomAlarmSoundTile({
-    required this.currentPath,
-    required this.onSelected,
-    required this.onClear,
-  });
-
-  String get _displayName {
-    if (currentPath == null) return 'Default';
-    if (currentPath!.startsWith('content://') ||
-        currentPath!.contains('/alarms/')) {
-      return 'Custom sound';
-    }
-    final segments = currentPath!.split('/');
-    final fileName = segments.last;
-    return fileName.length > 24
-        ? '${fileName.substring(0, 21)}...'
-        : fileName;
-  }
-
-  Future<void> _pickFile(BuildContext ctx) async {
-    try {
-      final nativePath = await FilePickerChannel.pickAudioFile();
-      if (nativePath != null && nativePath.isNotEmpty) {
-        onSelected(nativePath);
-        return;
-      }
-      if (nativePath == '') return; // user cancelled native picker
-    } on MissingPluginException {
-      // platform not supported, fall through to manual dialog
-    }
-
-    // Fallback: manual path input
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: ctx,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Alarm Sound Path'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: '/storage/emulated/0/Music/alert.mp3',
-            labelText: 'File path',
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    if (result == null || result.isEmpty) return;
-
-    final sourceFile = File(result);
-    if (!await sourceFile.exists()) {
-      ScaffoldMessenger.of(ctx).showSnackBar(
-        const SnackBar(content: Text('File not found')),
-      );
-      return;
-    }
-
-    onSelected(result);
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AppCard(
-      child: ListTile(
-        title: const Text('Alarm Sound'),
-        subtitle: Text(
-          _displayName,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-          ),
-        ),
-        leading: Icon(
-          Icons.music_note_rounded,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        trailing: currentPath != null
-            ? IconButton(
-                icon: Icon(
-                  Icons.close_rounded,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                onPressed: onClear,
-                tooltip: 'Reset to default',
-              )
-            : const Icon(Icons.chevron_right_rounded),
-        onTap: () => _pickFile(context),
-        contentPadding: EdgeInsets.zero,
       ),
     );
   }

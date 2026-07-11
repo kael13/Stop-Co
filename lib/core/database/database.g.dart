@@ -1780,6 +1780,488 @@ class TripsCompanion extends UpdateCompanion<TripsRow> {
   }
 }
 
+class $ScheduledTripsTable extends ScheduledTrips
+    with TableInfo<$ScheduledTripsTable, ScheduledTripsRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScheduledTripsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _waypointsJsonMeta = const VerificationMeta(
+    'waypointsJson',
+  );
+  @override
+  late final GeneratedColumn<String> waypointsJson = GeneratedColumn<String>(
+    'waypoints_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scheduledStartTimeMeta =
+      const VerificationMeta('scheduledStartTime');
+  @override
+  late final GeneratedColumn<DateTime> scheduledStartTime =
+      GeneratedColumn<DateTime>(
+        'scheduled_start_time',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    description,
+    waypointsJson,
+    scheduledStartTime,
+    status,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'scheduled_trips';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ScheduledTripsRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('waypoints_json')) {
+      context.handle(
+        _waypointsJsonMeta,
+        waypointsJson.isAcceptableOrUnknown(
+          data['waypoints_json']!,
+          _waypointsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_waypointsJsonMeta);
+    }
+    if (data.containsKey('scheduled_start_time')) {
+      context.handle(
+        _scheduledStartTimeMeta,
+        scheduledStartTime.isAcceptableOrUnknown(
+          data['scheduled_start_time']!,
+          _scheduledStartTimeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_scheduledStartTimeMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ScheduledTripsRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScheduledTripsRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      waypointsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}waypoints_json'],
+      )!,
+      scheduledStartTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}scheduled_start_time'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ScheduledTripsTable createAlias(String alias) {
+    return $ScheduledTripsTable(attachedDatabase, alias);
+  }
+}
+
+class ScheduledTripsRow extends DataClass
+    implements Insertable<ScheduledTripsRow> {
+  final String id;
+  final String name;
+  final String? description;
+  final String waypointsJson;
+  final DateTime scheduledStartTime;
+  final String status;
+  final DateTime createdAt;
+  const ScheduledTripsRow({
+    required this.id,
+    required this.name,
+    this.description,
+    required this.waypointsJson,
+    required this.scheduledStartTime,
+    required this.status,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['waypoints_json'] = Variable<String>(waypointsJson);
+    map['scheduled_start_time'] = Variable<DateTime>(scheduledStartTime);
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ScheduledTripsCompanion toCompanion(bool nullToAbsent) {
+    return ScheduledTripsCompanion(
+      id: Value(id),
+      name: Value(name),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      waypointsJson: Value(waypointsJson),
+      scheduledStartTime: Value(scheduledStartTime),
+      status: Value(status),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ScheduledTripsRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScheduledTripsRow(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      description: serializer.fromJson<String?>(json['description']),
+      waypointsJson: serializer.fromJson<String>(json['waypointsJson']),
+      scheduledStartTime: serializer.fromJson<DateTime>(
+        json['scheduledStartTime'],
+      ),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'description': serializer.toJson<String?>(description),
+      'waypointsJson': serializer.toJson<String>(waypointsJson),
+      'scheduledStartTime': serializer.toJson<DateTime>(scheduledStartTime),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ScheduledTripsRow copyWith({
+    String? id,
+    String? name,
+    Value<String?> description = const Value.absent(),
+    String? waypointsJson,
+    DateTime? scheduledStartTime,
+    String? status,
+    DateTime? createdAt,
+  }) => ScheduledTripsRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    description: description.present ? description.value : this.description,
+    waypointsJson: waypointsJson ?? this.waypointsJson,
+    scheduledStartTime: scheduledStartTime ?? this.scheduledStartTime,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ScheduledTripsRow copyWithCompanion(ScheduledTripsCompanion data) {
+    return ScheduledTripsRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      waypointsJson: data.waypointsJson.present
+          ? data.waypointsJson.value
+          : this.waypointsJson,
+      scheduledStartTime: data.scheduledStartTime.present
+          ? data.scheduledStartTime.value
+          : this.scheduledStartTime,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduledTripsRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('waypointsJson: $waypointsJson, ')
+          ..write('scheduledStartTime: $scheduledStartTime, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    description,
+    waypointsJson,
+    scheduledStartTime,
+    status,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScheduledTripsRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.description == this.description &&
+          other.waypointsJson == this.waypointsJson &&
+          other.scheduledStartTime == this.scheduledStartTime &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt);
+}
+
+class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String?> description;
+  final Value<String> waypointsJson;
+  final Value<DateTime> scheduledStartTime;
+  final Value<String> status;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ScheduledTripsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    this.waypointsJson = const Value.absent(),
+    this.scheduledStartTime = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ScheduledTripsCompanion.insert({
+    required String id,
+    required String name,
+    this.description = const Value.absent(),
+    required String waypointsJson,
+    required DateTime scheduledStartTime,
+    required String status,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       waypointsJson = Value(waypointsJson),
+       scheduledStartTime = Value(scheduledStartTime),
+       status = Value(status),
+       createdAt = Value(createdAt);
+  static Insertable<ScheduledTripsRow> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? description,
+    Expression<String>? waypointsJson,
+    Expression<DateTime>? scheduledStartTime,
+    Expression<String>? status,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (waypointsJson != null) 'waypoints_json': waypointsJson,
+      if (scheduledStartTime != null)
+        'scheduled_start_time': scheduledStartTime,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ScheduledTripsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String?>? description,
+    Value<String>? waypointsJson,
+    Value<DateTime>? scheduledStartTime,
+    Value<String>? status,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ScheduledTripsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      waypointsJson: waypointsJson ?? this.waypointsJson,
+      scheduledStartTime: scheduledStartTime ?? this.scheduledStartTime,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (waypointsJson.present) {
+      map['waypoints_json'] = Variable<String>(waypointsJson.value);
+    }
+    if (scheduledStartTime.present) {
+      map['scheduled_start_time'] = Variable<DateTime>(
+        scheduledStartTime.value,
+      );
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduledTripsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('waypointsJson: $waypointsJson, ')
+          ..write('scheduledStartTime: $scheduledStartTime, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -1788,6 +2270,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     this,
   );
   late final $TripsTable trips = $TripsTable(this);
+  late final $ScheduledTripsTable scheduledTrips = $ScheduledTripsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1796,6 +2279,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     destinations,
     appSettingsTable,
     trips,
+    scheduledTrips,
   ];
 }
 
@@ -2659,6 +3143,260 @@ typedef $$TripsTableProcessedTableManager =
       TripsRow,
       PrefetchHooks Function()
     >;
+typedef $$ScheduledTripsTableCreateCompanionBuilder =
+    ScheduledTripsCompanion Function({
+      required String id,
+      required String name,
+      Value<String?> description,
+      required String waypointsJson,
+      required DateTime scheduledStartTime,
+      required String status,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ScheduledTripsTableUpdateCompanionBuilder =
+    ScheduledTripsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String?> description,
+      Value<String> waypointsJson,
+      Value<DateTime> scheduledStartTime,
+      Value<String> status,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$ScheduledTripsTableFilterComposer
+    extends Composer<_$LocalDatabase, $ScheduledTripsTable> {
+  $$ScheduledTripsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get waypointsJson => $composableBuilder(
+    column: $table.waypointsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get scheduledStartTime => $composableBuilder(
+    column: $table.scheduledStartTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ScheduledTripsTableOrderingComposer
+    extends Composer<_$LocalDatabase, $ScheduledTripsTable> {
+  $$ScheduledTripsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get waypointsJson => $composableBuilder(
+    column: $table.waypointsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get scheduledStartTime => $composableBuilder(
+    column: $table.scheduledStartTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ScheduledTripsTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $ScheduledTripsTable> {
+  $$ScheduledTripsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get waypointsJson => $composableBuilder(
+    column: $table.waypointsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get scheduledStartTime => $composableBuilder(
+    column: $table.scheduledStartTime,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ScheduledTripsTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $ScheduledTripsTable,
+          ScheduledTripsRow,
+          $$ScheduledTripsTableFilterComposer,
+          $$ScheduledTripsTableOrderingComposer,
+          $$ScheduledTripsTableAnnotationComposer,
+          $$ScheduledTripsTableCreateCompanionBuilder,
+          $$ScheduledTripsTableUpdateCompanionBuilder,
+          (
+            ScheduledTripsRow,
+            BaseReferences<
+              _$LocalDatabase,
+              $ScheduledTripsTable,
+              ScheduledTripsRow
+            >,
+          ),
+          ScheduledTripsRow,
+          PrefetchHooks Function()
+        > {
+  $$ScheduledTripsTableTableManager(
+    _$LocalDatabase db,
+    $ScheduledTripsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScheduledTripsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScheduledTripsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ScheduledTripsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String> waypointsJson = const Value.absent(),
+                Value<DateTime> scheduledStartTime = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScheduledTripsCompanion(
+                id: id,
+                name: name,
+                description: description,
+                waypointsJson: waypointsJson,
+                scheduledStartTime: scheduledStartTime,
+                status: status,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<String?> description = const Value.absent(),
+                required String waypointsJson,
+                required DateTime scheduledStartTime,
+                required String status,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ScheduledTripsCompanion.insert(
+                id: id,
+                name: name,
+                description: description,
+                waypointsJson: waypointsJson,
+                scheduledStartTime: scheduledStartTime,
+                status: status,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ScheduledTripsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $ScheduledTripsTable,
+      ScheduledTripsRow,
+      $$ScheduledTripsTableFilterComposer,
+      $$ScheduledTripsTableOrderingComposer,
+      $$ScheduledTripsTableAnnotationComposer,
+      $$ScheduledTripsTableCreateCompanionBuilder,
+      $$ScheduledTripsTableUpdateCompanionBuilder,
+      (
+        ScheduledTripsRow,
+        BaseReferences<
+          _$LocalDatabase,
+          $ScheduledTripsTable,
+          ScheduledTripsRow
+        >,
+      ),
+      ScheduledTripsRow,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -2669,4 +3407,6 @@ class $LocalDatabaseManager {
       $$AppSettingsTableTableTableManager(_db, _db.appSettingsTable);
   $$TripsTableTableManager get trips =>
       $$TripsTableTableManager(_db, _db.trips);
+  $$ScheduledTripsTableTableManager get scheduledTrips =>
+      $$ScheduledTripsTableTableManager(_db, _db.scheduledTrips);
 }

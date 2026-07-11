@@ -15,6 +15,7 @@ import '../../destination/data/destination_model.dart';
 import '../../destination/data/destination_providers.dart';
 import '../../destination/data/destination_repository.dart';
 import '../../destination/presentation/destination_setup_screen.dart';
+import '../../scheduled_trip/presentation/schedules_list_view.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../simulation/presentation/simulation_screen.dart';
 import '../../trip/data/trip_model.dart';
@@ -46,7 +47,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   static const _tabs = <_TabItem>[
-    _TabItem(icon: Icons.location_on_outlined, activeIcon: Icons.location_on_rounded, label: 'Saved'),
+    _TabItem(icon: Icons.location_on_outlined, activeIcon: Icons.location_on_rounded, label: 'Planner'),
     _TabItem(icon: Icons.science_outlined, activeIcon: Icons.science_rounded, label: 'Simulate'),
     _TabItem(icon: Icons.explore_outlined, activeIcon: Icons.explore_rounded, label: 'Trips'),
     _TabItem(icon: Icons.settings_outlined, activeIcon: Icons.settings_rounded, label: 'Settings'),
@@ -702,6 +703,8 @@ class _ActiveTripBanner extends ConsumerWidget {
   }
 }
 
+enum _PlannerSegment { destinations, schedules }
+
 class _DestinationsTab extends ConsumerStatefulWidget {
   const _DestinationsTab();
 
@@ -712,6 +715,7 @@ class _DestinationsTab extends ConsumerStatefulWidget {
 class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
   final Set<String> _selectedIds = {};
   bool _isSelectionMode = false;
+  _PlannerSegment _selectedSegment = _PlannerSegment.destinations;
 
   void _toggleSelection(String id) {
     setState(() {
@@ -773,6 +777,24 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
     final destinations = destinationsAsync.valueOrNull ?? [];
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const DestinationSetupScreen(),
+            ),
+          );
+          if (result == 'scheduled' && mounted) {
+            setState(() => _selectedSegment = _PlannerSegment.schedules);
+          }
+        },
+        child: Icon(
+          _selectedSegment == _PlannerSegment.schedules
+              ? Icons.calendar_month_rounded
+              : Icons.add_location_alt_rounded,
+        ),
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -788,7 +810,7 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Saved Destinations',
+                    'Planner',
                     style: AppTypography.largeTitle,
                   ),
                   if (_isSelectionMode)
@@ -796,7 +818,7 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
                       onPressed: _exitSelectionMode,
                       child: const Text('Cancel'),
                     )
-                  else
+                  else if (_selectedSegment == _PlannerSegment.destinations)
                     Text(
                       '${destinations.length} saved',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textTertiary),
@@ -804,43 +826,68 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SegmentedButton<_PlannerSegment>(
+                segments: const [
+                  ButtonSegment(
+                    value: _PlannerSegment.destinations,
+                    label: Text('Destinations'),
+                    icon: Icon(Icons.location_on_outlined, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: _PlannerSegment.schedules,
+                    label: Text('Schedules'),
+                    icon: Icon(Icons.calendar_month_outlined, size: 16),
+                  ),
+                ],
+                selected: {_selectedSegment},
+                onSelectionChanged: (selected) => setState(() => _selectedSegment = selected.first),
+                showSelectedIcon: false,
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
-            Expanded(
-              child: destinations.isEmpty
-                  ? ListView(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      children: [
-                        AppCard(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.lg,
-                            ),
-                            child: Center(
-                              child: Text(
-                                'No saved destinations yet.\nSet one to get started.',
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textTertiary),
+            if (_selectedSegment == _PlannerSegment.destinations)
+              Expanded(
+                child: destinations.isEmpty
+                    ? ListView(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        children: [
+                          AppCard(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppSpacing.lg,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'No saved destinations yet.\nSet one to get started.',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textTertiary),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      children: destinations.map((dest) {
-                        final isActive = dest.id == activeTrip?.currentWaypoint.id;
-                        return _DestinationTile(
-                          destination: dest,
-                          isActive: isActive,
-                          isSelected: _selectedIds.contains(dest.id),
-                          isSelectionMode: _isSelectionMode,
-                          onLongPress: () => _toggleSelection(dest.id),
-                        );
-                      }).toList(),
-                    ),
-            ),
-            if (_isSelectionMode)
+                        ],
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        children: destinations.map((dest) {
+                          final isActive = dest.id == activeTrip?.currentWaypoint.id;
+                          return _DestinationTile(
+                            destination: dest,
+                            isActive: isActive,
+                            isSelected: _selectedIds.contains(dest.id),
+                            isSelectionMode: _isSelectionMode,
+                            onLongPress: () => _toggleSelection(dest.id),
+                          );
+                        }).toList(),
+                      ),
+              )
+            else
+              const Expanded(
+                child: SchedulesListView(),
+              ),
+            if (_isSelectionMode && _selectedSegment == _PlannerSegment.destinations)
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),

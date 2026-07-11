@@ -12,6 +12,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../scheduled_trip/presentation/schedule_trip_form_screen.dart';
 import '../../trip/data/location_service.dart';
 import '../../trip/data/trip_providers.dart';
 import '../../trip/data/waypoint.dart';
@@ -234,6 +235,16 @@ class _DestinationSetupScreenState
     if (mounted) Navigator.pop(context, true);
   }
 
+  void _scheduleTrip() {
+    if (_waypoints.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScheduleTripFormScreen(waypoints: _waypoints),
+      ),
+    );
+  }
+
   Future<void> _deleteDestination() async {
     if (widget.existingDestination == null) return;
     final confirmed = await showDialog<bool>(
@@ -313,9 +324,11 @@ class _DestinationSetupScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          FlutterMap(
+          RepaintBoundary(
+            child: FlutterMap(
             key: _mapKey,
             mapController: _mapController,
             options: MapOptions(
@@ -444,6 +457,7 @@ class _DestinationSetupScreenState
                 ],
               ),
             ],
+          ),
           ),
 
           Positioned(
@@ -637,9 +651,10 @@ class _DestinationSetupScreenState
   }
 
   Widget _buildPlannerBottomSheet() {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).padding.bottom,
+        bottom: MediaQuery.of(context).padding.bottom + bottomInset,
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -653,13 +668,15 @@ class _DestinationSetupScreenState
         ],
       ),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.40,
+        maxHeight: MediaQuery.of(context).size.height * 0.40 + bottomInset,
       ),
-      child: _waypoints.isEmpty
+      child: SingleChildScrollView(
+        child: _waypoints.isEmpty
           ? _buildEmptyPlanner()
           : (_waypoints.length == 1 && !_multiMode)
               ? _buildSingleStopPanel()
               : _buildWaypointList(),
+      ),
     );
   }
 
@@ -735,6 +752,13 @@ class _DestinationSetupScreenState
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
+          Center(
+            child: TextButton.icon(
+              onPressed: _scheduleTrip,
+              icon: const Icon(Icons.calendar_month_rounded, size: 16),
+              label: const Text('Schedule trip'),
+            ),
+          ),
           Center(
             child: TextButton.icon(
               onPressed: _enterMultiMode,
@@ -888,6 +912,13 @@ class _DestinationSetupScreenState
             ],
           ),
         ),
+        Center(
+          child: TextButton.icon(
+            onPressed: _scheduleTrip,
+            icon: const Icon(Icons.calendar_month_rounded, size: 16),
+            label: const Text('Schedule trip'),
+          ),
+        ),
       ],
     );
   }
@@ -896,9 +927,10 @@ class _DestinationSetupScreenState
     if (widget.existingDestination == null) return const SizedBox();
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).padding.bottom,
+        bottom: MediaQuery.of(context).padding.bottom + MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
@@ -977,6 +1009,7 @@ class _DestinationSetupScreenState
             ),
           ),
         ],
+        ),
       ),
     );
   }
