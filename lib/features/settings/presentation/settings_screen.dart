@@ -513,7 +513,7 @@ class _AboutSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xxs),
         Text(
-          'A minimalist GPS-based destination alarm app for commuters.',
+          'For commuters, by commuters — a minimalist GPS destination alarm.',
           style: AppTypography.secondary.copyWith(color: cs.onSurface.withValues(alpha: 0.45)),
           textAlign: TextAlign.center,
         ),

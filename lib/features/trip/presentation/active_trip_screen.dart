@@ -16,12 +16,16 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../../core/platform/foreground_service_channel.dart';
+import '../../../core/platform/battery_opt_channel.dart';
 import '../../settings/data/settings_providers.dart';
 import '../../simulation/data/simulation_service.dart';
-import '../data/geofence_manager.dart';
 import '../data/location_service.dart';
 import '../data/routing_service.dart';
 import '../data/trip_providers.dart';
+
+enum _AccuracyTier { medium, high, bestForNavigation }
+
+final batteryOptAskedProvider = StateProvider<bool>((ref) => false);
 
 class ActiveTripScreen extends ConsumerStatefulWidget {
   const ActiveTripScreen({super.key});
@@ -34,13 +38,14 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     with WidgetsBindingObserver {
   StreamSubscription<Position>? _subscription;
   Timer? _pollTimer;
-  Timer? _routeReFetchTimer;
   bool _permissionDenied = false;
   double? _lastSpeed;
   LatLng? _currentPosition;
   bool _isFetchingRoute = false;
   LatLng? _lastRouteStartPoint;
   late MapController _mapController;
+  _AccuracyTier _currentAccuracyTier = _AccuracyTier.high;
+  DateTime? _lastForegroundUpdate;
 
   @override
   void initState() {
@@ -52,7 +57,6 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
 
   @override
   void dispose() {
-    _routeReFetchTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _subscription?.cancel();
     _pollTimer?.cancel();
@@ -64,17 +68,8 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      final trip = ref.read(activeTripProvider);
-      if (trip == null || !trip.isActive) return;
-      if (ref.read(simulationEnabledProvider)) {
-        _startSimulationPolling();
-      } else {
-        _startPolling();
-      }
-    } else if (!ref.read(simulationEnabledProvider)) {
-      _pollTimer?.cancel();
-    }
+    // Simulation timer and GPS stream are lifecycle-independent.
+    // The foreground service (PARTIAL_WAKE_LOCK) keeps CPU alive.
   }
 
   Future<void> _startMonitoring() async {
@@ -82,37 +77,114 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
 
     if (simulationEnabled) {
       _startSimulationMonitoring();
-      return;
+    } else {
+      final locationService = ref.read(locationServiceProvider);
+      final hasPerm = await locationService.ensurePermissions();
+      if (!hasPerm) {
+        if (mounted) setState(() => _permissionDenied = true);
+        return;
+      }
+      _startRealMonitoring();
     }
 
-    final locationService = ref.read(locationServiceProvider);
-    final hasPerm = await locationService.ensurePermissions();
-    if (!hasPerm) {
-      if (mounted) setState(() => _permissionDenied = true);
-      return;
-    }
-    _startRealMonitoring();
+    _checkBatteryOptimization();
+  }
+
+  Future<void> _checkBatteryOptimization() async {
+    if (!mounted) return;
+    final alreadyAsked = ref.read(batteryOptAskedProvider);
+    if (alreadyAsked) return;
+    ref.read(batteryOptAskedProvider.notifier).state = true;
+
+    final isIgnoring = await BatteryOptChannel.isIgnoring();
+    if (isIgnoring) return;
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Battery Optimization'),
+        content: const Text(
+          'For reliable trip tracking in the background, '
+          'Stop-Co needs to bypass battery optimization. '
+          'Tap "Allow" on the next screen to keep tracking active '
+          'even when your phone is in power-saving mode.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Skip'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              BatteryOptChannel.requestExemption();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onPositionData(double lat, double lon, {double? speed}) {
+    if (!mounted) return;
+    _updateDistance(lat, lon, speed: speed);
   }
 
   void _startRealMonitoring() {
     final locationService = ref.read(locationServiceProvider);
-    final geofenceManager = ref.read(geofenceManagerProvider);
+    _currentAccuracyTier = _AccuracyTier.high;
 
-    geofenceManager.startMonitoring();
     _startForegroundService();
     _dimScreenIfNapMode();
 
-    final stream = locationService.getPositionStream();
-    _subscription = stream.listen((position) {
-      if (!mounted) return;
-      _updateDistance(position.latitude, position.longitude,
-          speed: position.speed >= 0 ? position.speed : null);
-    }, onError: (_) {
-      if (mounted) setState(() => _permissionDenied = true);
-    });
+    _subscription = _createPositionStream(locationService);
+  }
 
-    _startPolling();
-    _startPeriodicRouteReFetching();
+  StreamSubscription<Position> _createPositionStream(LocationService service) {
+    final (accuracy, filter) = _accuracyTierToSettings(_currentAccuracyTier);
+    final stream = service.getPositionStream(
+      accuracy: accuracy,
+      distanceFilter: filter,
+    );
+    return stream.listen(
+      (position) => _onPositionData(
+        position.latitude,
+        position.longitude,
+        speed: position.speed >= 0 ? position.speed : null,
+      ),
+      onError: (_) {
+        if (mounted) setState(() => _permissionDenied = true);
+      },
+    );
+  }
+
+  (LocationAccuracy, int) _accuracyTierToSettings(_AccuracyTier tier) {
+    return switch (tier) {
+      _AccuracyTier.medium => (LocationAccuracy.medium, 50),
+      _AccuracyTier.high => (LocationAccuracy.high, 10),
+      _AccuracyTier.bestForNavigation => (LocationAccuracy.bestForNavigation, 0),
+    };
+  }
+
+  void _updateAccuracyTier(double distance, double alertRadius) {
+    if (ref.read(simulationEnabledProvider)) return;
+    _AccuracyTier newTier;
+    if (distance <= alertRadius) {
+      newTier = _AccuracyTier.bestForNavigation;
+    } else if (distance <= alertRadius * 2) {
+      newTier = _AccuracyTier.high;
+    } else {
+      newTier = _AccuracyTier.medium;
+    }
+
+    if (newTier == _currentAccuracyTier) return;
+    _currentAccuracyTier = newTier;
+
+    final service = ref.read(locationServiceProvider);
+    _subscription?.cancel();
+    _subscription = _createPositionStream(service);
   }
 
   void _startSimulationMonitoring() {
@@ -122,7 +194,6 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     _scheduleSimulationRouteFetch();
 
     _startSimulationPolling();
-    _startPeriodicRouteReFetching();
   }
 
   void _startForegroundService() {
@@ -154,30 +225,12 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     }
   }
 
-  void _startPolling() {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(
-      const Duration(seconds: 10),
-      (_) => _pollLocation(),
-    );
-  }
-
   void _startSimulationPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(
       const Duration(seconds: 1),
       (_) => _pollSimulation(),
     );
-  }
-
-  Future<void> _pollLocation() async {
-    if (!mounted) return;
-    final locationService = ref.read(locationServiceProvider);
-    final position = await locationService.getCurrentPosition();
-    if (position != null && mounted) {
-      _updateDistance(position.latitude, position.longitude,
-          speed: position.speed >= 0 ? position.speed : null);
-    }
   }
 
   void _scheduleSimulationRouteFetch() async {
@@ -242,10 +295,17 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     ref.read(activeTripProvider.notifier).updateDistance(distance);
     ref.read(activeTripProvider.notifier).addBreadcrumb(LatLng(lat, lon));
 
-    _updateForegroundNotification(
-      wp.name,
-      GpsUtils.formatDistance(distance),
-    );
+    _updateAccuracyTier(distance, wp.alertRadius);
+
+    final now = DateTime.now();
+    if (_lastForegroundUpdate == null ||
+        now.difference(_lastForegroundUpdate!) >= const Duration(seconds: 30)) {
+      _lastForegroundUpdate = now;
+      _updateForegroundNotification(
+        wp.name,
+        GpsUtils.formatDistance(distance),
+      );
+    }
 
     bool hasLeftPrevZone = true;
     if (trip.currentWaypointIndex > 0) {
@@ -263,9 +323,10 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
       ref.read(activeTripProvider.notifier).triggerAlarm();
       _subscription?.cancel();
       _pollTimer?.cancel();
-      _routeReFetchTimer?.cancel();
       Navigator.pushReplacementNamed(context, '/alarm');
     }
+
+    _maybeReFetchRoute();
   }
 
   Future<void> _fetchAndStoreRoute(LatLng from, LatLng to) async {
@@ -283,14 +344,6 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     if (mounted) {
       setState(() => _isFetchingRoute = false);
     }
-  }
-
-  void _startPeriodicRouteReFetching() {
-    _routeReFetchTimer?.cancel();
-    _routeReFetchTimer = Timer.periodic(
-      const Duration(seconds: AppConstants.routeReFetchIntervalSec),
-      (_) => _maybeReFetchRoute(),
-    );
   }
 
   void _maybeReFetchRoute() {
@@ -388,7 +441,8 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
       body: Stack(
         children: [
           if (_currentPosition != null)
-            FlutterMap(
+            RepaintBoundary(
+              child: FlutterMap(
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: _currentPosition!,
@@ -449,7 +503,8 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                   ],
                 ),
               ],
-            )
+            ),
+          )
           else
             Container(color: context.scaffoldBackground),
 
@@ -509,7 +564,6 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                        onPressed: () {
                         _subscription?.cancel();
                         _pollTimer?.cancel();
-                        _routeReFetchTimer?.cancel();
                         ForegroundServiceChannel.stopTracking();
                         _restoreScreenBrightness();
                         WakelockPlus.disable();

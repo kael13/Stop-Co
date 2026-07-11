@@ -3,10 +3,13 @@ package com.stopco.stop_co
 import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.PowerManager
 import android.provider.MediaStore
+import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -89,6 +92,35 @@ class MainActivity : FlutterActivity() {
                         type = "audio/*"
                     }
                     startActivityForResult(intent, FILE_PICKER_REQUEST_CODE)
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.stopco.app/battery"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "requestBatteryOptimizationExemption" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        val intent = Intent(
+                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            Uri.parse("package:$packageName")
+                        )
+                        startActivity(intent)
+                    }
+                    result.success(true)
+                }
+                "isIgnoringBatteryOptimizations" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        val pm = getSystemService(POWER_SERVICE) as PowerManager
+                        result.success(pm.isIgnoringBatteryOptimizations(packageName))
+                    } else {
+                        result.success(true)
+                    }
                 }
                 else -> {
                     result.notImplemented()

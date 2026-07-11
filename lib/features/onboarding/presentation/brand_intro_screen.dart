@@ -127,7 +127,7 @@ class _BrandIntroScreenState extends ConsumerState<BrandIntroScreen>
                           ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        "Don't miss your stop",
+                        'For commuters, by commuters',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: context.textSecondary,
                         ),

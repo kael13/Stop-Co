@@ -782,7 +782,9 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const DestinationSetupScreen(),
+              builder: (_) => DestinationSetupScreen(
+                showScheduledTrip: _selectedSegment == _PlannerSegment.schedules,
+              ),
             ),
           );
           if (result == 'scheduled' && mounted) {

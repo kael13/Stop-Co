@@ -74,7 +74,9 @@ class SchedulesListView extends ConsumerWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const DestinationSetupScreen(),
+                          builder: (_) => const DestinationSetupScreen(
+                            showScheduledTrip: true,
+                          ),
                         ),
                       );
                     },

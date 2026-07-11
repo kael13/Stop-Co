@@ -22,8 +22,13 @@ import '../data/geocoding_service.dart';
 
 class DestinationSetupScreen extends ConsumerStatefulWidget {
   final Destination? existingDestination;
+  final bool showScheduledTrip;
 
-  const DestinationSetupScreen({super.key, this.existingDestination});
+  const DestinationSetupScreen({
+    super.key,
+    this.existingDestination,
+    this.showScheduledTrip = false,
+  });
 
   @override
   ConsumerState<DestinationSetupScreen> createState() =>
@@ -235,14 +240,17 @@ class _DestinationSetupScreenState
     if (mounted) Navigator.pop(context, true);
   }
 
-  void _scheduleTrip() {
+  Future<void> _scheduleTrip() async {
     if (_waypoints.isEmpty) return;
-    Navigator.push(
+    final result = await Navigator.push<String>(
       context,
       MaterialPageRoute(
         builder: (_) => ScheduleTripFormScreen(waypoints: _waypoints),
       ),
     );
+    if (result == 'scheduled' && widget.showScheduledTrip && mounted) {
+      Navigator.pop(context, 'scheduled');
+    }
   }
 
   Future<void> _deleteDestination() async {
@@ -742,22 +750,34 @@ class _DestinationSetupScreenState
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 flex: 2,
-                child: AppButton(
-                  label: 'Start Trip',
-                  icon: Icons.near_me_rounded,
-                  isLoading: _isStartingTrip,
-                  onPressed: _saveAndStartTrip,
-                ),
+                child: widget.showScheduledTrip
+                    ? AppButton(
+                        label: 'Schedule Trip',
+                        icon: Icons.calendar_month_rounded,
+                        onPressed: _scheduleTrip,
+                      )
+                    : AppButton(
+                        label: 'Start Trip',
+                        icon: Icons.near_me_rounded,
+                        isLoading: _isStartingTrip,
+                        onPressed: _saveAndStartTrip,
+                      ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Center(
-            child: TextButton.icon(
-              onPressed: _scheduleTrip,
-              icon: const Icon(Icons.calendar_month_rounded, size: 16),
-              label: const Text('Schedule trip'),
-            ),
+            child: widget.showScheduledTrip
+                ? TextButton.icon(
+                    onPressed: _saveAndStartTrip,
+                    icon: const Icon(Icons.near_me_rounded, size: 16),
+                    label: const Text('Start Trip'),
+                  )
+                : TextButton.icon(
+                    onPressed: _scheduleTrip,
+                    icon: const Icon(Icons.calendar_month_rounded, size: 16),
+                    label: const Text('Schedule trip'),
+                  ),
           ),
           Center(
             child: TextButton.icon(
@@ -900,24 +920,42 @@ class _DestinationSetupScreenState
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 flex: 2,
-                child: AppButton(
-                  label: _waypoints.length == 1
-                      ? 'Start Trip'
-                      : 'Start Trip (${_waypoints.length} stops)',
-                  icon: Icons.near_me_rounded,
-                  isLoading: _isStartingTrip,
-                  onPressed: _saveAndStartTrip,
-                ),
+                child: widget.showScheduledTrip
+                    ? AppButton(
+                        label: _waypoints.length == 1
+                            ? 'Schedule Trip'
+                            : 'Schedule Trip (${_waypoints.length} stops)',
+                        icon: Icons.calendar_month_rounded,
+                        onPressed: _scheduleTrip,
+                      )
+                    : AppButton(
+                        label: _waypoints.length == 1
+                            ? 'Start Trip'
+                            : 'Start Trip (${_waypoints.length} stops)',
+                        icon: Icons.near_me_rounded,
+                        isLoading: _isStartingTrip,
+                        onPressed: _saveAndStartTrip,
+                      ),
               ),
             ],
           ),
         ),
         Center(
-          child: TextButton.icon(
-            onPressed: _scheduleTrip,
-            icon: const Icon(Icons.calendar_month_rounded, size: 16),
-            label: const Text('Schedule trip'),
-          ),
+          child: widget.showScheduledTrip
+              ? TextButton.icon(
+                  onPressed: _saveAndStartTrip,
+                  icon: const Icon(Icons.near_me_rounded, size: 16),
+                  label: Text(
+                    _waypoints.length == 1
+                        ? 'Start Trip'
+                        : 'Start Trip (${_waypoints.length} stops)',
+                  ),
+                )
+              : TextButton.icon(
+                  onPressed: _scheduleTrip,
+                  icon: const Icon(Icons.calendar_month_rounded, size: 16),
+                  label: const Text('Schedule trip'),
+                ),
         ),
       ],
     );

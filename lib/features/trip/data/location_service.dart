@@ -49,11 +49,14 @@ class LocationService {
     }
   }
 
-  Stream<Position> getPositionStream() {
+  Stream<Position> getPositionStream({
+    LocationAccuracy accuracy = LocationAccuracy.high,
+    int distanceFilter = 10,
+  }) {
     return Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 0,
+      locationSettings: LocationSettings(
+        accuracy: accuracy,
+        distanceFilter: distanceFilter,
       ),
     );
   }

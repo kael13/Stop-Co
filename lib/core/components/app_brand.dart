@@ -32,7 +32,7 @@ class AppBrand extends StatelessWidget {
         if (showTagline) ...[
           const SizedBox(height: 4),
           Text(
-            "Don't miss your stop",
+            'For commuters, by commuters',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: context.textTertiary,
             ),

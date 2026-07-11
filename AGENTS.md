@@ -679,3 +679,67 @@ A comprehensive inventory revealed inconsistent border radii across all tappable
 
 ## Relevant Files
 - `lib/features/destination/presentation/destination_setup_screen.dart` — `_buildPlannerBottomSheet` and `_buildEditBottomSheet` updated with keyboard-aware padding, adjusted maxHeight, and SingleChildScrollView.
+
+---
+
+# Session: Battery optimization, Schedule Trip button, tagline, simulation lifecycle fix, map/GPS bug fix
+
+## Goal
+- Optimize battery usage (background tracking, alarms, foreground service) when app is minimized and when opened; refactor Schedule Trip button arrangement in destination setup screen; fix simulation alarm on display-off; update app tagline; fix map not showing and GPS not producing data after latest build.
+
+## Constraints & Preferences
+- All battery optimization changes must not compromise existing app features (alarm, tracking, trip recording, navigation, simulation)
+- User accepted adaptive GPS accuracy: `medium` when far (> 2× radius), `high` when close (≤ 2× radius), `bestForNavigation` at arrival
+- User wants "Schedule Trip" highlighted (primary filled button) and "Start Trip" de-emphasized (TextButton) when entering DestinationSetupScreen from Schedules context
+- User wants auto-close to Schedules list after scheduling a trip
+- Tagline changed to "For commuters, by commuters"
+- Simulation timer must keep running when display is off (lifecycle-independent)
+
+## What was done
+1. Merged GeofenceManager dual GPS listeners into single stream handler; removed `geofenceManagerProvider` usage from `active_trip_screen.dart`
+2. Removed redundant 10 s polling timer for real GPS (kept simulation 1 s timer)
+3. Implemented adaptive GPS accuracy tier switching inside `_updateAccuracyTier()` with stream recreation
+4. Removed periodic 60 s timer-based route re-fetch; now calls `_maybeReFetchRoute()` from every position update (movement-based only)
+5. Throttled foreground notification updates to 30 s interval in `_updateDistance()`
+6. Added `RepaintBoundary` wrapping FlutterMap
+7. Created `BatteryOptChannel` (Dart) and battery MethodChannel in `MainActivity.kt` (`com.stopco.app/battery`) with `requestBatteryOptimizationExemption` and `isIgnoringBatteryOptimizations`
+8. Integrated battery optimization dialog before trip start in both real and simulation modes via `_checkBatteryOptimization()`
+9. Added `showScheduledTrip` parameter (`default false`) to `DestinationSetupScreen`
+10. Flipped button priority in `_buildSingleStopPanel()` and `_buildWaypointList()` when `showScheduledTrip == true`: "Schedule Trip" → primary AppButton, "Start Trip" → secondary TextButton
+11. Updated `_scheduleTrip()` to auto-pop to Schedules list when `showScheduledTrip == true`
+12. Updated `main_shell.dart` FAB to pass `showScheduledTrip` based on selected segment
+13. Updated `schedules_list_view.dart` empty-state button to pass `showScheduledTrip: true`
+14. Changed tagline from `"Don't miss your stop"` to `"For commuters, by commuters"` in `app_brand.dart`, `brand_intro_screen.dart`, and settings description
+15. Made `didChangeAppLifecycleState` a no-op so simulation 1 s timer runs independently of lifecycle (fixes alarm not firing on display-off)
+16. **Bug fix**: Made `_checkBatteryOptimization()` non-blocking — moved it after tracking starts without `await` (was blocking GPS stream creation from `initState` via `showDialog` throwing before widget tree was built)
+17. **Bug fix**: Added `simulationEnabled` guard in `_updateAccuracyTier()` to prevent creating a GPS stream subscription during simulation mode (was activating GPS hardware unnecessarily)
+
+## Key decisions
+- Adaptive accuracy switching over fixed high accuracy: battery savings (high→medium) when far from destination
+- `_checkBatteryOptimization()` fire-and-forget after tracking starts: GPS stream is never blocked by dialog lifecycle
+- `RepaintBoundary` on FlutterMap: prevents unnecessary repaints when app is in background
+- Battery optimization dialog shown before first trip only (per app session via `batteryOptAskedProvider`)
+
+## Verification
+- `flutter analyze`: 0 errors, 3 pre-existing info warnings
+- `flutter build apk --debug`: succeeded
+
+## Bug Root Cause
+After the battery optimization changes, `_startMonitoring()` called `await _checkBatteryOptimization()` before creating the GPS stream. `checkBatteryOptimization()` calls `showDialog`, which can fail with an unhandled async exception when called during `initState` (widget tree not fully built). This caused the entire `_startMonitoring` chain to terminate early — no stream was created, `_currentPosition` remained null, map never rendered, and GPS never produced data. Fixed by moving the battery check after tracking starts without `await`.
+
+## Second Bug
+During simulation mode, `_updateDistance()` called `_updateAccuracyTier()`, which created a `Geolocator.getPositionStream()` subscription when the accuracy tier changed. This activated GPS hardware unnecessarily during simulation and could conflict with simulation position data. Fixed by adding `if (ref.read(simulationEnabledProvider)) return;` guard.
+
+## Next Steps
+- No specific next steps — battery optimization and bug fixes complete
+
+## Relevant Files
+- `lib/features/trip/presentation/active_trip_screen.dart` — main file: `_startMonitoring()` restructured, `_checkBatteryOptimization()` non-blocking, `_updateAccuracyTier()` simulation guard, adaptive accuracy, lifecycle no-op, RepaintBoundary, notification throttle
+- `lib/features/trip/data/location_service.dart` — `getPositionStream()` accepts `accuracy`/`distanceFilter` parameters
+- `lib/core/platform/battery_opt_channel.dart` — NEW: Dart MethodChannel wrapper for battery exemption
+- `lib/features/destination/presentation/destination_setup_screen.dart` — added `showScheduledTrip` param, flipped button priority, auto-close on schedule
+- `lib/core/components/app_brand.dart` — tagline changed
+- `lib/features/onboarding/presentation/brand_intro_screen.dart` — tagline changed
+- `android/app/src/main/kotlin/com/stopco/stop_co/MainActivity.kt` — added `com.stopco.app/battery` MethodChannel handler
+- `lib/features/scheduled_trip/presentation/schedules_list_view.dart` — passes `showScheduledTrip: true`
+- `lib/features/home/presentation/main_shell.dart` — FAB passes `showScheduledTrip` by segment
