@@ -658,3 +658,24 @@ A comprehensive inventory revealed inconsistent border radii across all tappable
 - `lib/features/simulation/presentation/simulation_screen.dart` — "Sound" section + Test Alarm button
 - `android/app/src/main/kotlin/com/stopco/stop_co/MainActivity.kt` — `copyToMediaStore()`, `detectExtension()`
 - `pubspec.yaml` — added `audioplayers: ^6.1.0`
+
+---
+
+# Session: Keyboard-aware bottom sheets — no overflow, auto push above keyboard
+
+## Goal
+- Fix keyboard overlapping destination input fields in the planner bottom sheet. Use `SingleChildScrollView` so content is scrollable when keyboard covers it, and add `viewInsets.bottom` to padding + `maxHeight` so sheet shifts up by the keyboard height without overflow.
+
+## What was done
+1. Added `resizeToAvoidBottomInset: false` to `DestinationSetupScreen` Scaffold (already set) — map doesn't resize when keyboard opens.
+2. Wrapped planner bottom sheet child with `SingleChildScrollView` — content scrollable when keyboard covers it.
+3. Added `MediaQuery.of(context).viewInsets.bottom` to both `padding.bottom` and `maxHeight` — sheet pushes up by keyboard height, and the `maxHeight` constraint grows by the same amount, preventing overflow.
+4. Same pattern applied to edit bottom sheet (`_buildEditBottomSheet`): `viewInsets.bottom` in padding + `SingleChildScrollView`.
+5. Verified: `flutter analyze` — 0 errors, `flutter build apk --debug` — succeeds, `adb install` — success.
+
+## Key decisions
+- `viewInsets.bottom` in padding + `maxHeight` both increase by keyboard height: sheet slides up exactly as much as it needs, the available content area stays the same, no overflow.
+- `SingleChildScrollView` as fallback — if content is still taller than the adjusted maxHeight, user can scroll.
+
+## Relevant Files
+- `lib/features/destination/presentation/destination_setup_screen.dart` — `_buildPlannerBottomSheet` and `_buildEditBottomSheet` updated with keyboard-aware padding, adjusted maxHeight, and SingleChildScrollView.
