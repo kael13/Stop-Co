@@ -17,7 +17,6 @@ import '../../destination/data/destination_repository.dart';
 import '../../destination/presentation/destination_setup_screen.dart';
 import '../../scheduled_trip/presentation/schedules_list_view.dart';
 import '../../settings/presentation/settings_screen.dart';
-import '../../simulation/presentation/simulation_screen.dart';
 import '../../trip/data/trip_model.dart';
 import '../../trip/data/trip_providers.dart';
 import '../../trip/data/trip_record.dart';
@@ -31,7 +30,7 @@ class MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
-  int _currentIndex = 2;
+  int _currentIndex = 1;
   late final PageController _pageController;
 
   @override
@@ -48,14 +47,12 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   static const _tabs = <_TabItem>[
     _TabItem(icon: Icons.location_on_outlined, activeIcon: Icons.location_on_rounded, label: 'Planner'),
-    _TabItem(icon: Icons.science_outlined, activeIcon: Icons.science_rounded, label: 'Simulate'),
     _TabItem(icon: Icons.explore_outlined, activeIcon: Icons.explore_rounded, label: 'Trips'),
     _TabItem(icon: Icons.settings_outlined, activeIcon: Icons.settings_rounded, label: 'Settings'),
   ];
 
   final _pages = const <Widget>[
     _DestinationsTab(),
-    SimulationScreen(),
     _HomeTab(),
     SettingsScreen(),
   ];
@@ -79,31 +76,57 @@ class _MainShellState extends ConsumerState<MainShell> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.only(
-              left: AppSpacing.xs,
-              right: AppSpacing.xs,
-              top: AppSpacing.xxs,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_tabs.length, (index) {
-                final tab = _tabs[index];
-                final selected = _currentIndex == index;
-                return _NavBarItem(
-                  icon: selected ? tab.activeIcon : tab.icon,
-                  label: tab.label,
-                  selected: selected,
-                  onTap: () {
-                    _pageController.animateToPage(
-                      index,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: AppSpacing.xs,
+                  right: AppSpacing.xs,
+                  top: AppSpacing.xxs,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: List.generate(_tabs.length, (index) {
+                    final tab = _tabs[index];
+                    final selected = _currentIndex == index;
+                    if (index == 1) {
+                      return const SizedBox(width: 56, height: 56);
+                    }
+                    return _NavBarItem(
+                      icon: selected ? tab.activeIcon : tab.icon,
+                      label: tab.label,
+                      selected: selected,
+                      onTap: () {
+                        _pageController.animateToPage(
+                          index,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      },
                     );
-                  },
-                );
-              }),
-            ),
+                  }),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: -12,
+                child: Center(
+                  child: _CenterNavButton(
+                    selected: _currentIndex == 1,
+                    onTap: () {
+                      _pageController.animateToPage(
+                        1,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -197,6 +220,104 @@ class _NavBarItemState extends State<_NavBarItem>
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CenterNavButton extends StatefulWidget {
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _CenterNavButton({
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  State<_CenterNavButton> createState() => _CenterNavButtonState();
+}
+
+class _CenterNavButtonState extends State<_CenterNavButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 110),
+      vsync: this,
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.92).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _scaleController.forward().then((_) => _scaleController.reverse());
+        widget.onTap();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ScaleTransition(
+            scale: _scaleAnim,
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: widget.selected
+                    ? context.primary
+                    : context.primary.withValues(alpha: 0.75),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: context.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.explore_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Trips',
+            style: AppTypography.caption.copyWith(
+              fontSize: 11,
+              fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
+              color: widget.selected ? context.primary : context.textTertiary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            width: widget.selected ? 6 : 0,
+            height: widget.selected ? 6 : 0,
+            decoration: BoxDecoration(
+              color: context.primary,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
       ),
     );
   }

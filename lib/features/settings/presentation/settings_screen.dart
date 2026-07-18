@@ -11,6 +11,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/components/app_input.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../profile/data/profile_providers.dart';
+import '../../simulation/presentation/simulation_screen.dart';
 import '../data/settings_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -62,6 +63,25 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sm),
           _CommuteModeSection(
             currentMode: settings.commuteMode,
+          ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+          const SizedBox(height: AppSpacing.lg),
+          _SectionHeader(
+            title: 'Simulation',
+            accentColor: const Color(0xFFE67E22),
+          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
+          const SizedBox(height: AppSpacing.sm),
+          AppCard(
+            child: ListTile(
+              leading: Icon(Icons.science_rounded, color: Theme.of(context).colorScheme.primary),
+              title: const Text('Test Trip Simulation'),
+              subtitle: const Text('Simulate a trip with mock GPS data'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SimulationScreen()),
+              ),
+              contentPadding: EdgeInsets.zero,
+            ),
           ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
