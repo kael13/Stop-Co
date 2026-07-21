@@ -743,3 +743,77 @@ During simulation mode, `_updateDistance()` called `_updateAccuracyTier()`, whic
 - `android/app/src/main/kotlin/com/stopco/stop_co/MainActivity.kt` — added `com.stopco.app/battery` MethodChannel handler
 - `lib/features/scheduled_trip/presentation/schedules_list_view.dart` — passes `showScheduledTrip: true`
 - `lib/features/home/presentation/main_shell.dart` — FAB passes `showScheduledTrip` by segment
+
+---
+
+# Session: Battery optimization analysis — departure notifications vs. arrival geofence
+
+## Goal
+- Analyze battery consumption for scheduled trip departure-time notifications and the existing arrival geofence alarm system.
+
+## Battery profile: departure-time notification (new feature)
+- **Virtually free.** A one-shot local notification at a specific date/time via `flutter_local_notifications` `zonedSchedule()` uses Android's native `AlarmManager` under the hood. No GPS, no stream, no wakelock needed. The app doesn't need to be running.
+- **No optimization needed** for this feature.
+
+## Battery profile: arrival geofence alarm (existing — the real drain)
+- The current implementation streams continuous GPS via `Geolocator.getPositionStream()` for the entire trip duration. This is the #1 battery consumer.
+- Adaptive accuracy (medium → high → bestForNavigation) helps but doesn't change the fundamental approach — GPS hardware is always active.
+
+## Optimization options (ordered by impact)
+
+### Option A: Android GeofencingClient API (high impact, recommended)
+- Replace the continuous Dart-level GPS stream with Android's native `GeofencingClient`.
+- Registers geofence circles (one per waypoint). Android's fused location provider:
+  - Uses WiFi/cell tower triangulation when far from a geofence (near-zero battery)
+  - Only turns on GPS when you're close to a geofence boundary
+  - Batches checks with other apps' geofence requests
+- **Estimated savings:** 60–80% reduction in GPS-on time.
+- **Implementation:** New Kotlin file or extend `TrackingForegroundService.kt`; Dart MethodChannel to register/unregister geofences; callback on geofence enter → triggers alarm. Fallback to Dart-level stream if GeofencingClient unavailable.
+
+### Option B: Lighter accuracy tiers (medium impact)
+- Could go further than current implementation:
+
+| Current | Proposed |
+|---|---|
+| `medium` (50m filter) when > 2× radius | `low` (network-based, ~500m filter) when > 5× radius |
+| `high` (10m filter) when ≤ 2× radius | Keep as-is |
+| `bestForNavigation` (0m) at arrival | Keep as-is |
+
+- GPS hardware off entirely when far away, using only network/cell location.
+
+### Option C: Periodic polling instead of streaming (medium impact)
+- Replace `getPositionStream()` (continuous callback on every GPS fix) with a periodic `Timer` + `getCurrentPosition()` (one-shot).
+- Poll every 60s when far (> 2× radius), every 15s when approaching (≤ 2× radius), every 5s at arrival.
+- GPS radio sleeps between polls instead of streaming continuously. But less responsive.
+
+### Option D: Simulation timer reduction (low impact)
+- The simulation 1s `Timer.periodic` wakes the CPU every second. Could be relaxed to 2–3s when far from next waypoint.
+
+## Recommendation
+| Priority | What | Why |
+|---|---|---|
+| **1** | Option A: GeofencingClient | Biggest savings, native Android optimization, standard pattern for this exact use case |
+| **2** | Option B: lighter accuracy tiers | Simple code change, immediate savings with minimal risk |
+| **3** | Option D: simulation timer | Cheap win during simulation only |
+| — | Departure notification | No optimization needed — inherently battery-light |
+
+## Key decisions
+- `zonedSchedule()` is the right approach for departure notifications: zero battery drain until fire time.
+- Continuous GPS stream is the dominant battery consumer; native GeofencingClient is the proper long-term fix.
+- All four options are additive — they can be implemented independently.
+
+## Critical Context
+- `PARTIAL_WAKE_LOCK` is already acquired in `TrackingForegroundService.kt` (CPU-on, screen-off).
+- WakelockPlus `enable()` has been removed — only `disable()` remains (effectively unused).
+- Battery optimization exemption dialog is shown once per session via `BatteryOptChannel` — user can skip.
+- Current adaptive accuracy tiers: medium (50m filter), high (10m), bestForNavigation (0m).
+- Simulation correctly skips GPS hardware activation via `simulationEnabled` guard.
+- Departure-time notifications for scheduled trips are purely time-based — no GPS, no streaming, no wakelock needed.
+
+## Relevant Files
+- `lib/features/trip/presentation/active_trip_screen.dart` — GPS stream, adaptive accuracy, `_updateAccuracyTier()`, notification throttle, `RepaintBoundary`, lifecycle handler
+- `lib/features/trip/data/geofence_manager.dart` — orphaned class (monitoring merged into ActiveTripScreen)
+- `lib/features/trip/data/location_service.dart` — `getPositionStream()` with configurable accuracy/distanceFilter
+- `lib/core/platform/battery_opt_channel.dart` — Dart side of battery exemption MethodChannel
+- `android/app/src/main/kotlin/com/stopco/stop_co/MainActivity.kt` — `com.stopco.app/battery` channel handler
+- `android/app/src/main/kotlin/com/stopco/stop_co/TrackingForegroundService.kt` — `PARTIAL_WAKE_LOCK`, `VISIBILITY_PUBLIC`, notification update handling
