@@ -14,6 +14,8 @@ import '../../../core/theme/theme_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../scheduled_trip/presentation/schedule_trip_form_screen.dart';
 import '../../trip/data/location_service.dart';
+import '../../trip/data/saved_route.dart';
+import '../../trip/data/saved_route_repository.dart';
 import '../../trip/data/trip_providers.dart';
 import '../../trip/data/waypoint.dart';
 import '../data/destination_model.dart';
@@ -207,6 +209,23 @@ class _DestinationSetupScreenState
     if (mounted) {
       Navigator.pushReplacementNamed(context, '/active-trip');
     }
+  }
+
+  Future<void> _saveRoute() async {
+    if (!_hasValidWaypoints) {
+      setState(() => _saveError = 'Please name each stop');
+      return;
+    }
+    setState(() => _isSaving = true);
+    final repo = ref.read(savedRouteRepositoryProvider);
+    final route = SavedRoute.fromWaypoints(waypoints: _waypoints);
+    await repo.save(route);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Route "${route.name}" saved')),
+      );
+    }
+    setState(() => _isSaving = false);
   }
 
   Future<void> _saveDestination() async {
@@ -913,8 +932,8 @@ class _DestinationSetupScreenState
             children: [
               Expanded(
                 child: TextButton(
-                  onPressed: _saveDestination,
-                  child: const Text('Save Only'),
+                  onPressed: _waypoints.length > 1 ? _saveRoute : _saveDestination,
+                  child: Text(_waypoints.length > 1 ? 'Save Route' : 'Save Only'),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),

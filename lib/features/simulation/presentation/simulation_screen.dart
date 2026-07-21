@@ -12,6 +12,8 @@ import '../../../core/theme/theme_colors.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../destination/data/destination_model.dart';
 import '../../destination/data/destination_providers.dart';
+import '../../trip/data/saved_route.dart';
+import '../../trip/data/saved_route_repository.dart';
 import '../../settings/data/settings_providers.dart';
 import '../../trip/data/trip_model.dart';
 import '../../trip/data/trip_providers.dart';
@@ -215,6 +217,30 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 });
               },
             ),
+          const SizedBox(height: AppSpacing.lg),
+          _SectionHeader(
+              title: 'Saved Routes',
+              accentColor: Theme.of(context).colorScheme.primary,
+            ),
+          const SizedBox(height: AppSpacing.xs),
+          _SavedRoutesSection(
+            selectedWaypointIds: _selectedWaypoints.map((w) => w.id).toSet(),
+            onSelectRoute: (route) {
+              setState(() {
+                _selectedWaypoints.clear();
+                for (final wp in route.waypoints) {
+                  _selectedWaypoints.add(Destination(
+                    id: wp.id,
+                    name: wp.name,
+                    latitude: wp.latitude,
+                    longitude: wp.longitude,
+                    alertRadius: wp.alertRadius,
+                    createdAt: DateTime.now(),
+                  ));
+                }
+              });
+            },
+          ),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
               title: 'Speed',
@@ -671,6 +697,75 @@ class _NapModeActiveBanner extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SavedRoutesSection extends ConsumerWidget {
+  final Set<String> selectedWaypointIds;
+  final ValueChanged<SavedRoute> onSelectRoute;
+
+  const _SavedRoutesSection({
+    required this.selectedWaypointIds,
+    required this.onSelectRoute,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final routesAsync = ref.watch(savedRoutesProvider);
+    return routesAsync.when(
+      loading: () => const SizedBox(
+        height: 40,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (routes) {
+        if (routes.isEmpty) return const SizedBox.shrink();
+        return Column(
+          children: routes.take(5).map((route) {
+            final waypoints = route.waypoints;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: AppCard(
+                onTap: () => onSelectRoute(route),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.route_rounded,
+                      color: context.primary,
+                      size: 24,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            route.name,
+                            style: AppTypography.bodyBold,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${waypoints.length} stop${waypoints.length == 1 ? '' : 's'}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textTertiary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.play_circle_fill_rounded,
+                      color: context.primary,
+                      size: 28,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }

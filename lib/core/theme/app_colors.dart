@@ -4,24 +4,15 @@ class AppColors {
   AppColors._();
 
   static const Color offWhite = Color(0xFFFAFAF8);
-  static const Color softCharcoal = Color(0xFF2C2C2E);
   static const Color deepSlate = Color(0xFF1C1C1E);
 
   static const Color primary = Color(0xFF4A90B0);
   static const Color primaryDark = Color(0xFF3A7A9A);
   static const Color taupe = Color(0xFF8B7E74);
 
-  static const Color success = Color(0xFF34C759);
-  static const Color warning = Color(0xFFFFB340);
   static const Color error = Color(0xFFFF3B30);
 
   static const Color white = Color(0xFFFFFFFF);
-  static const Color black = Color(0xFF000000);
   static const Color grey50 = Color(0xFFF8F8F8);
   static const Color grey100 = Color(0xFFE8E8E8);
-  static const Color grey200 = Color(0xFFD1D1D1);
-  static const Color grey400 = Color(0xFF9A9A9A);
-  static const Color grey600 = Color(0xFF6B6B6B);
-  static const Color grey800 = Color(0xFF3A3A3A);
-  static const Color grey900 = Color(0xFF1A1A1A);
 }

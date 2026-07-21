@@ -17,6 +17,8 @@ import '../../destination/data/destination_repository.dart';
 import '../../destination/presentation/destination_setup_screen.dart';
 import '../../scheduled_trip/presentation/schedules_list_view.dart';
 import '../../settings/presentation/settings_screen.dart';
+import '../../trip/data/saved_route.dart';
+import '../../trip/data/saved_route_repository.dart';
 import '../../trip/data/trip_model.dart';
 import '../../trip/data/trip_providers.dart';
 import '../../trip/data/trip_record.dart';
@@ -367,6 +369,8 @@ class _HomeTab extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.lg),
                         const _DestinationsBlock().fadeSlideUp(delay: 160.ms),
                         const SizedBox(height: AppSpacing.lg),
+                        const _RoutesBlock().fadeSlideUp(delay: 200.ms),
+                        const SizedBox(height: AppSpacing.lg),
                         const _RecentTripsBlock().fadeSlideUp(delay: 240.ms),
                       ],
                     ),
@@ -402,6 +406,152 @@ class _RecentTripsBlock extends ConsumerWidget {
       loading: () => const _RecentTripsSkeleton(),
       error: (_, _) => _RecentTripsSection(trips: const []),
       data: (trips) => _RecentTripsSection(trips: trips),
+    );
+  }
+}
+
+class _RoutesBlock extends ConsumerWidget {
+  const _RoutesBlock();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final routesAsync = ref.watch(savedRoutesProvider);
+    return routesAsync.when(
+      loading: () => const _RoutesSkeleton(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (routes) {
+        if (routes.isEmpty) return const SizedBox.shrink();
+        return _RoutesSection(routes: routes);
+      },
+    );
+  }
+}
+
+class _RoutesSection extends StatelessWidget {
+  final List<SavedRoute> routes;
+
+  const _RoutesSection({required this.routes});
+
+  @override
+  Widget build(BuildContext context) {
+    final display = routes.take(5).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Saved Routes',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: context.textPrimary),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ...display.asMap().entries.map((entry) => Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+          child: _RouteCard(route: entry.value)
+              .fadeSlideUp(delay: Duration(milliseconds: 60 * entry.key)),
+        )),
+      ],
+    );
+  }
+}
+
+class _RouteCard extends ConsumerWidget {
+  final SavedRoute route;
+
+  const _RouteCard({required this.route});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final waypoints = route.waypoints;
+    return AppCard(
+      onTap: () {
+        ref.read(activeTripProvider.notifier).startTripWithWaypoints(waypoints);
+        Navigator.pushNamed(context, '/active-trip');
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: context.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            child: Icon(
+              Icons.route_rounded,
+              color: context.primary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  route.name,
+                  style: AppTypography.bodyBold,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${waypoints.length} stop${waypoints.length == 1 ? '' : 's'}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textTertiary),
+                ),
+              ],
+            ),
+          ),
+          if (route.isFavorite)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Icon(Icons.star_rounded, color: context.warning, size: 20),
+            ),
+          Icon(Icons.play_circle_fill_rounded, color: context.primary, size: 32),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoutesSkeleton extends StatelessWidget {
+  const _RoutesSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildShimmerLine(context: context, width: 110, height: 22, radius: 4),
+        const SizedBox(height: AppSpacing.sm),
+        ...List.generate(
+          2,
+          (i) => Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            child: AppCard(
+              child: Row(
+                children: [
+                  buildShimmerBox(
+                    context: context,
+                    width: 44,
+                    height: 44,
+                    radius: AppSpacing.radiusMd,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        buildShimmerLine(context: context, width: 140, height: 14),
+                        const SizedBox(height: 6),
+                        buildShimmerLine(context: context, width: 80, height: 12),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -824,7 +974,7 @@ class _ActiveTripBanner extends ConsumerWidget {
   }
 }
 
-enum _PlannerSegment { destinations, schedules }
+enum _PlannerSegment { destinations, schedules, routes }
 
 class _DestinationsTab extends ConsumerStatefulWidget {
   const _DestinationsTab();
@@ -915,7 +1065,9 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
         child: Icon(
           _selectedSegment == _PlannerSegment.schedules
               ? Icons.calendar_month_rounded
-              : Icons.add_location_alt_rounded,
+              : _selectedSegment == _PlannerSegment.routes
+                  ? Icons.route_rounded
+                  : Icons.add_location_alt_rounded,
         ),
       ),
       body: SafeArea(
@@ -957,6 +1109,11 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
                     value: _PlannerSegment.destinations,
                     label: Text('Destinations'),
                     icon: Icon(Icons.location_on_outlined, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: _PlannerSegment.routes,
+                    label: Text('Routes'),
+                    icon: Icon(Icons.route_rounded, size: 16),
                   ),
                   ButtonSegment(
                     value: _PlannerSegment.schedules,
@@ -1006,6 +1163,10 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
                         }).toList(),
                       ),
               )
+            else if (_selectedSegment == _PlannerSegment.routes)
+              Expanded(
+                child: _RoutesListView(),
+              )
             else
               const Expanded(
                 child: SchedulesListView(),
@@ -1028,6 +1189,156 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RoutesListView extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final routesAsync = ref.watch(savedRoutesProvider);
+    return routesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Center(
+        child: Text(
+          'Could not load routes',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textTertiary),
+        ),
+      ),
+      data: (routes) {
+        if (routes.isEmpty) {
+          return ListView(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            children: [
+              AppCard(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  child: Center(
+                    child: Text(
+                      'No saved routes yet.\nCreate a multi-stop trip and save it.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textTertiary),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: routes.map((route) {
+            final waypoints = route.waypoints;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: AppCard(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: context.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                      ),
+                      child: Icon(
+                        Icons.route_rounded,
+                        color: context.primary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            route.name,
+                            style: AppTypography.bodyBold,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Row(
+                              children: [
+                                Icon(Icons.flag_rounded, size: 14, color: context.textTertiary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${waypoints.length} stop${waypoints.length == 1 ? '' : 's'}',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textTertiary),
+                                ),
+                                if (route.isFavorite) ...[
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Icon(Icons.star_rounded, size: 14, color: context.warning),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      iconSize: 20,
+                      icon: Icon(Icons.play_arrow_rounded, color: context.primary),
+                      onPressed: () {
+                        ref.read(activeTripProvider.notifier).startTripWithWaypoints(waypoints);
+                        Navigator.pushNamed(context, '/active-trip');
+                      },
+                      tooltip: 'Start Trip',
+                    ),
+                    IconButton(
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      iconSize: 20,
+                      icon: Icon(
+                        route.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+                        color: context.warning,
+                      ),
+                      onPressed: () {
+                        final repo = ref.read(savedRouteRepositoryProvider);
+                        repo.update(route.copyWith(isFavorite: !route.isFavorite));
+                      },
+                      tooltip: route.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+                    ),
+                    IconButton(
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      iconSize: 20,
+                      icon: Icon(Icons.delete_outline_rounded, color: context.error),
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: Text('Delete "${route.name}"?'),
+                            content: const Text('This route will be permanently removed.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                style: TextButton.styleFrom(foregroundColor: context.error),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          ref.read(savedRouteRepositoryProvider).delete(route.id);
+                        }
+                      },
+                      tooltip: 'Delete',
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }

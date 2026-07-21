@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../core/components/app_button.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -10,6 +11,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../data/trip_record.dart';
 import '../data/trip_model.dart';
+import '../data/trip_providers.dart';
 import '../data/waypoint.dart';
 
 class TripDetailScreen extends ConsumerWidget {
@@ -319,6 +321,18 @@ class TripDetailScreen extends ConsumerWidget {
                   label: 'Ended',
                   value: _formatDate(trip.endedAt),
                 ).animate().fadeIn(delay: 420.ms),
+                const SizedBox(height: AppSpacing.lg),
+                AppButton(
+                  label: routeWaypoints.length > 1
+                      ? 'Ride Again (${routeWaypoints.length} stops)'
+                      : 'Ride Again',
+                  icon: Icons.replay_rounded,
+                  onPressed: () {
+                    ref.read(activeTripProvider.notifier)
+                        .startTripWithWaypoints(routeWaypoints);
+                    Navigator.pushReplacementNamed(context, '/active-trip');
+                  },
+                ),
               ],
             ),
           ),

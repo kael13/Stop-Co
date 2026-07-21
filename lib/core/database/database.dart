@@ -10,6 +10,7 @@ import '../../features/scheduled_trip/data/scheduled_trip.dart';
 import '../../features/settings/data/settings_providers.dart';
 import '../../features/trip/data/trip_record.dart';
 import '../../features/trip/data/trip_model.dart';
+import '../../features/trip/data/saved_route.dart';
 
 part 'database.g.dart';
 
@@ -77,12 +78,24 @@ class ScheduledTrips extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Destinations, AppSettingsTable, Trips, ScheduledTrips])
+@DataClassName('SavedRoutesRow')
+class SavedRoutes extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get waypointsJson => text()();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Destinations, AppSettingsTable, Trips, ScheduledTrips, SavedRoutes])
 class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -104,6 +117,9 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 6) {
         await migrator.createTable(scheduledTrips);
+      }
+      if (from < 7) {
+        await migrator.createTable(savedRoutes);
       }
     },
   );
@@ -327,6 +343,64 @@ class LocalDatabase extends _$LocalDatabase {
       waypointsJson: row.waypointsJson,
       scheduledStartTime: row.scheduledStartTime,
       status: ScheduledTripStatus.values.firstWhere((s) => s.name == row.status),
+      createdAt: row.createdAt,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // SavedRoutes DAO
+  // ---------------------------------------------------------------------------
+
+  Stream<List<SavedRoute>> watchAllSavedRoutes() {
+    return (select(savedRoutes)
+          ..orderBy([(t) => OrderingTerm(
+              expression: t.isFavorite, mode: OrderingMode.desc)])
+          ..orderBy([(t) => OrderingTerm(
+              expression: t.createdAt, mode: OrderingMode.desc)]))
+        .watch()
+        .map((rows) => rows.map(_toSavedRoute).toList());
+  }
+
+  Future<List<SavedRoute>> getAllSavedRoutes() async {
+    final rows = await (select(savedRoutes)
+          ..orderBy([(t) => OrderingTerm(
+              expression: t.isFavorite, mode: OrderingMode.desc)])
+          ..orderBy([(t) => OrderingTerm(
+              expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+    return rows.map(_toSavedRoute).toList();
+  }
+
+  Future<void> saveSavedRoute(SavedRoute route) {
+    return into(savedRoutes).insert(SavedRoutesCompanion(
+      id: Value(route.id),
+      name: Value(route.name),
+      waypointsJson: Value(route.waypointsJson),
+      isFavorite: Value(route.isFavorite),
+      createdAt: Value(route.createdAt),
+    ));
+  }
+
+  Future<void> updateSavedRoute(SavedRoute route) {
+    return update(savedRoutes).replace(SavedRoutesCompanion(
+      id: Value(route.id),
+      name: Value(route.name),
+      waypointsJson: Value(route.waypointsJson),
+      isFavorite: Value(route.isFavorite),
+      createdAt: Value(route.createdAt),
+    ));
+  }
+
+  Future<void> deleteSavedRoute(String id) {
+    return (delete(savedRoutes)..where((t) => t.id.equals(id))).go();
+  }
+
+  SavedRoute _toSavedRoute(SavedRoutesRow row) {
+    return SavedRoute(
+      id: row.id,
+      name: row.name,
+      waypointsJson: row.waypointsJson,
+      isFavorite: row.isFavorite,
       createdAt: row.createdAt,
     );
   }

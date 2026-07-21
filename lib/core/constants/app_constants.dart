@@ -10,19 +10,11 @@ class AppConstants {
 
   static const double maxAccuracyThreshold = 50;
   static const double maxSpeedMps = 100;
-  static const int routeReFetchIntervalSec = 60;
   static const double routeReFetchMinDistance = 50;
   static const int maxWaypoints = 5;
-  static const int locationPollIntervalMs = 10000;
-  static const int geofenceCheckIntervalMs = 15000;
-
-  static const String destinationCollection = 'destinations';
 
   static String get foregroundChannel =>
       dotenv.env['FOREGROUND_CHANNEL'] ?? 'com.stopco.app/foreground_service';
-
-  static String get alarmChannel =>
-      dotenv.env['ALARM_CHANNEL'] ?? 'com.stopco.app/alarm';
 
   static String get nominatimBaseUrl =>
       dotenv.env['NOMINATIM_BASE_URL'] ?? 'https://nominatim.openstreetmap.org';

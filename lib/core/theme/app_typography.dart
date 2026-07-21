@@ -58,13 +58,6 @@ class AppTypography {
         height: 1.2,
       );
 
-  static TextStyle get alarm => GoogleFonts.plusJakartaSans(
-        fontSize: 48,
-        fontWeight: FontWeight.w700,
-        height: 1.0,
-        letterSpacing: -1.5,
-      );
-
   static TextStyle get distance => GoogleFonts.plusJakartaSans(
         fontSize: 64,
         fontWeight: FontWeight.w200,
@@ -126,14 +119,6 @@ class AppTypography {
     fontSize: 15,
     fontWeight: FontWeight.w500,
     height: 1.2,
-  );
-
-  static const TextStyle alarmFallback = TextStyle(
-    fontFamily: _fontFamily,
-    fontSize: 48,
-    fontWeight: FontWeight.w700,
-    height: 1.0,
-    letterSpacing: -1.5,
   );
 
   static const TextStyle distanceFallback = TextStyle(

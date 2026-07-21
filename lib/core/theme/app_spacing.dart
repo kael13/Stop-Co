@@ -15,8 +15,5 @@ class AppSpacing {
   static const double radiusXl = 24;
 
   static const double buttonHeight = 48;
-  static const double inputHeight = 48;
-  static const double iconButtonSize = 44;
-  static const double minTapTarget = 44;
   static const double pillRadius = 100;
 }
