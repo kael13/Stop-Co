@@ -35,4 +35,7 @@ class AppConstants {
 
   static String get alarmChannelDesc =>
       dotenv.env['ALARM_CHANNEL_DESC'] ?? 'Alerts when approaching your destination';
+
+  static String get packageName =>
+      dotenv.env['PACKAGE_NAME'] ?? 'com.stopco.stop_co';
 }

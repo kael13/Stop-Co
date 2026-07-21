@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart'
+    show AndroidAudioFocus, AndroidContentType, AndroidUsageType,
+        AudioContext, AudioContextAndroid, AudioPlayer,
+        DeviceFileSource, ReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +15,7 @@ import '../../../core/utils/gps_utils.dart';
 import '../../settings/data/settings_providers.dart';
 import '../../simulation/data/simulation_service.dart';
 import '../../../core/platform/foreground_service_channel.dart';
+import '../../../core/utils/alarm_sound.dart';
 import '../data/alarm_notification_service.dart';
 import '../data/trip_providers.dart';
 
@@ -26,6 +31,7 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   Timer? _repeatTimer;
+  AudioPlayer? _audioPlayer;
 
   @override
   void initState() {
@@ -41,28 +47,35 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
+    _startAlarmSound();
     _startRepeatingAlarm();
+  }
+
+  void _startAlarmSound() {
+    final settings = ref.read(settingsProvider);
+    if (settings.alarmType == AlarmType.vibrationOnly) return;
+    final path = AlarmSoundHelper.getInternalPath(settings.customAlarmSoundPath);
+    if (path == null || path.isEmpty) return;
+
+    _audioPlayer ??= AudioPlayer();
+    _audioPlayer!.setAudioContext(AudioContext(
+      android: AudioContextAndroid(
+        contentType: AndroidContentType.sonification,
+        usageType: AndroidUsageType.alarm,
+        audioFocus: AndroidAudioFocus.gain,
+      ),
+    ));
+    _audioPlayer!.setReleaseMode(ReleaseMode.loop);
+    _audioPlayer!.play(DeviceFileSource(path));
   }
 
   void _startRepeatingAlarm() {
     _repeatTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
       final settings = ref.read(settingsProvider);
       if (!settings.repeatedAlarm) return;
 
-      final alarmType = settings.alarmType;
-      final currentTrip = ref.read(activeTripProvider);
-      if (currentTrip == null) return;
-
-      if (alarmType != AlarmType.vibrationOnly) {
-        AlarmNotificationService.showAlarmNotification(
-          destinationName: currentTrip.currentWaypoint.name,
-          distance: currentTrip.currentDistance ?? 0,
-          alarmType: alarmType,
-          customSoundPath: settings.customAlarmSoundPath,
-          fullScreenIntent: false,
-        );
-      }
-      if (alarmType != AlarmType.soundOnly) {
+      if (settings.alarmType != AlarmType.soundOnly) {
         _fireNapAwareVibration();
       }
     });
@@ -71,12 +84,15 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
   @override
   void dispose() {
     _repeatTimer?.cancel();
+    _audioPlayer?.stop();
+    _audioPlayer?.dispose();
     _pulseController.dispose();
     super.dispose();
   }
 
   void _dismiss() {
     _repeatTimer?.cancel();
+    _audioPlayer?.stop();
     AlarmNotificationService.dismissAlarm();
     ScreenBrightness().resetApplicationScreenBrightness();
     WakelockPlus.disable();

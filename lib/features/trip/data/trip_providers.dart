@@ -61,12 +61,10 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
       hasAlerted: true,
     );
     final alarmType = _ref.read(settingsProvider).alarmType;
-    final customSoundPath = _ref.read(settingsProvider).customAlarmSoundPath;
     AlarmNotificationService.showAlarmNotification(
       destinationName: state!.currentWaypoint.name,
       distance: state!.currentDistance ?? 0,
       alarmType: alarmType,
-      customSoundPath: customSoundPath,
     );
   }
 

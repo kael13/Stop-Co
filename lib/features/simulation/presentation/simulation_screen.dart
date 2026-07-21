@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:audioplayers/audioplayers.dart' show AudioPlayer, DeviceFileSource;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +9,7 @@ import '../../../core/components/app_card.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/theme_colors.dart';
+import '../../../core/utils/alarm_sound.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../destination/data/destination_model.dart';
 import '../../destination/data/destination_providers.dart';
@@ -44,7 +45,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     super.dispose();
   }
 
-  Future<void> _testAlarmSound(String? path) async {
+  Future<void> _testAlarmSound(String? stored) async {
+    final path = AlarmSoundHelper.getInternalPath(stored);
     if (path == null || path.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No custom alarm sound selected')),
@@ -62,9 +64,9 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     setState(() => _isPlayingTest = true);
 
     try {
-      final source = path.startsWith('content://')
-          ? UrlSource(path) as Source
-          : DeviceFileSource(path.startsWith('file://') ? path.substring(7) : path);
+      final source = DeviceFileSource(
+        path.startsWith('file://') ? path.substring(7) : path,
+      );
       await _audioPlayer!.play(source);
       _playerCompleteSub?.cancel();
       _playerCompleteSub = _audioPlayer!.onPlayerComplete.listen((_) {

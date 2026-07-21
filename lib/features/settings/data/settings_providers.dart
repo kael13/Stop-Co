@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/database.dart';
 import '../../../core/database/database_provider.dart';
-import '../../../main.dart' show recreateAlarmChannel;
 
 enum AlarmType { soundAndVibration, soundOnly, vibrationOnly }
 
@@ -135,13 +134,11 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   void setCustomAlarmSound(String path) {
     state = state.copyWith(customAlarmSoundPath: path);
     _db.saveAppSettings(state);
-    recreateAlarmChannel(soundPath: path);
   }
 
   void clearCustomAlarmSound() {
     state = state.copyWith(customAlarmSoundPath: null);
     _db.saveAppSettings(state);
-    recreateAlarmChannel(soundPath: null);
   }
 
   void reset() {

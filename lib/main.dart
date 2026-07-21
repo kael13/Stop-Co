@@ -7,7 +7,6 @@ import 'app.dart';
 import 'core/constants/app_constants.dart';
 import 'core/database/database.dart';
 import 'core/database/database_provider.dart';
-
 final FlutterLocalNotificationsPlugin notificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
@@ -43,23 +42,13 @@ Future<void> _initPluginOnce() async {
   );
 }
 
-Future<void> _createAlarmChannel({String? customSoundPath}) async {
-  AndroidNotificationSound? sound;
-  if (customSoundPath != null) {
-    final uri = customSoundPath.startsWith('content://') ||
-            customSoundPath.startsWith('file://')
-        ? customSoundPath
-        : 'file://$customSoundPath';
-    sound = UriAndroidNotificationSound(uri);
-  }
-
+Future<void> _createAlarmChannel() async {
   final androidChannel = AndroidNotificationChannel(
     AppConstants.alarmChannelId,
     AppConstants.alarmChannelName,
     description: AppConstants.alarmChannelDesc,
     importance: Importance.max,
-    playSound: true,
-    sound: sound,
+    playSound: false,
     enableVibration: true,
     vibrationPattern: Int64List.fromList([0, 500, 250, 500, 250, 500]),
     audioAttributesUsage: AudioAttributesUsage.alarm,
@@ -73,13 +62,8 @@ Future<void> _createAlarmChannel({String? customSoundPath}) async {
   await androidPlugin?.createNotificationChannel(androidChannel);
 }
 
-Future<void> _initNotifications({String? customSoundPath}) async {
+Future<void> _initNotifications() async {
   await _initPluginOnce();
-  await _createAlarmChannel(customSoundPath: customSoundPath);
-}
-
-Future<void> recreateAlarmChannel({String? soundPath}) async {
-  await _createAlarmChannel(customSoundPath: soundPath);
 }
 
 void main() async {
@@ -88,8 +72,8 @@ void main() async {
 
   final db = LocalDatabase();
 
-  final settings = await db.getAppSettings();
-  await _initNotifications(customSoundPath: settings?.customAlarmSoundPath);
+  await _initNotifications();
+  await _createAlarmChannel();
 
   runApp(
     ProviderScope(

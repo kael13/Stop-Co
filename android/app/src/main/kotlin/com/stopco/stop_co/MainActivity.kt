@@ -137,18 +137,9 @@ class MainActivity : FlutterActivity() {
                 val uri = data.data!!
 
                 try {
-                    // Keep a local copy for in-app audioplayers playback
-                    copyToInternalStorage(uri)
-
-                    val resultPath = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        // API 29+: copy to MediaStore so the notification system can read it
-                        copyToMediaStore(uri)
-                    } else {
-                        // Pre-Q: return file path (audioplayers test works, notification default fallback)
-                        File(filesDir, "alarms").listFiles()?.firstOrNull()?.absolutePath ?: ""
-                    }
-
-                    filePickerResult?.success(resultPath)
+                    val internalPath = copyToInternalStorage(uri)
+                    val mediaStoreUri = copyToMediaStore(uri)
+                    filePickerResult?.success("$internalPath||$mediaStoreUri")
                 } catch (e: Exception) {
                     filePickerResult?.success("")
                 }
@@ -163,7 +154,6 @@ class MainActivity : FlutterActivity() {
         val mimeType = contentResolver.getType(uri) ?: "audio/mpeg"
         val extension = detectExtension(uri)
 
-        // Remove previous entry
         contentResolver.delete(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
             "${MediaStore.Audio.Media.DISPLAY_NAME} = ?",
@@ -195,7 +185,7 @@ class MainActivity : FlutterActivity() {
         return mediaUri.toString()
     }
 
-    private fun copyToInternalStorage(uri: android.net.Uri) {
+    private fun copyToInternalStorage(uri: android.net.Uri): String {
         val inputStream = contentResolver.openInputStream(uri)
             ?: throw Exception("Cannot open selected file")
 
@@ -211,6 +201,7 @@ class MainActivity : FlutterActivity() {
                 input.copyTo(output)
             }
         }
+        return outputFile.absolutePath
     }
 
     private fun detectExtension(uri: android.net.Uri): String {
