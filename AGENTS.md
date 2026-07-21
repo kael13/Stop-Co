@@ -871,3 +871,40 @@ During simulation mode, `_updateDistance()` called `_updateAccuracyTier()`, whic
 ## Verification
 - `flutter analyze`: 0 errors, 0 warnings (3 pre-existing info)
 - `flutter build apk --debug`: succeeded
+
+---
+
+# Session: Custom alarm sound playback fix — audioplayers for lock-screen, no default tone overlap
+
+## Goal
+- Play the user-selected custom alarm sound via audioplayers in alarm context when the app is minimized (locked/background), without overlapping with the notification's default sound.
+
+## Constraints & Preferences
+- Android 14+ (API 34). Foreground service + PARTIAL_WAKE_LOCK keeps Dart isolate alive.
+- Audioplayers with `AndroidUsageType.alarm` + `ReleaseMode.loop` handles continuous custom sound, survives lock screen.
+- Default tone suppressed via notification channel config: `Importance.high` (not `max`), no alarm category, `playSound: false`.
+- `fullScreenIntent: true` still wakes device.
+- Repeating vibration every 3s — no notification sound overlap.
+
+## What was done
+1. Restored audioplayers import, `AudioPlayer` field, and `_startAlarmSound()` with alarm `AudioContext` and `ReleaseMode.loop` in `alarm_screen.dart`.
+2. `_startAlarmSound()` uses `AlarmSoundHelper.getInternalPath()` to extract the internal file path from the combined `customAlarmSoundPath` string.
+3. Removed notification-based repeating sound from `_startRepeatingAlarm()` — now vibration only.
+4. Removed `notificationUri` parameter from `_createAlarmChannel()` in `main.dart`; channel uses `playSound: false` with no custom sound.
+5. Removed `recreateAlarmChannel()` from `main.dart` and its calls from `settings_providers.dart`.
+6. Set `playSound: false` in `alarm_notification_service.dart` notification details.
+7. Changed `Importance.max` → `Importance.high`, removed `AndroidNotificationCategory.alarm`, `Priority.max` → `Priority.high` to suppress default tone enforced by Android 14 on alarm category + max importance.
+
+## Key decisions
+- `Importance.high` instead of `max` + no alarm category: Android 14 enforces a default tone on alarm-category + max-importance notifications even with `playSound: false`. Switching to high + no category suppresses it while `fullScreenIntent: true` still wakes the device.
+- `AlarmSoundHelper.getInternalPath()` for path extraction: `customAlarmSoundPath` stores `internalFilepath||mediaStoreUri` combined string; `getInternalPath()` splits on `||` and returns the first segment for audioplayers.
+- `AndroidUsageType.alarm` + `ReleaseMode.loop`: ensures playback is treated as alarm audio (not media) and loops until dismissed.
+- `recreateAlarmChannel()` removed entirely: no longer needed since the notification channel no longer uses a custom sound URI.
+- Works on older Android versions (pre-API 26): `importance` and `category` are ignored; `playSound: false` is properly respected via `defaults` flags.
+
+## Relevant Files
+- `lib/features/trip/presentation/alarm_screen.dart` — audioplayers playback with alarm context + loop, vibration-only repeating timer
+- `lib/features/trip/data/alarm_notification_service.dart` — `playSound: false`, `Importance.high`, no alarm category
+- `lib/main.dart` — channel `playSound: false`, no custom sound URI, no `recreateAlarmChannel`
+- `lib/features/settings/data/settings_providers.dart` — no `recreateAlarmChannel` calls on set/clear
+- `lib/core/utils/alarm_sound.dart` — `AlarmSoundHelper.getInternalPath()` for path extraction
