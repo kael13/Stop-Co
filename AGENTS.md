@@ -817,3 +817,57 @@ During simulation mode, `_updateDistance()` called `_updateAccuracyTier()`, whic
 - `lib/core/platform/battery_opt_channel.dart` — Dart side of battery exemption MethodChannel
 - `android/app/src/main/kotlin/com/stopco/stop_co/MainActivity.kt` — `com.stopco.app/battery` channel handler
 - `android/app/src/main/kotlin/com/stopco/stop_co/TrackingForegroundService.kt` — `PARTIAL_WAKE_LOCK`, `VISIBILITY_PUBLIC`, notification update handling
+
+---
+
+# Session: Route Profiles — SavedRoutes DB, save/launch from planner, home, sim, trip detail
+
+## What was done
+- Created `SavedRoutes` Drift table (schema v7) with `id`, `name`, `waypointsJson`, `isFavorite`, `createdAt`
+- Added DAO methods: `watchAllSavedRoutes`, `getAllSavedRoutes`, `save`, `update`, `delete`
+- Created `SavedRoute` model (`lib/features/trip/data/saved_route.dart`) with `fromWaypoints()` (auto-names from stop names), JSON serialization, `copyWith`
+- Created `SavedRouteRepository` + `savedRoutesProvider` (stream) + `savedRouteRepositoryProvider`
+- Planner: "Save Route" button shown when `_waypoints.length > 1` (replaces "Save Only" from single-stop mode)
+- Home tab: `_RoutesBlock` added between Destinations and Recent Trips — tap to launch all stops
+- Planner tab: Routes segment added as third tab — list, launch, favorite, delete
+- Trip Detail: "Ride Again" button at bottom — re-launches all waypoints from past trip
+- Simulation: Saved Routes section — tap to load stops into simulation
+
+## Color palette reference
+### Static (`AppColors` — `lib/core/theme/app_colors.dart`)
+| Token | Hex |
+|---|---|
+| `primary` | `#4A90B0` |
+| `primaryDark` | `#3A7A9A` |
+| `taupe` | `#8B7E74` |
+| `offWhite` | `#FAFAF8` |
+| `deepSlate` | `#1C1C1E` |
+| `white` | `#FFFFFF` |
+| `grey50` | `#F8F8F8` |
+| `grey100` | `#E8E8E8` |
+| `error` | `#FF3B30` |
+
+### Context-driven (`ThemeColors` extension — `lib/core/theme/theme_colors.dart`)
+| Getter | Source |
+|---|---|
+| `primary` | `colorScheme.primary` |
+| `secondary` | `colorScheme.secondary` |
+| `surface` | `colorScheme.surface` |
+| `onSurface` | `colorScheme.onSurface` |
+| `error` | `colorScheme.error` |
+| `surfaceContainerLow` | `colorScheme.surfaceContainerLow` |
+| `surfaceContainerHigh` | `colorScheme.surfaceContainerHigh` |
+| `outlineVariant` | `colorScheme.outlineVariant` |
+| `scaffoldBackground` | `scaffoldBackgroundColor` |
+| `textPrimary` | = `onSurface` |
+| `textSecondary` | `onSurface` @ 60% |
+| `textTertiary` | `onSurface` @ 40% |
+| `textInverse` | = `surface` |
+| `success` | hardcoded `#34C759` |
+| `warning` | hardcoded `#FFB340` |
+| `shimmerBase` | = `surfaceContainerLow` |
+| `shimmerHighlight` | = `surfaceContainerHigh` |
+
+## Verification
+- `flutter analyze`: 0 errors, 0 warnings (3 pre-existing info)
+- `flutter build apk --debug`: succeeded
