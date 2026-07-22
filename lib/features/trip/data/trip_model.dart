@@ -32,14 +32,16 @@ class ActiveTrip {
 
   int get totalStops => waypoints.length;
 
+  static const _sentinel = Object();
+
   ActiveTrip copyWith({
     List<Waypoint>? waypoints,
     int? currentWaypointIndex,
     TripStatus? status,
     DateTime? startedAt,
-    double? currentDistance,
+    Object? currentDistance = _sentinel,
     bool? hasAlerted,
-    RouteResult? routeResult,
+    Object? routeResult = _sentinel,
     List<LatLng>? gpsBreadcrumbs,
   }) {
     return ActiveTrip(
@@ -47,9 +49,13 @@ class ActiveTrip {
       currentWaypointIndex: currentWaypointIndex ?? this.currentWaypointIndex,
       status: status ?? this.status,
       startedAt: startedAt ?? this.startedAt,
-      currentDistance: currentDistance ?? this.currentDistance,
+      currentDistance: currentDistance == _sentinel
+          ? this.currentDistance
+          : currentDistance as double?,
       hasAlerted: hasAlerted ?? this.hasAlerted,
-      routeResult: routeResult ?? this.routeResult,
+      routeResult: routeResult == _sentinel
+          ? this.routeResult
+          : routeResult as RouteResult?,
       gpsBreadcrumbs: gpsBreadcrumbs ?? this.gpsBreadcrumbs,
     );
   }

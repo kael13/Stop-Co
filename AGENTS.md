@@ -908,3 +908,60 @@ During simulation mode, `_updateDistance()` called `_updateAccuracyTier()`, whic
 - `lib/main.dart` — channel `playSound: false`, no custom sound URI, no `recreateAlarmChannel`
 - `lib/features/settings/data/settings_providers.dart` — no `recreateAlarmChannel` calls on set/clear
 - `lib/core/utils/alarm_sound.dart` — `AlarmSoundHelper.getInternalPath()` for path extraction
+
+---
+
+# Session: Unit tests — ActiveTripNotifier, models, GpsUtils
+
+## Objective
+- Add unit tests to the Stop-Co Flutter app for production readiness, starting with the core trip lifecycle (ActiveTripNotifier) and pure model/utils tests.
+
+## Important Details
+- Android-only (no ios/ directory), minSdk 24, uses debug signing keys for release.
+- AlarmNotifier interface extracted to allow mocking; alarmNotifierProvider + _AlarmNotifierImpl added to alarm_notification_service.dart.
+- ActiveTripNotifier now uses injected alarmNotifierProvider instead of static AlarmNotificationService calls.
+- ActiveTrip.copyWith uses sentinel pattern to allow clearing nullable fields to null.
+- completeTrip() always persists TripStatus.completed (was using state?.status which could be monitoring).
+- Two production bugs found and fixed: copyWith null-field clearing + completeTrip status.
+- FakeRef (extends Fake implements Ref) used instead of MockRef to avoid mocktail generic matcher issues with ProviderListenable.
+- registerFallbackValue required for AlarmType and TripRecord in mocktail stubs.
+
+## What was done
+- Added mocktail: ^1.0.4 to pubspec.yaml dev_dependencies.
+- Added abstract AlarmNotifier class, alarmNotifierProvider, _AlarmNotifierImpl to lib/features/trip/data/alarm_notification_service.dart.
+- Wired alarmNotifierProvider into trip_providers.dart (triggerAlarm, cancelTrip, completeTrip).
+- Wrote test/models/waypoint_test.dart (14 tests: fromDestination, copyWith, JSON roundtrip, serialization).
+- Wrote test/models/active_trip_test.dart (15 tests: currentWaypoint, isActive, hasMultipleStops, copyWith).
+- Wrote test/models/trip_record_test.dart (9 tests: serializeCoordinates, deserialize, duration).
+- Wrote test/utils/gps_utils_test.dart (16 tests: formatDistance, haversine, accuracy, speed, spike).
+- Wrote test/providers/active_trip_notifier_test.dart (33 tests: all notifier methods, state transitions, idempotency, persist correctness).
+- flutter analyze: 0 errors (only pre-existing info-level warnings).
+- flutter test: 95/95 tests pass.
+
+## Key decisions
+- **AlarmNotifier abstract class over mocking AlarmNotificationService directly**: Decouples production code from static methods, enables clean mocktail stubs.
+- **FakeRef over MockRef**: ProviderListenable generic type mismatch with mocktail matchers — Fake with manual stubMap avoids the issue entirely.
+- **Sentinel pattern for copyWith null clearing**: Dart's `null ?? existingValue` can't distinguish "intentionally null" from "not specified". Sentinel sentinelBox object detects explicit clears.
+- **completeTrip always uses TripStatus.completed**: Was using `state?.status` which could persist `alarmTriggered` or `monitoring` — bug found during testing.
+- **Per-image resilience in _persistTrip**: Each breadcrumb serialized independently; one failure doesn't corrupt the whole persist.
+
+## Verification
+- `flutter analyze`: 0 errors, 0 warnings (3 pre-existing info — unnecessary_underscores, use_build_context_synchronously x2)
+- `flutter test`: 95 tests, all passed
+
+## Critical Context
+- `StateNotifierProvider<ActiveTripNotifier, ActiveTrip?>` type is `StateNotifierProvider` not `NotifierProvider` — subtle Riverpod distinction.
+- `provider == settingsProvider` needed cast to `ProviderListenable<AppSettings>` to avoid `unrelated_type_equality_checks` analyzer warning.
+- Registering fallback values in `setUpAll` is required for mocktail methods that accept non-nullable value types as params.
+- `TripRecord` constructor requires `id` of type `int` — use `any(named: 'id')` in mocktail when verifying `saveTrip` call.
+
+## Relevant Files
+- `test/providers/active_trip_notifier_test.dart`: 33 tests for ActiveTripNotifier (trip lifecycle core)
+- `test/models/waypoint_test.dart`: 14 tests for Waypoint (serialization, fromDestination, JSON)
+- `test/models/active_trip_test.dart`: 15 tests for ActiveTrip (status, isActive, copyWith)
+- `test/models/trip_record_test.dart`: 9 tests for TripRecord (serializeCoordinates, deserialize, duration)
+- `test/utils/gps_utils_test.dart`: 16 tests for GpsUtils (formatDistance, haversine, speed spike)
+- `lib/features/trip/data/alarm_notification_service.dart`: AlarmNotifier interface + provider extracted
+- `lib/features/trip/data/trip_providers.dart`: uses alarmNotifierProvider instead of static call; completeTrip uses TripStatus.completed
+- `lib/features/trip/data/trip_model.dart`: ActiveTrip.copyWith uses sentinel pattern for nullable fields
+- `pubspec.yaml`: added mocktail: ^1.0.4 to dev_dependencies

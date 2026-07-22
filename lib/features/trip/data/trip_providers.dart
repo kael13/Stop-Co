@@ -60,11 +60,10 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
       status: TripStatus.alarmTriggered,
       hasAlerted: true,
     );
-    final alarmType = _ref.read(settingsProvider).alarmType;
-    AlarmNotificationService.showAlarmNotification(
+    _ref.read(alarmNotifierProvider).showAlarmNotification(
       destinationName: state!.currentWaypoint.name,
       distance: state!.currentDistance ?? 0,
-      alarmType: alarmType,
+      alarmType: _ref.read(settingsProvider).alarmType,
     );
   }
 
@@ -87,15 +86,14 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
   void cancelTrip() {
     _persistTrip(TripStatus.cancelled);
     state = null;
-    AlarmNotificationService.dismissAlarm();
+    _ref.read(alarmNotifierProvider).dismissAlarm();
   }
 
   void completeTrip() {
-    final finalStatus = state?.status ?? TripStatus.completed;
-    _persistTrip(finalStatus);
-    AlarmNotificationService.dismissAlarm();
+    _persistTrip(TripStatus.completed);
+    _ref.read(alarmNotifierProvider).dismissAlarm();
     if (state != null) {
-      state = state!.copyWith(status: finalStatus, hasAlerted: true);
+      state = state!.copyWith(status: TripStatus.completed, hasAlerted: true);
     }
   }
 
