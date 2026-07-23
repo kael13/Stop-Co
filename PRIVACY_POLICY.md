@@ -89,4 +89,4 @@ If this Privacy Policy is updated, the "Last updated" date at the top will chang
 For questions about this Privacy Policy, open an issue at:
 https://github.com/your-username/stop-co/issues
 
-Or contact the developer at: [your-email@example.com]
+Or contact the developer at: [g.dev@gmail.com]
