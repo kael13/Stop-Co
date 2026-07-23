@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/services/tile_cache_providers.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -164,7 +165,10 @@ class TripCompleteScreen extends ConsumerWidget {
                   height: 120,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                    child: _MiniRouteMap(waypoints: waypoints),
+                    child: _MiniRouteMap(
+                      waypoints: waypoints,
+                      tileProvider: ref.read(tileCacheServiceProvider).tileProvider,
+                    ),
                   ).animate().fadeIn(delay: 750.ms),
 
                 ),
@@ -252,8 +256,9 @@ class _StatItem extends StatelessWidget {
 
 class _MiniRouteMap extends StatelessWidget {
   final List<Waypoint> waypoints;
+  final TileProvider tileProvider;
 
-  const _MiniRouteMap({required this.waypoints});
+  const _MiniRouteMap({required this.waypoints, required this.tileProvider});
 
   @override
   Widget build(BuildContext context) {
@@ -278,6 +283,7 @@ class _MiniRouteMap extends StatelessWidget {
           TileLayer(
             urlTemplate: AppConstants.tileUrlTemplate,
             userAgentPackageName: 'com.stopco.app',
+            tileProvider: tileProvider,
           ),
           MarkerLayer(
             markers: waypoints.asMap().entries.map((entry) {

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/services/tile_cache_providers.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_input.dart';
@@ -372,6 +373,7 @@ class _DestinationSetupScreenState
               TileLayer(
                 urlTemplate: AppConstants.tileUrlTemplate,
                 userAgentPackageName: 'com.stopco.app',
+                tileProvider: ref.read(tileCacheServiceProvider).tileProvider,
               ),
               MarkerLayer(
                 markers: [

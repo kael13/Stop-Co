@@ -965,3 +965,87 @@ During simulation mode, `_updateDistance()` called `_updateAccuracyTier()`, whic
 - `lib/features/trip/data/trip_providers.dart`: uses alarmNotifierProvider instead of static call; completeTrip uses TripStatus.completed
 - `lib/features/trip/data/trip_model.dart`: ActiveTrip.copyWith uses sentinel pattern for nullable fields
 - `pubspec.yaml`: added mocktail: ^1.0.4 to dev_dependencies
+
+---
+
+# Session: Automatic tile caching — offline map support
+
+## Goal
+- Add automatic tile caching so previously viewed map areas work offline
+
+## What was done
+1. Created `TileCacheService` (`lib/core/services/tile_cache_service.dart`):
+   - Manages cache directory under app cache (`{cacheDir}/tiles/{z}/{x}/{y}.png`)
+   - Provides `CachedTileProvider` extending `TileProvider` — checks disk cache first, falls back to network + background cache write
+   - `cachedTileCount` / `cacheSizeBytes` getters for stats
+   - `clearCache()` for explicit invalidation
+   - 200 MB default cache cap with `evictIfNeeded()` (oldest-file-first eviction)
+   - Initialized in `main.dart` before `runApp()`, wired via `tileCacheServiceProvider` override
+
+2. Created `TileCacheProvider`s (`lib/core/services/tile_cache_providers.dart`):
+   - `tileCacheServiceProvider` — singleton service instance
+   - `tileCacheInitializedProvider` — ensures `init()` completes before consumers
+   - `tileCacheStatsProvider` — watcher for cache count + size
+
+3. Updated all 4 `TileLayer` usages to pass `tileProvider`:
+   - `destination_setup_screen.dart` — direct `ref.read()`
+   - `active_trip_screen.dart` — direct `ref.read()`
+   - `trip_detail_screen.dart` — passed through `_AnimatedTripMap` via constructor
+   - `trip_complete_screen.dart` — passed through `_MiniRouteMap` via constructor
+
+4. Added **Offline Maps** section to Settings screen:
+   - Shows cached tile count + total size (auto-refreshing)
+   - "Clear Cache" button with confirmation dialog
+   - `_formatBytes()` helper for human-readable sizes
+
+## Key decisions
+- Custom `CachedTileProvider` over third-party packages: minimal dependencies, full control over cache behavior
+- Fire-and-forget cache write: on first load, returns `NetworkImage` immediately (same as before) + writes tile to disk in background. Subsequent loads serve from `FileImage` — no performance regression on first view
+- 200 MB default cap: avoids unbounded disk usage; can be configured via constructor
+- `path_provider` app cache directory: tiles are eligible for OS cleanup under storage pressure (safe to lose), no user-facing permissions needed
+
+## Verification
+- `flutter analyze`: 0 errors, 5 info (pre-existing + 1 minor style)
+- `flutter build apk --debug`: succeeded (47.6s)
+
+## How to test
+1. Open the app while online
+2. Pan around any map (planner, active trip, trip detail) — tiles are silently cached
+3. Go to **Settings → Offline Maps** — see tile count + size
+4. Turn off airplane mode (or go offline)
+5. Revisit the same map areas — tiles load from cache (grey tiles for uncached areas)
+6. Use **Clear Cache** button to delete all cached tiles (they re-download on next online view)
+
+## Relevant Files
+- `lib/core/services/tile_cache_service.dart` — `TileCacheService` + `CachedTileProvider` (NEW)
+- `lib/core/services/tile_cache_providers.dart` — Riverpod providers (NEW)
+- `lib/main.dart` — `TileCacheService.init()` before `runApp()`, provider override
+- `lib/features/destination/presentation/destination_setup_screen.dart` — `tileProvider` on `TileLayer`
+- `lib/features/trip/presentation/active_trip_screen.dart` — `tileProvider` on `TileLayer`
+- `lib/features/trip/presentation/trip_detail_screen.dart` — `tileProvider` passed to `_AnimatedTripMap`
+- `lib/features/trip/presentation/trip_complete_screen.dart` — `tileProvider` passed to `_MiniRouteMap`
+- `lib/features/settings/presentation/settings_screen.dart` — `_TileCacheSection` with stats + clear
+
+---
+
+# Session: Tile caching sign-off — distance confirmed offline, feature complete
+
+## What happened
+1. User asked what we did so far — summarized the tile caching session.
+2. User asked if distance calculation works without internet — confirmed it uses Haversine formula (pure math, no network needed).
+3. All distance checks (`formatDistance`, Haversine, speed spike, movement detection) run entirely on-device via `GpsUtils` in `lib/core/utils/gps_utils.dart`.
+4. User confirmed "skip this feature" — meaning no further offline work needed; tile caching (previously implemented) is sufficient.
+5. Saved this session to AGENTS.md.
+
+## Offline capability summary
+| Feature | Works offline? | How |
+|---|---|---|
+| GPS position | ✅ | Satellites |
+| Map tiles (cached areas) | ✅ | Disk cache (200 MB, oldest-first eviction) |
+| Blue dot on map | ✅ | Local rendering |
+| Distance to stop | ✅ | Haversine math on CPU (no network) |
+| Geofence alarm | ✅ | Distance check → local notification |
+| Route polyline | ❌ | Needs OSRM API (not cached) |
+
+## Relevant Files
+- `lib/core/utils/gps_utils.dart` — `calculateDistance()` (Haversine), `formatDistance()`, `isMovementSpike()`, all fully offline

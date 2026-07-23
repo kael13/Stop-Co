@@ -10,6 +10,7 @@ import '../../../core/theme/theme_providers.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/components/app_input.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/services/tile_cache_providers.dart';
 import '../../profile/data/profile_providers.dart';
 import '../../simulation/presentation/simulation_screen.dart';
 import '../data/settings_providers.dart';
@@ -83,6 +84,13 @@ class SettingsScreen extends ConsumerWidget {
               contentPadding: EdgeInsets.zero,
             ),
           ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+          const SizedBox(height: AppSpacing.lg),
+          _SectionHeader(
+            title: 'Offline Maps',
+            accentColor: const Color(0xFF00A896),
+          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
+          const SizedBox(height: AppSpacing.sm),
+          const _TileCacheSection().animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
             title: 'Appearance',
@@ -695,5 +703,100 @@ class _ProfileSection extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _TileCacheSection extends ConsumerWidget {
+  const _TileCacheSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(tileCacheStatsProvider);
+    final cs = Theme.of(context).colorScheme;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: Row(
+              children: [
+                Icon(Icons.map_rounded, size: 18, color: cs.primary),
+                const SizedBox(width: AppSpacing.xs),
+                Text('Tile Cache', style: AppTypography.bodyBold.copyWith(color: cs.onSurface)),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+          statsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+            error: (_, __) => Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Text('Failed to load cache stats', style: AppTypography.caption.copyWith(color: cs.error)),
+            ),
+            data: (stats) => Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.xs),
+                  child: Row(
+                    children: [
+                      Icon(Icons.storage_rounded, size: 16, color: cs.onSurface.withValues(alpha: 0.5)),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        '${stats.count} tiles cached',
+                        style: AppTypography.secondary.copyWith(color: cs.onSurface.withValues(alpha: 0.7)),
+                      ),
+                      const Spacer(),
+                      Text(
+                        _formatBytes(stats.sizeBytes),
+                        style: AppTypography.secondary.copyWith(color: cs.onSurface.withValues(alpha: 0.7)),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+                ListTile(
+                  leading: Icon(Icons.delete_sweep_rounded, color: cs.error, size: 20),
+                  title: Text('Clear Cache', style: AppTypography.secondary.copyWith(color: cs.error)),
+                  subtitle: Text(
+                    'Removes all cached map tiles',
+                    style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.4)),
+                  ),
+                  trailing: Icon(Icons.chevron_right_rounded, color: cs.onSurface.withValues(alpha: 0.4), size: 18),
+                  onTap: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Clear Map Cache?'),
+                        content: const Text('Cached map tiles will be removed. They will be re-downloaded when you view the map while online.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Clear')),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await ref.read(tileCacheServiceProvider).clearCache();
+                      ref.invalidate(tileCacheStatsProvider);
+                    }
+                  },
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }

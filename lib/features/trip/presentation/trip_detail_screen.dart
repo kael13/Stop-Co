@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/services/tile_cache_providers.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -115,6 +116,7 @@ class TripDetailScreen extends ConsumerWidget {
               hasPath: hasPath,
               destinationPoint: destinationPoint,
               waypoints: routeWaypoints,
+              tileProvider: ref.read(tileCacheServiceProvider).tileProvider,
             ),
           ),
           Expanded(
@@ -419,6 +421,7 @@ class _AnimatedTripMap extends StatefulWidget {
   final bool hasPath;
   final LatLng? destinationPoint;
   final List<Waypoint> waypoints;
+  final TileProvider tileProvider;
 
   const _AnimatedTripMap({
     required this.traveledPath,
@@ -426,6 +429,7 @@ class _AnimatedTripMap extends StatefulWidget {
     required this.mapCenter,
     required this.hasPath,
     required this.destinationPoint,
+    required this.tileProvider,
     this.waypoints = const [],
   });
 
@@ -490,6 +494,7 @@ class _AnimatedTripMapState extends State<_AnimatedTripMap>
             TileLayer(
               urlTemplate: AppConstants.tileUrlTemplate,
               userAgentPackageName: 'com.stopco.app',
+              tileProvider: widget.tileProvider,
             ),
             if (visibleTraveled.length > 1)
               PolylineLayer(

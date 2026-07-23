@@ -16,6 +16,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../../core/platform/foreground_service_channel.dart';
+import '../../../core/services/tile_cache_providers.dart';
 import '../../../core/platform/battery_opt_channel.dart';
 import '../../settings/data/settings_providers.dart';
 import '../../simulation/data/simulation_service.dart';
@@ -452,6 +453,7 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
                 TileLayer(
                   urlTemplate: AppConstants.tileUrlTemplate,
                   userAgentPackageName: 'com.stopco.app',
+                  tileProvider: ref.read(tileCacheServiceProvider).tileProvider,
                 ),
                 MarkerLayer(
                   markers: [

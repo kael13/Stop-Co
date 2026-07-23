@@ -7,6 +7,8 @@ import 'app.dart';
 import 'core/constants/app_constants.dart';
 import 'core/database/database.dart';
 import 'core/database/database_provider.dart';
+import 'core/services/tile_cache_service.dart';
+import 'core/services/tile_cache_providers.dart';
 final FlutterLocalNotificationsPlugin notificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
@@ -72,6 +74,9 @@ void main() async {
 
   final db = LocalDatabase();
 
+  final tileCache = TileCacheService();
+  await tileCache.init();
+
   await _initNotifications();
   await _createAlarmChannel();
 
@@ -79,6 +84,7 @@ void main() async {
     ProviderScope(
       overrides: [
         localDatabaseProvider.overrideWithValue(db),
+        tileCacheServiceProvider.overrideWithValue(tileCache),
       ],
       child: const StopCoApp(),
     ),
