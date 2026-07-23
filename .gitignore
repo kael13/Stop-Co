@@ -58,3 +58,7 @@ PhasePlans.md
 
 # AI agent instructions (developer-only)
 AGENTS.md
+
+# Release signing keystore (never commit)
+android/upload-keystore.jks
+android/key.properties

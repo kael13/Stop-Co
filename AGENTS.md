@@ -847,6 +847,32 @@ During simulation mode, `_updateDistance()` called `_updateAccuracyTier()`, whic
 
 ---
 
+# Session: Firebase Cloud Functions proxy for TomTom geocoding + Firebase init
+
+## What was done
+1. Created `functions/index.js` with two v2 callable Cloud Functions (`tomtomSearch`, `tomtomReverseGeocode`) that proxy TomTom API requests server-side
+2. API key stored as Firebase Secret (`TOMTOM_API_KEY`) — never leaves the server
+3. Added `cloud_functions: ^5.2.0` and `firebase_core: ^3.15.2` to pubspec.yaml
+4. Downloaded `google-services.json` from Firebase Console (project `stop-co-bf96c`)
+5. Added `google-services` Gradle plugin to `android/build.gradle.kts` and `android/app/build.gradle.kts`
+6. Added `Firebase.initializeApp()` to `main.dart`
+7. Rewired `geocoding_service.dart` from direct HTTP calls to `FirebaseFunctions.instance.httpsCallable()`
+8. Fixed `_Map<Object?, Object?>` → `Map<String, dynamic>` type cast issue using `_castMap()` helper with `.map<String, dynamic>()` (Dart 3 runtime type mismatch)
+9. Removed `TOMTOM_API_KEY` and `TOMTOM_BASE_URL` from `.env`, `.env.example`, and `AppConstants`
+10. Cleaned up `firebase.json` (removed orphaned "exit" codebase)
+11. Deployed functions to `us-central1` via `firebase deploy --only functions`
+
+## Key decisions
+- **v2 callable functions** over v1: modern API, native secret support
+- **`_castMap()` helper** over `Map<String, dynamic>.from()`: nested maps in JSON response also come as `_Map<Object?, Object?>` — helper handles all nesting levels
+- **No auth gate on functions**: geocoding is a lightweight public utility; rate limiting deferred
+- **Secrets over config**: `firebase functions:secrets:set TOMTOM_API_KEY` for encrypted storage
+
+## Verification
+- `flutter analyze`: 0 errors (6 pre-existing info)
+- Function curl test: returns TomTom search results correctly
+- App search: working on device
+
 # Session: Route Profiles — SavedRoutes DB, save/launch from planner, home, sim, trip detail
 
 ## What was done
