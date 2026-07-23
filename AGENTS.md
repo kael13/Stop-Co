@@ -873,6 +873,15 @@ During simulation mode, `_updateDistance()` called `_updateAccuracyTier()`, whic
 - Function curl test: returns TomTom search results correctly
 - App search: working on device
 
+## Critical Context
+| Issue | Fix |
+|---|---|
+| Firebase was never initialized (`Firebase.initializeApp()` missing) | Added `Firebase.initializeApp()` to `main.dart` before `runApp()` |
+| No `google-services.json` in project | Downloaded via `firebase apps:sdkconfig ANDROID --out android/app/google-services.json` |
+| `google-services` Gradle plugin missing from `build.gradle.kts` | Added `classpath("com.google.gms:google-services:4.4.2")` to root buildscript; `id("com.google.gms.google-services")` to app plugin block |
+| `firebase init` overwrote `functions/index.js` with boilerplate and `functions/package.json` with different deps | Rewrote `index.js` with v2 callable functions; `npm install` restored deps; verified exports with `node -e` |
+| `cloud_functions` v5 SDK returns `_Map<Object?, Object?>` at runtime (Dart 3), not `Map<String, dynamic>` — all `as Map<String, dynamic>` casts fail | Added `_castMap()` helper using `.map<String, dynamic>()` on every nested map access; works recursively through response JSON |
+
 # Session: Route Profiles — SavedRoutes DB, save/launch from planner, home, sim, trip detail
 
 ## What was done
