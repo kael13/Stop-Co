@@ -1,3 +1,30 @@
+# Session: TomTom geocoding migration + custom simulation speed
+
+## What was done
+1. **TomTom geocoding** — replaced Nominatim with TomTom Fuzzy Search:
+   - `.env`/`.env.example`: swapped `NOMINATIM_BASE_URL` for `TOMTOM_API_KEY` + `TOMTOM_BASE_URL`
+   - `app_constants.dart`: replaced `nominatimBaseUrl` getter with `tomtomApiKey` + `tomtomBaseUrl`
+   - `geocoding_service.dart`: full rewrite — TomTom Fuzzy Search endpoint (`/search/2/search/{query}.json`), `countrySet` from one-time reverse geocode per session, POI display as `name, street, city`
+   - `destination_setup_screen.dart`: added `"Geocoding © TomTom"` attribution
+2. **Custom km/h input on Simulation**:
+   - `_customSpeedController` + `_customSpeedKmh` state in `_SimulationScreenState`
+   - Speed section: mode chips unchanged, new `Custom: [___] km/h` text field below
+   - `_SpeedSelector` accepts nullable `currentMode` (none selected when custom active)
+   - Chip tap clears custom; custom entry deselects chips
+   - `_startSimulation()` / `_fetchRouteAndStart()` use custom km/h when set
+
+## Key decisions
+- **Hybrid provider decision**: OSM tiles + TomTom geocoding + OSRM routing — Nominatim banned auto-complete and has 1 req/s limit; TomTom free tier sufficient for ~1k users
+- **TomTom Fuzzy Search over geocode endpoint**: `/search/2/search/{query}.json` finds POIs (landmarks, businesses) not just street addresses
+- **`countrySet` auto-detection**: one-time reverse geocode from user GPS → cached param (e.g. `PH`), avoids TomTom worldwide results dominating local POIs
+- **API key in APK**: user accepted security risk (no CC, key restricted by IP/referrer in TomTom portal)
+- **Custom speed overrides commute mode**: when custom km/h entered, no chip highlighted; clearing custom restores chip selection
+
+## Verification
+- `flutter analyze`: 0 errors
+- `flutter test`: 95/95 tests passed
+- `flutter build apk --debug`: succeeded
+
 # Session: Env-ify config, add PhasePlans.md & AGENTS.md to gitignore, rewrite README
 
 ## What was done

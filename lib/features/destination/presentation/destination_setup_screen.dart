@@ -1127,27 +1127,44 @@ class _SearchResultsDropdown extends StatelessWidget {
       padding: const EdgeInsets.only(top: AppSpacing.xxs),
       child: AppCard(
       padding: EdgeInsets.zero,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 200),
-        child: ListView.separated(
-          shrinkWrap: true,
-          itemCount: results.length,
-          separatorBuilder: (_, __) => Divider(height: 1, color: context.outlineVariant),
-          itemBuilder: (context, index) {
-            final result = results[index];
-            return ListTile(
-              dense: true,
-              leading: Icon(Icons.location_on_rounded, size: 16, color: context.primary),
-              title: Text(
-                result.displayName,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.secondary,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 200),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: results.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: context.outlineVariant),
+              itemBuilder: (context, index) {
+                final result = results[index];
+                return ListTile(
+                  dense: true,
+                  leading: Icon(Icons.location_on_rounded, size: 16, color: context.primary),
+                  title: Text(
+                    result.displayName,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.secondary,
+                  ),
+                  onTap: () => onSelect(result),
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8, bottom: 4),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Geocoding © TomTom',
+                style: AppTypography.caption.copyWith(
+                  color: context.textTertiary,
+                ),
               ),
-              onTap: () => onSelect(result              ),
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
       ),
     );

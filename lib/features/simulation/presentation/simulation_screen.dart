@@ -35,6 +35,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   bool _isPlayingTest = false;
   AudioPlayer? _audioPlayer;
   StreamSubscription? _playerCompleteSub;
+  final _customSpeedController = TextEditingController();
+  double? _customSpeedKmh;
 
   bool get _canAddWaypoint => _selectedWaypoints.length < 5;
 
@@ -42,6 +44,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   void dispose() {
     _playerCompleteSub?.cancel();
     _audioPlayer?.dispose();
+    _customSpeedController.dispose();
     super.dispose();
   }
 
@@ -250,10 +253,37 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             ),
           const SizedBox(height: AppSpacing.sm),
           _SpeedSelector(
-            currentMode: settings.commuteMode,
+            currentMode: _customSpeedKmh != null ? null : settings.commuteMode,
             onChanged: (mode) {
+              _customSpeedController.clear();
+              setState(() => _customSpeedKmh = null);
               ref.read(settingsProvider.notifier).setCommuteMode(mode);
             },
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Text('Custom', style: AppTypography.secondary),
+              const SizedBox(width: AppSpacing.xs),
+              SizedBox(
+                width: 72,
+                child: TextField(
+                  controller: _customSpeedController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    border: OutlineInputBorder(),
+                    hintText: 'km/h',
+                  ),
+                  onChanged: (val) {
+                    setState(() => _customSpeedKmh = double.tryParse(val));
+                  },
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text('km/h', style: AppTypography.secondary),
+            ],
           ),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
@@ -340,6 +370,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   void _startSimulation(SimulationService service, AppSettings settings) {
     if (_selectedWaypoints.isEmpty) return;
 
+    final speedMps = _customSpeedKmh != null
+        ? _customSpeedKmh! / 3.6
+        : settings.simulationSpeedMps;
+
     final first = _selectedWaypoints.first;
     service.start(
       destinationLatitude: first.latitude,
@@ -347,7 +381,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       destinationName: first.name,
       startLatitude: first.latitude + 0.01,
       startLongitude: first.longitude,
-      speedMps: settings.simulationSpeedMps,
+      speedMps: speedMps,
     );
 
     ref.read(simulationEnabledProvider.notifier).state = true;
@@ -374,6 +408,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   Future<void> _fetchRouteAndStart(SimulationService service, AppSettings settings) async {
     if (_selectedWaypoints.isEmpty) return;
 
+    final speedMps = _customSpeedKmh != null
+        ? _customSpeedKmh! / 3.6
+        : settings.simulationSpeedMps;
+
     final first = _selectedWaypoints.first;
     final from = LatLng(
       first.latitude + 0.01,
@@ -393,7 +431,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         destinationName: first.name,
         startLatitude: first.latitude + 0.01,
         startLongitude: first.longitude,
-        speedMps: settings.simulationSpeedMps,
+        speedMps: speedMps,
         routeCoordinates: route.coordinates,
       );
       ref.read(activeTripProvider.notifier).setRouteResult(route);
@@ -527,7 +565,7 @@ class _DestinationList extends StatelessWidget {
 }
 
 class _SpeedSelector extends StatelessWidget {
-  final CommuteMode currentMode;
+  final CommuteMode? currentMode;
   final ValueChanged<CommuteMode> onChanged;
 
   const _SpeedSelector({

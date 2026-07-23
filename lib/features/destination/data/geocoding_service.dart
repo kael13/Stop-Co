@@ -15,53 +15,79 @@ class GeocodingResult {
 }
 
 class GeocodingService {
+  String? _cachedCountryCode;
+
+  Future<String?> _resolveCountryCode(double lat, double lon) async {
+    if (_cachedCountryCode != null) return _cachedCountryCode;
+    try {
+      final uri = Uri.parse(
+        '${AppConstants.tomtomBaseUrl}/search/2/reverseGeocode/$lat,$lon.json'
+        '?key=${AppConstants.tomtomApiKey}',
+      );
+      final response = await http.get(uri);
+      if (response.statusCode != 200) return null;
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final List<dynamic> addresses = body['addresses'] as List<dynamic>? ?? [];
+      if (addresses.isEmpty) return null;
+      final addr = addresses[0]['address'] as Map<String, dynamic>?;
+      _cachedCountryCode = addr?['countryCode'] as String?;
+      return _cachedCountryCode;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<GeocodingResult>> search(String query, {double? nearLat, double? nearLon}) async {
-    var url = '${AppConstants.nominatimBaseUrl}/search'
-      '?q=${Uri.encodeComponent(query)}'
-      '&format=json'
-      '&limit=5'
-      '&addressdetails=0';
+    var url = '${AppConstants.tomtomBaseUrl}/search/2/search/'
+        '${Uri.encodeComponent(query)}.json'
+        '?key=${AppConstants.tomtomApiKey}'
+        '&limit=5';
     if (nearLat != null && nearLon != null) {
-      final minLon = (nearLon - 1.0).toStringAsFixed(4);
-      final minLat = (nearLat - 1.0).toStringAsFixed(4);
-      final maxLon = (nearLon + 1.0).toStringAsFixed(4);
-      final maxLat = (nearLat + 1.0).toStringAsFixed(4);
-      url += '&viewbox=$minLon,$minLat,$maxLon,$maxLat&bounded=1';
+      url += '&lat=$nearLat&lon=$nearLon';
+      final country = await _resolveCountryCode(nearLat, nearLon);
+      if (country != null) url += '&countrySet=$country';
     }
     final uri = Uri.parse(url);
 
-    final response = await http.get(
-      uri,
-      headers: {'User-Agent': AppConstants.userAgent},
-    );
+    final response = await http.get(uri);
 
     if (response.statusCode != 200) return [];
 
-    final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
-    return data.map((item) {
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final List<dynamic> results = body['results'] as List<dynamic>? ?? [];
+    return results.map((item) {
+      final pos = item['position'] as Map<String, dynamic>;
+      final addr = item['address'] as Map<String, dynamic>?;
+      final poi = item['poi'] as Map<String, dynamic>?;
+      final displayName = poi?['name'] != null
+          ? [
+              poi!['name'] as String,
+              if (addr?['streetName'] case final s? when (s as String).isNotEmpty) s,
+              if (addr?['municipality'] case final m? when (m as String).isNotEmpty) m,
+            ].join(', ')
+          : addr?['freeformAddress'] as String? ?? 'Unknown';
       return GeocodingResult(
-        displayName: item['display_name'] as String? ?? 'Unknown',
-        latitude: double.parse(item['lat'] as String),
-        longitude: double.parse(item['lon'] as String),
+        displayName: displayName,
+        latitude: (pos['lat'] as num).toDouble(),
+        longitude: (pos['lon'] as num).toDouble(),
       );
     }).toList();
   }
 
   Future<String?> reverseGeocode(double lat, double lon) async {
     final uri = Uri.parse(
-      '${AppConstants.nominatimBaseUrl}/reverse'
-      '?lat=$lat&lon=$lon'
-      '&format=json',
+      '${AppConstants.tomtomBaseUrl}/search/2/reverseGeocode/$lat,$lon.json'
+      '?key=${AppConstants.tomtomApiKey}',
     );
 
-    final response = await http.get(
-      uri,
-      headers: {'User-Agent': AppConstants.userAgent},
-    );
+    final response = await http.get(uri);
 
     if (response.statusCode != 200) return null;
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    return data['display_name'] as String?;
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final List<dynamic> addresses = body['addresses'] as List<dynamic>? ?? [];
+    if (addresses.isEmpty) return null;
+    final addr = addresses[0]['address'] as Map<String, dynamic>?;
+    return addr?['freeformAddress'] as String?;
   }
 }

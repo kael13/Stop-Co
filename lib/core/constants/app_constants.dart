@@ -16,8 +16,10 @@ class AppConstants {
   static String get foregroundChannel =>
       dotenv.env['FOREGROUND_CHANNEL'] ?? 'com.stopco.app/foreground_service';
 
-  static String get nominatimBaseUrl =>
-      dotenv.env['NOMINATIM_BASE_URL'] ?? 'https://nominatim.openstreetmap.org';
+  static String get tomtomApiKey =>
+      dotenv.env['TOMTOM_API_KEY'] ?? '';
+  static String get tomtomBaseUrl =>
+      dotenv.env['TOMTOM_BASE_URL'] ?? 'https://api.tomtom.com';
 
   static String get osrmBaseUrl =>
       dotenv.env['OSRM_BASE_URL'] ?? 'https://router.project-osrm.org';
