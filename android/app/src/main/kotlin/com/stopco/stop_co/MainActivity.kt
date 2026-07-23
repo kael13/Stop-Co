@@ -20,6 +20,7 @@ class MainActivity : FlutterActivity() {
 
     private val CHANNEL = "com.stopco.app/foreground_service"
     private val FILE_PICKER_CHANNEL = "com.stopco.app/file_picker"
+    private val SETTINGS_CHANNEL = "com.stopco.app/settings"
 
     private var filePickerResult: MethodChannel.Result? = null
     private val FILE_PICKER_REQUEST_CODE = 1001
@@ -92,6 +93,25 @@ class MainActivity : FlutterActivity() {
                         type = "audio/*"
                     }
                     startActivityForResult(intent, FILE_PICKER_REQUEST_CODE)
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            SETTINGS_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "openAppSettings" -> {
+                    val intent = Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:$packageName")
+                    )
+                    startActivity(intent)
+                    result.success(true)
                 }
                 else -> {
                     result.notImplemented()

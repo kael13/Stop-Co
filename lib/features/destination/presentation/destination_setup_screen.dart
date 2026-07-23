@@ -13,6 +13,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/platform/settings_channel.dart';
+import '../../../core/utils/permission_helper.dart';
 import '../../scheduled_trip/presentation/schedule_trip_form_screen.dart';
 import '../../trip/data/location_service.dart';
 import '../../trip/data/saved_route.dart';
@@ -92,13 +94,21 @@ class _DestinationSetupScreenState
   }
 
   Future<void> _getUserLocation() async {
-    final locationService = ref.read(locationServiceProvider);
-    final hasPerm = await locationService.ensurePermissions();
+    final hasPerm = await PermissionHelper.requestLocationWithRationale(context);
     if (!hasPerm) {
       if (mounted) {
-        // permission denied
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Location permission needed to center map on your position'),
+            action: SnackBarAction(
+              label: 'Settings',
+              onPressed: () => SettingsChannel.openAppSettings(),
+            ),
+          ),
+        );
       }
     } else {
+      final locationService = ref.read(locationServiceProvider);
       final pos = await locationService.getCurrentPosition();
       if (mounted && pos != null) {
         setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));

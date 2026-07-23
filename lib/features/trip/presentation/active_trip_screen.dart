@@ -18,6 +18,8 @@ import '../../../core/utils/gps_utils.dart';
 import '../../../core/platform/foreground_service_channel.dart';
 import '../../../core/services/tile_cache_providers.dart';
 import '../../../core/platform/battery_opt_channel.dart';
+import '../../../core/platform/settings_channel.dart';
+import '../../../core/utils/permission_helper.dart';
 import '../../settings/data/settings_providers.dart';
 import '../../simulation/data/simulation_service.dart';
 import '../data/location_service.dart';
@@ -79,15 +81,16 @@ class _ActiveTripScreenState extends ConsumerState<ActiveTripScreen>
     if (simulationEnabled) {
       _startSimulationMonitoring();
     } else {
-      final locationService = ref.read(locationServiceProvider);
-      final hasPerm = await locationService.ensurePermissions();
+      final hasPerm = await PermissionHelper.requestLocationWithRationale(context);
       if (!hasPerm) {
         if (mounted) setState(() => _permissionDenied = true);
         return;
       }
+      PermissionHelper.requestBackgroundLocation(context);
       _startRealMonitoring();
     }
 
+    PermissionHelper.requestNotificationPermission();
     _checkBatteryOptimization();
   }
 
@@ -747,6 +750,15 @@ class _PermissionDeniedBanner extends StatelessWidget {
             'Location permission is required for tracking.\nPlease enable it in Settings.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.warning),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            width: double.infinity,
+            child: AppButton(
+              label: 'Open Settings',
+              onPressed: () => SettingsChannel.openAppSettings(),
+              icon: Icons.settings_rounded,
+            ),
           ),
         ],
       ),
