@@ -58,15 +58,17 @@ class SettingsScreen extends ConsumerWidget {
               contentPadding: EdgeInsets.zero,
             ),
           ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
-          const SizedBox(height: AppSpacing.lg),
-          _SectionHeader(
-            title: 'Commute Mode',
-            accentColor: const Color(0xFF00A896),
-          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
-          const SizedBox(height: AppSpacing.sm),
-          _CommuteModeSection(
-            currentMode: settings.commuteMode,
-          ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+          if (kReleaseMode == false) ...[
+            const SizedBox(height: AppSpacing.lg),
+            _SectionHeader(
+              title: 'Commute Mode',
+              accentColor: const Color(0xFF00A896),
+            ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
+            const SizedBox(height: AppSpacing.sm),
+            _CommuteModeSection(
+              currentMode: settings.commuteMode,
+            ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+          ],
           const SizedBox(height: AppSpacing.lg),
           if (kReleaseMode == false) ...[
             _SectionHeader(

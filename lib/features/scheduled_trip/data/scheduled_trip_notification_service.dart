@@ -9,6 +9,39 @@ class ScheduledTripNotificationService {
 
   ScheduledTripNotificationService(this._plugin);
 
+  Future<void> _schedule(
+    int id,
+    String tripId,
+    String title,
+    String body,
+    tz.TZDateTime fireTime,
+  ) async {
+    final androidDetails = AndroidNotificationDetails(
+      AppConstants.tripReminderChannelId,
+      AppConstants.tripReminderChannelName,
+      channelDescription: AppConstants.tripReminderChannelDesc,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+
+    const iosDetails = DarwinNotificationDetails();
+
+    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      fireTime,
+      details,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: null,
+      payload: 'scheduled_trip:$tripId',
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
   Future<void> scheduleDayBeforeReminder(ScheduledTrip trip) async {
     final fireLocal = tz.local;
 
@@ -24,37 +57,55 @@ class ScheduledTripNotificationService {
         ? tz.TZDateTime.now(fireLocal).add(const Duration(seconds: 5))
         : fireTime;
 
-    final androidDetails = AndroidNotificationDetails(
-      AppConstants.tripReminderChannelId,
-      AppConstants.tripReminderChannelName,
-      channelDescription: AppConstants.tripReminderChannelDesc,
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
+    final timeFormatted = DateFormat('h:mm a').format(trip.scheduledStartTime);
+    final body =
+        'Departure at $timeFormatted — ${trip.waypoints.length} stop${trip.waypoints.length == 1 ? '' : 's'}';
+
+    await _schedule(
+      _dayBeforeId(trip.id),
+      trip.id,
+      'Trip Tomorrow: ${trip.name}',
+      body,
+      actualFireTime,
+    );
+  }
+
+  Future<void> scheduleHourBeforeReminder(ScheduledTrip trip) async {
+    final fireLocal = tz.local;
+
+    final fireTime = tz.TZDateTime(
+      fireLocal,
+      trip.scheduledStartTime.year,
+      trip.scheduledStartTime.month,
+      trip.scheduledStartTime.day,
+      trip.scheduledStartTime.hour - 1,
+      trip.scheduledStartTime.minute,
+      trip.scheduledStartTime.second,
+      trip.scheduledStartTime.millisecond,
     );
 
-    const iosDetails = DarwinNotificationDetails();
-
-    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    final actualFireTime = fireTime.isBefore(tz.TZDateTime.now(fireLocal))
+        ? tz.TZDateTime.now(fireLocal).add(const Duration(seconds: 5))
+        : fireTime;
 
     final timeFormatted = DateFormat('h:mm a').format(trip.scheduledStartTime);
+    final body =
+        'Departure at $timeFormatted — ${trip.waypoints.length} stop${trip.waypoints.length == 1 ? '' : 's'}';
 
-    await _plugin.zonedSchedule(
-      _notificationId(trip.id),
-      'Trip Tomorrow: ${trip.name}',
-      'Departure at $timeFormatted — ${trip.waypoints.length} stop${trip.waypoints.length == 1 ? '' : 's'}',
+    await _schedule(
+      _hourBeforeId(trip.id),
+      trip.id,
+      'Upcoming Trip: ${trip.name}',
+      body,
       actualFireTime,
-      details,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: null,
-      payload: 'scheduled_trip:${trip.id}',
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
   Future<void> cancelReminder(String tripId) async {
-    await _plugin.cancel(_notificationId(tripId));
+    await _plugin.cancel(_dayBeforeId(tripId));
+    await _plugin.cancel(_hourBeforeId(tripId));
   }
 
-  int _notificationId(String tripId) => 2000 + tripId.hashCode;
+  int _dayBeforeId(String tripId) => 2000 + tripId.hashCode;
+  int _hourBeforeId(String tripId) => 3000 + tripId.hashCode;
 }
