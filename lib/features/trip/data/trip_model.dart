@@ -14,6 +14,7 @@ class ActiveTrip {
   final bool hasAlerted;
   final RouteResult? routeResult;
   final List<LatLng> gpsBreadcrumbs;
+  final int napSnoozeRemaining;
 
   const ActiveTrip({
     required this.waypoints,
@@ -24,6 +25,7 @@ class ActiveTrip {
     this.hasAlerted = false,
     this.routeResult,
     this.gpsBreadcrumbs = const [],
+    this.napSnoozeRemaining = 3,
   });
 
   Waypoint get currentWaypoint => waypoints[currentWaypointIndex];
@@ -43,6 +45,7 @@ class ActiveTrip {
     bool? hasAlerted,
     Object? routeResult = _sentinel,
     List<LatLng>? gpsBreadcrumbs,
+    int? napSnoozeRemaining,
   }) {
     return ActiveTrip(
       waypoints: waypoints ?? this.waypoints,
@@ -57,6 +60,7 @@ class ActiveTrip {
           ? this.routeResult
           : routeResult as RouteResult?,
       gpsBreadcrumbs: gpsBreadcrumbs ?? this.gpsBreadcrumbs,
+      napSnoozeRemaining: napSnoozeRemaining ?? this.napSnoozeRemaining,
     );
   }
 

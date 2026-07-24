@@ -18,42 +18,52 @@ import 'features/trip/presentation/alarm_screen.dart';
 import 'features/trip/presentation/trip_complete_screen.dart';
 import 'main.dart';
 
-class StopCoApp extends ConsumerWidget {
+class StopCoApp extends StatelessWidget {
   const StopCoApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(builder: (context, ref, _) {
+      return MaterialApp(
+        title: AppConstants.appName,
+        navigatorKey: navigatorKey,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: ref.watch(themeModeProvider),
+        home: const _AppShell(),
+        routes: {
+          '/active-trip': (_) => const ActiveTripScreen(),
+          '/alarm': (_) => const AlarmScreen(),
+          '/trip-complete': (_) => const TripCompleteScreen(),
+          '/scheduled-trip-detail': (_) => const _ScheduledTripDetailWrapper(),
+        },
+      );
+    });
+  }
+}
+
+class _AppShell extends ConsumerWidget {
+  const _AppShell();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final onboardingAsync = ref.watch(onboardingCompletedProvider);
     final nicknameAsync = ref.watch(nicknameProvider);
-    final themeMode = ref.watch(themeModeProvider);
 
-    return MaterialApp(
-      title: AppConstants.appName,
-      navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: themeMode,
-      home: onboardingAsync.when(
-        loading: () => const _SplashScreen(),
-        error: (_, _) => const _SplashScreen(),
-        data: (onboarded) {
-          if (!onboarded) return const _OnboardingGate();
-          return nicknameAsync.when(
-            loading: () => const _SplashScreen(),
-            error: (_, _) => const MainShell(),
-            data: (nickname) {
-              if (nickname != null) return const MainShell();
-              return const NicknameSetupScreen();
-            },
-          );
-        },
-      ),
-      routes: {
-        '/active-trip': (_) => const ActiveTripScreen(),
-        '/alarm': (_) => const AlarmScreen(),
-        '/trip-complete': (_) => const TripCompleteScreen(),
-        '/scheduled-trip-detail': (_) => const _ScheduledTripDetailWrapper(),
+    return onboardingAsync.when(
+      loading: () => const _SplashScreen(),
+      error: (_, _) => const _SplashScreen(),
+      data: (onboarded) {
+        if (!onboarded) return const _OnboardingGate();
+        return nicknameAsync.when(
+          loading: () => const _SplashScreen(),
+          error: (_, _) => const MainShell(),
+          data: (nickname) {
+            if (nickname != null) return const MainShell();
+            return const NicknameSetupScreen();
+          },
+        );
       },
     );
   }

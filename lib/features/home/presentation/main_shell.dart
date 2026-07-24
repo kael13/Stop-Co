@@ -1124,6 +1124,11 @@ class _DestinationsTabState extends ConsumerState<_DestinationsTab> {
                 selected: {_selectedSegment},
                 onSelectionChanged: (selected) => setState(() => _selectedSegment = selected.first),
                 showSelectedIcon: false,
+                style: SegmentedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),

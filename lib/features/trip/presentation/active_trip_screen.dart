@@ -786,7 +786,7 @@ class _SimulationBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: context.secondary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
         border: Border.all(
           color: context.secondary.withValues(alpha: 0.3),
         ),
@@ -833,7 +833,7 @@ class _SimulationBadge extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: selected ? context.secondary : context.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
                   ),
                   child: Text(
                     mode.label,

@@ -110,7 +110,7 @@ class AppTheme {
         elevation: 2,
         shadowColor: colorScheme.shadow.withValues(alpha: 0.12),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
         ),
         margin: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
@@ -230,7 +230,7 @@ class AppTheme {
         elevation: 2,
         shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
         ),
         margin: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,

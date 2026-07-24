@@ -764,6 +764,10 @@ class _DestinationSetupScreenState
                   _editWaypointRadius(0, r);
                 },
                 selectedColor: context.primary.withValues(alpha: 0.15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
+                  side: BorderSide.none,
+                ),
               );
             }).toList(),
           ),
@@ -1047,6 +1051,10 @@ class _DestinationSetupScreenState
                         _editWaypointRadius(0, r);
                       },
                       selectedColor: context.primary.withValues(alpha: 0.15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
+                        side: BorderSide.none,
+                      ),
                     );
                   }).toList(),
                 ),
@@ -1352,6 +1360,10 @@ class _WaypointEditSheetState extends State<_WaypointEditSheet> {
                   selected: selected,
                   onSelected: (_) => setState(() => _selectedRadius = r),
                   selectedColor: context.primary.withValues(alpha: 0.15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
+                    side: BorderSide.none,
+                  ),
                 );
               }).toList(),
             ),

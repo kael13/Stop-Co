@@ -591,7 +591,7 @@ class _SpeedSelector extends StatelessWidget {
             ),
             backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
               side: BorderSide.none,
             ),
           );

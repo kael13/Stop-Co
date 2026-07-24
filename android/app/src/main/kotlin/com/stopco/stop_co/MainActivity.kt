@@ -3,6 +3,7 @@ package com.stopco.stop_co
 import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -140,6 +141,50 @@ class MainActivity : FlutterActivity() {
                         result.success(pm.isIgnoringBatteryOptimizations(packageName))
                     } else {
                         result.success(true)
+                    }
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.stopco.app/alarm"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getDefaultAlarmPath" -> {
+                    try {
+                        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                        val alarmUri = if (uri.toString().contains("settings")) {
+                            val actualUriString = Settings.System.getString(
+                                contentResolver,
+                                Settings.System.ALARM_ALERT
+                            )
+                            if (actualUriString != null) Uri.parse(actualUriString) else uri
+                        } else uri
+
+                        val mimeType = contentResolver.getType(alarmUri) ?: "audio/ogg"
+                        val extension = when {
+                            mimeType.contains("mp3") -> ".mp3"
+                            mimeType.contains("wav") || mimeType.contains("x-wav") -> ".wav"
+                            mimeType.contains("ogg") -> ".ogg"
+                            mimeType.contains("aac") -> ".aac"
+                            mimeType.contains("flac") -> ".flac"
+                            mimeType.contains("m4a") -> ".m4a"
+                            else -> ".audio"
+                        }
+
+                        val tempFile = File(cacheDir, "default_alarm$extension")
+                        contentResolver.openInputStream(alarmUri)?.use { input ->
+                            tempFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        result.success(tempFile.absolutePath)
+                    } catch (e: Exception) {
+                        result.success("")
                     }
                 }
                 else -> {

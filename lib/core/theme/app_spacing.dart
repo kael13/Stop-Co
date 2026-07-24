@@ -14,6 +14,8 @@ class AppSpacing {
   static const double radiusLg = 16;
   static const double radiusXl = 24;
 
+  static const double tileRadius = 14;
+
   static const double buttonHeight = 48;
   static const double pillRadius = 100;
 }

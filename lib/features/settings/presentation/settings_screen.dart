@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/platform/file_picker_channel.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -47,7 +49,7 @@ class SettingsScreen extends ConsumerWidget {
             child: SwitchListTile(
               secondary: Icon(Icons.bedtime_rounded, color: Theme.of(context).colorScheme.primary),
               title: const Text('Enable Nap Mode'),
-              subtitle: const Text('Dims screen and extends vibration when active'),
+              subtitle: const Text('Dims screen, loud vibration, smart snooze (3x max)'),
               value: settings.napModeEnabled,
               onChanged: (_) {
                 ref.read(settingsProvider.notifier).toggleNapMode();
@@ -66,25 +68,27 @@ class SettingsScreen extends ConsumerWidget {
             currentMode: settings.commuteMode,
           ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
-          _SectionHeader(
-            title: 'Simulation',
-            accentColor: const Color(0xFFE67E22),
-          ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
-          const SizedBox(height: AppSpacing.sm),
-          AppCard(
-            child: ListTile(
-              leading: Icon(Icons.science_rounded, color: Theme.of(context).colorScheme.primary),
-              title: const Text('Test Trip Simulation'),
-              subtitle: const Text('Simulate a trip with mock GPS data'),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SimulationScreen()),
+          if (kReleaseMode == false) ...[
+            _SectionHeader(
+              title: 'Simulation',
+              accentColor: const Color(0xFFE67E22),
+            ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
+            const SizedBox(height: AppSpacing.sm),
+            AppCard(
+              child: ListTile(
+                leading: Icon(Icons.science_rounded, color: Theme.of(context).colorScheme.primary),
+                title: const Text('Test Trip Simulation'),
+                subtitle: const Text('Simulate a trip with mock GPS data'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SimulationScreen()),
+                ),
+                contentPadding: EdgeInsets.zero,
               ),
-              contentPadding: EdgeInsets.zero,
-            ),
-          ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
-          const SizedBox(height: AppSpacing.lg),
+            ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+            const SizedBox(height: AppSpacing.lg),
+          ],
           _SectionHeader(
             title: 'Offline Maps',
             accentColor: const Color(0xFF00A896),
@@ -234,7 +238,7 @@ class _AlertPreferencesGroup extends ConsumerWidget {
                 ),
                 backgroundColor: cs.surfaceContainerLow,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
                   side: BorderSide.none,
                 ),
               );
@@ -286,6 +290,9 @@ class _AlertPreferencesGroup extends ConsumerWidget {
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: colors[settings.alarmType],
               selectedForegroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -581,6 +588,11 @@ class _ThemeModeSection extends ConsumerWidget {
               ref.read(themeModeProvider.notifier).setThemeMode(selected.first);
             },
             showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
+              ),
+            ),
           ),
         ],
       ),
@@ -595,14 +607,10 @@ class _ResetButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
+    return AppButton(
+      label: 'Reset to Defaults',
       onPressed: onReset,
-      child: Text(
-        'Reset to Defaults',
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-        ),
-      ),
+      isText: true,
     );
   }
 }

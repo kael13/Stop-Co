@@ -14,6 +14,7 @@ import '../../../core/theme/theme_colors.dart';
 import '../../../core/utils/gps_utils.dart';
 import '../../settings/data/settings_providers.dart';
 import '../../simulation/data/simulation_service.dart';
+import '../../../core/platform/alarm_channel.dart';
 import '../../../core/platform/foreground_service_channel.dart';
 import '../../../core/utils/alarm_sound.dart';
 import '../data/alarm_notification_service.dart';
@@ -51,11 +52,9 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
     _startRepeatingAlarm();
   }
 
-  void _startAlarmSound() {
+  Future<void> _startAlarmSound() async {
     final settings = ref.read(settingsProvider);
     if (settings.alarmType == AlarmType.vibrationOnly) return;
-    final path = AlarmSoundHelper.getInternalPath(settings.customAlarmSoundPath);
-    if (path == null || path.isEmpty) return;
 
     _audioPlayer ??= AudioPlayer();
     _audioPlayer!.setAudioContext(AudioContext(
@@ -66,7 +65,16 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
       ),
     ));
     _audioPlayer!.setReleaseMode(ReleaseMode.loop);
-    _audioPlayer!.play(DeviceFileSource(path));
+
+    final customPath = AlarmSoundHelper.getInternalPath(settings.customAlarmSoundPath);
+    if (customPath != null && customPath.isNotEmpty) {
+      _audioPlayer!.play(DeviceFileSource(customPath));
+    } else {
+      final path = await AlarmChannel.getDefaultAlarmPath();
+      if (path.isNotEmpty) {
+        _audioPlayer!.play(DeviceFileSource(path));
+      }
+    }
   }
 
   void _startRepeatingAlarm() {
@@ -88,6 +96,43 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
     _audioPlayer?.dispose();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  Duration _snoozeDuration(int remaining) {
+    return switch (remaining) {
+      3 => const Duration(minutes: 5),
+      2 => const Duration(minutes: 3),
+      _ => const Duration(minutes: 1),
+    };
+  }
+
+  void _snooze() {
+    _repeatTimer?.cancel();
+    _audioPlayer?.stop();
+    AlarmNotificationService.dismissAlarm();
+
+    final trip = ref.read(activeTripProvider);
+    if (trip == null) return;
+
+    final remaining = trip.napSnoozeRemaining;
+    final duration = _snoozeDuration(remaining);
+
+    ref.read(activeTripProvider.notifier).snoozeNap();
+
+    Timer(duration, () {
+      ref.read(activeTripProvider.notifier).triggerAlarm();
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Alarm snoozed — will re-alert in ${duration.inMinutes} min',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    Navigator.pushReplacementNamed(context, '/active-trip');
   }
 
   void _dismiss() {
@@ -161,6 +206,7 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
       return const SizedBox();
     }
 
+    final settings = ref.watch(settingsProvider);
     final distance = trip.currentDistance ?? 0;
     final distanceFormatted = GpsUtils.formatDistance(distance);
     final wp = trip.currentWaypoint;
@@ -248,10 +294,34 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen>
                 ),
               ),
               const Spacer(flex: 3),
-              AppButton(
-                label: 'Dismiss Alarm',
-                onPressed: _dismiss,
-              ),
+              if (settings.napModeEnabled && trip.napSnoozeRemaining > 0) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppButton(
+                        label: trip.napSnoozeRemaining == 3
+                            ? 'Snooze 5m'
+                            : trip.napSnoozeRemaining == 2
+                                ? 'Snooze 3m'
+                                : 'Snooze 1m',
+                        onPressed: _snooze,
+                        isSecondary: true,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: AppButton(
+                        label: 'Dismiss',
+                        onPressed: _dismiss,
+                      ),
+                    ),
+                  ],
+                ),
+              ] else
+                AppButton(
+                  label: 'Dismiss Alarm',
+                  onPressed: _dismiss,
+                ),
               const SizedBox(height: AppSpacing.lg),
             ],
           ),

@@ -67,6 +67,16 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
     );
   }
 
+  void snoozeNap() {
+    if (state == null) return;
+    if (state!.napSnoozeRemaining <= 0) return;
+    state = state!.copyWith(
+      napSnoozeRemaining: state!.napSnoozeRemaining - 1,
+      hasAlerted: false,
+      status: TripStatus.monitoring,
+    );
+  }
+
   void advanceToNextWaypoint() {
     if (state == null) return;
     final nextIndex = state!.currentWaypointIndex + 1;
@@ -80,6 +90,7 @@ class ActiveTripNotifier extends StateNotifier<ActiveTrip?> {
       hasAlerted: false,
       routeResult: null,
       currentDistance: null,
+      napSnoozeRemaining: 3,
     );
   }
 
