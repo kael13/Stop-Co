@@ -1111,3 +1111,66 @@ During simulation mode, `_updateDistance()` called `_updateAccuracyTier()`, whic
 
 ## Relevant Files
 - `lib/core/utils/gps_utils.dart` — `calculateDistance()` (Haversine), `formatDistance()`, `isMovementSpike()`, all fully offline
+
+---
+
+# Session: Firebase Cloud Functions proxy for TomTom geocoding + Firebase init + release prereqs
+
+## What was done
+1. Created `functions/index.js` with two v2 callable Cloud Functions (`tomtomSearch`, `tomtomReverseGeocode`) that proxy TomTom API requests server-side
+2. API key stored as Firebase Secret (`TOMTOM_API_KEY`) — never leaves the server
+3. Added `cloud_functions: ^5.2.0` and `firebase_core: ^3.15.2` to pubspec.yaml
+4. Downloaded `google-services.json` from Firebase Console (project `stop-co-bf96c`)
+5. Added `google-services` Gradle plugin to `android/build.gradle.kts` and `android/app/build.gradle.kts`
+6. Added `Firebase.initializeApp()` to `main.dart`
+7. Rewired `geocoding_service.dart` from direct HTTP calls to `FirebaseFunctions.instance.httpsCallable()`
+8. Fixed `_Map<Object?, Object?>` → `Map<String, dynamic>` type cast issue using `_castMap()` helper with `.map<String, dynamic>()` (Dart 3 runtime type mismatch)
+9. Removed `TOMTOM_API_KEY` and `TOMTOM_BASE_URL` from `.env`, `.env.example`, and `AppConstants`
+10. Cleaned up `firebase.json` (removed orphaned "exit" codebase)
+11. Deployed functions to `us-central1` via `firebase deploy --only functions`
+12. Revamped `PRIVACY_POLICY.md` to mention Firebase as a data processor
+13. Created `pre-requisite_playstore.md` with release checklist
+
+## Key decisions
+- **v2 callable functions** over v1: modern API, native secret support
+- **`_castMap()` helper** over `Map<String, dynamic>.from()`: nested maps in JSON response also come as `_Map<Object?, Object?>` — helper handles all nesting levels
+- **No auth gate on functions**: geocoding is a lightweight public utility; rate limiting deferred
+- **Secrets over config**: `firebase functions:secrets:set TOMTOM_API_KEY` for encrypted storage
+
+## Verification
+- `flutter analyze`: 0 errors (6 pre-existing info)
+- Function curl test: returns TomTom search results correctly
+- App search: working on device
+
+## Critical Context
+| Issue | Fix |
+|---|---|
+| Firebase was never initialized (`Firebase.initializeApp()` missing) | Added `Firebase.initializeApp()` to `main.dart` before `runApp()` |
+| No `google-services.json` in project | Downloaded via `firebase apps:sdkconfig ANDROID --out android/app/google-services.json` |
+| `google-services` Gradle plugin missing from `build.gradle.kts` | Added `classpath("com.google.gms:google-services:4.4.2")` to root buildscript; `id("com.google.gms.google-services")` to app plugin block |
+| `firebase init` overwrote `functions/index.js` with boilerplate and `functions/package.json` with different deps | Rewrote `index.js` with v2 callable functions; `npm install` restored deps; verified exports with `node -e` |
+| `cloud_functions` v5 SDK returns `_Map<Object?, Object?>` at runtime (Dart 3), not `Map<String, dynamic>` — all `as Map<String, dynamic>` casts fail | Added `_castMap()` helper using `.map<String, dynamic>()` on every nested map access; works recursively through response JSON |
+
+## Release Prerequisites Summary
+| # | Prerequisite | Status | Action needed |
+|---|---|---|---|
+| 1 | Keystore (`upload-keystore.jks` + `key.properties`) | ✅ Done | Already gitignored, release signing wired |
+| 2 | ProGuard / R8 rules | ❌ Missing | Add keep rules for Firebase |
+| 3 | Version bump | ⚠️ Pre-release | Currently `1.0.0+1` |
+| 4 | App icon | ⚠️ Default | Replace with custom branding |
+| 5 | Privacy Policy | ✅ Done | `PRIVACY_POLICY.md` written |
+| 6 | Play Console listing | ❌ User handles | Screenshots, description, content rating |
+| 7 | Build AAB | ❌ Final step | `flutter build appbundle --release` |
+
+## Relevant Files
+- `functions/index.js` — v2 callable Cloud Functions (tomtomSearch, tomtomReverseGeocode)
+- `functions/package.json` — Node 20 deps
+- `lib/features/destination/data/geocoding_service.dart` — rewired to Cloud Functions + `_castMap()` helper
+- `lib/main.dart` — added `Firebase.initializeApp()`
+- `lib/core/constants/app_constants.dart` — removed `tomtomApiKey`/`tomtomBaseUrl`
+- `pubspec.yaml` — added `cloud_functions: ^5.2.0`, `firebase_core: ^3.15.2`
+- `android/build.gradle.kts` — added google-services classpath
+- `android/app/build.gradle.kts` — added google-services plugin
+- `android/app/google-services.json` — downloaded from Firebase Console
+- `PRIVACY_POLICY.md` — revamped with Firebase mention
+- `pre-requisite_playstore.md` — release checklist

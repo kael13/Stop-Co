@@ -95,6 +95,11 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
     await ref.read(createScheduledTripAction(trip).future);
     if (!mounted) return;
 
+    ref.read(scheduledTripNotificationServiceProvider)
+        .scheduleDayBeforeReminder(trip);
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,

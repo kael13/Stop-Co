@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
 import 'app.dart';
 import 'core/constants/app_constants.dart';
 import 'core/database/database.dart';
@@ -38,8 +39,15 @@ Future<void> _initPluginOnce() async {
   await notificationsPlugin.initialize(
     initSettings,
     onDidReceiveNotificationResponse: (response) {
-      if (response.payload == 'alarm') {
+      final payload = response.payload;
+      if (payload == 'alarm') {
         navigatorKey.currentState?.pushReplacementNamed('/alarm');
+      } else if (payload != null && payload.startsWith('scheduled_trip:')) {
+        final tripId = payload.substring('scheduled_trip:'.length);
+        navigatorKey.currentState?.pushNamed(
+          '/scheduled-trip-detail',
+          arguments: tripId,
+        );
       }
     },
   );
@@ -65,7 +73,25 @@ Future<void> _createAlarmChannel() async {
   await androidPlugin?.createNotificationChannel(androidChannel);
 }
 
+Future<void> _createTripReminderChannel() async {
+  final androidChannel = AndroidNotificationChannel(
+    AppConstants.tripReminderChannelId,
+    AppConstants.tripReminderChannelName,
+    description: AppConstants.tripReminderChannelDesc,
+    importance: Importance.defaultImportance,
+    playSound: true,
+    enableVibration: true,
+  );
+
+  final androidPlugin = notificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+
+  await androidPlugin?.createNotificationChannel(androidChannel);
+}
+
 Future<void> _initNotifications() async {
+  tz_data.initializeTimeZones();
   await _initPluginOnce();
 }
 
@@ -81,6 +107,7 @@ void main() async {
 
   await _initNotifications();
   await _createAlarmChannel();
+  await _createTripReminderChannel();
 
   runApp(
     ProviderScope(

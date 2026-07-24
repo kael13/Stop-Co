@@ -11,6 +11,8 @@ import 'features/onboarding/presentation/brand_intro_screen.dart';
 import 'features/onboarding/presentation/onboarding_screen.dart';
 import 'features/profile/data/profile_providers.dart';
 import 'features/profile/presentation/nickname_setup_screen.dart';
+import 'features/scheduled_trip/data/scheduled_trip_providers.dart';
+import 'features/scheduled_trip/presentation/scheduled_trip_detail_screen.dart';
 import 'features/trip/presentation/active_trip_screen.dart';
 import 'features/trip/presentation/alarm_screen.dart';
 import 'features/trip/presentation/trip_complete_screen.dart';
@@ -51,6 +53,7 @@ class StopCoApp extends ConsumerWidget {
         '/active-trip': (_) => const ActiveTripScreen(),
         '/alarm': (_) => const AlarmScreen(),
         '/trip-complete': (_) => const TripCompleteScreen(),
+        '/scheduled-trip-detail': (_) => const _ScheduledTripDetailWrapper(),
       },
     );
   }
@@ -74,6 +77,28 @@ class _OnboardingGate extends ConsumerWidget {
           );
         }
         return const OnboardingScreen();
+      },
+    );
+  }
+}
+
+class _ScheduledTripDetailWrapper extends ConsumerWidget {
+  const _ScheduledTripDetailWrapper();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tripId = ModalRoute.of(context)!.settings.arguments as String;
+    final tripsAsync = ref.watch(scheduledTripsProvider);
+    return tripsAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        body: Center(child: Text('Error: $e')),
+      ),
+      data: (trips) {
+        final trip = trips.firstWhere((t) => t.id == tripId);
+        return ScheduledTripDetailScreen(trip: trip);
       },
     );
   }

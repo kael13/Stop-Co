@@ -24,6 +24,7 @@ import '../../trip/data/waypoint.dart';
 import '../data/destination_model.dart';
 import '../data/destination_repository.dart';
 import '../data/geocoding_service.dart';
+import '../../settings/data/settings_providers.dart';
 
 class DestinationSetupScreen extends ConsumerStatefulWidget {
   final Destination? existingDestination;
@@ -145,13 +146,14 @@ class _DestinationSetupScreenState
       name: 'Stop ${_waypoints.length + 1}',
       latitude: latLng.latitude,
       longitude: latLng.longitude,
-      alertRadius: AppConstants.defaultAlertRadius,
+      alertRadius: ref.read(settingsProvider).defaultAlertRadius,
       orderIndex: _waypoints.length,
     );
     setState(() {
       _waypoints.add(waypoint);
     });
     if (_waypoints.length == 1) {
+      _editName = waypoint.name;
       _editName = waypoint.name;
       _editRadius = waypoint.alertRadius;
       _nameController.text = _editName;
@@ -633,6 +635,7 @@ class _DestinationSetupScreenState
           _searchResults = results;
           _isSearching = false;
         });
+        FocusScope.of(context).unfocus();
       }
     });
   }
@@ -667,7 +670,7 @@ class _DestinationSetupScreenState
       name: result.displayName,
       latitude: latLng.latitude,
       longitude: latLng.longitude,
-      alertRadius: AppConstants.defaultAlertRadius,
+      alertRadius: ref.read(settingsProvider).defaultAlertRadius,
       orderIndex: _waypoints.length,
     );
     setState(() {
@@ -691,6 +694,7 @@ class _DestinationSetupScreenState
 
   Widget _buildPlannerBottomSheet() {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final bool isSearching = _searchResults.isNotEmpty;
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).padding.bottom + bottomInset,
@@ -707,7 +711,9 @@ class _DestinationSetupScreenState
         ],
       ),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.40 + bottomInset,
+        maxHeight: MediaQuery.of(context).size.height *
+                (isSearching ? 0.12 : 0.40) +
+            bottomInset,
       ),
       child: SingleChildScrollView(
         child: _waypoints.isEmpty

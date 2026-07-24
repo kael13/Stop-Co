@@ -35,4 +35,9 @@ class AppConstants {
 
   static String get packageName =>
       dotenv.env['PACKAGE_NAME'] ?? 'com.stopco.stop_co';
+
+  static const String tripReminderChannelId = 'stop_co_trip_reminder';
+  static const String tripReminderChannelName = 'Trip Reminders';
+  static const String tripReminderChannelDesc =
+      'Reminds you the day before a scheduled trip';
 }
