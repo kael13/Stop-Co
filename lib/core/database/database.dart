@@ -73,6 +73,7 @@ class ScheduledTrips extends Table {
   DateTimeColumn get scheduledStartTime => dateTime()();
   TextColumn get status => text()();
   DateTimeColumn get createdAt => dateTime()();
+  TextColumn get remindBefore => text().withDefault(const Constant('hourBefore'))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -95,7 +96,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -120,6 +121,9 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 7) {
         await migrator.createTable(savedRoutes);
+      }
+      if (from < 8) {
+        await migrator.addColumn(scheduledTrips, scheduledTrips.remindBefore);
       }
     },
   );
@@ -318,6 +322,7 @@ class LocalDatabase extends _$LocalDatabase {
       name: Value(trip.name),
       description: Value.absentIfNull(trip.description),
       waypointsJson: Value(trip.waypointsJson),
+      remindBefore: Value(trip.remindBefore.name),
       scheduledStartTime: Value(trip.scheduledStartTime),
       status: Value(trip.status.name),
       createdAt: Value(trip.createdAt),
@@ -344,6 +349,7 @@ class LocalDatabase extends _$LocalDatabase {
       scheduledStartTime: row.scheduledStartTime,
       status: ScheduledTripStatus.values.firstWhere((s) => s.name == row.status),
       createdAt: row.createdAt,
+      remindBefore: RemindBefore.values.firstWhere((e) => e.name == row.remindBefore),
     );
   }
 

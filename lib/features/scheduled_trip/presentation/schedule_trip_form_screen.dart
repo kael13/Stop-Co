@@ -34,6 +34,7 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
   TimeOfDay _selectedTime = TimeOfDay.now();
   CalendarFormat _calendarFormat = CalendarFormat.month;
   bool _isSaving = false;
+  RemindBefore _remindBefore = RemindBefore.hourBefore;
 
   @override
   void initState() {
@@ -44,6 +45,7 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
       _descController.text = t.description ?? '';
       _selectedDate = t.scheduledStartTime;
       _selectedTime = TimeOfDay.fromDateTime(t.scheduledStartTime);
+      _remindBefore = t.remindBefore;
     } else if (widget.waypoints.isNotEmpty) {
       _nameController.text = widget.waypoints.first.name;
     }
@@ -90,14 +92,14 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
       scheduledStartTime: scheduledStart,
       status: widget.existingTrip?.status ?? ScheduledTripStatus.pending,
       createdAt: widget.existingTrip?.createdAt ?? DateTime.now(),
+      remindBefore: _remindBefore,
     );
 
     await ref.read(createScheduledTripAction(trip).future);
     if (!mounted) return;
 
     final notif = ref.read(scheduledTripNotificationServiceProvider);
-    notif.scheduleDayBeforeReminder(trip);
-    notif.scheduleHourBeforeReminder(trip);
+    notif.scheduleReminder(trip);
 
     if (!mounted) return;
 
@@ -206,6 +208,22 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
                 const Spacer(),
                 Icon(Icons.edit_rounded, size: 18, color: cs.onSurface.withValues(alpha: 0.35)),
               ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text('Remind me', style: AppTypography.sectionHeader.copyWith(color: cs.onSurface)),
+          const SizedBox(height: AppSpacing.sm),
+          SegmentedButton<RemindBefore>(
+            segments: const [
+              ButtonSegment(value: RemindBefore.hourBefore, label: Text('An hour before')),
+              ButtonSegment(value: RemindBefore.dayBefore, label: Text('A day before (8 PM)')),
+            ],
+            selected: {_remindBefore},
+            onSelectionChanged: (v) => setState(() => _remindBefore = v.first),
+            style: SegmentedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),

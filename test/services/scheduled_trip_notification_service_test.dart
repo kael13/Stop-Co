@@ -18,8 +18,9 @@ void main() {
     name: 'Work',
     waypointsJson:
         '[{"id":"wp-1","name":"Office","latitude":40.0,"longitude":-74.0,"alertRadius":300,"orderIndex":0}]',
-    scheduledStartTime: DateTime(2026, 7, 25, 14, 30),
+    scheduledStartTime: DateTime(2026, 7, 27, 14, 30),
     createdAt: DateTime(2026, 7, 20),
+    remindBefore: RemindBefore.dayBefore,
   );
 
   setUpAll(() {
@@ -53,9 +54,9 @@ void main() {
         )).thenAnswer((_) async {});
   });
 
-  group('scheduleDayBeforeReminder', () {
+  group('scheduleReminder', () {
     test('schedules at 8 PM the day before departure', () async {
-      await service.scheduleDayBeforeReminder(sampleTrip);
+      await service.scheduleReminder(sampleTrip);
 
       final captured =
           verify(() => mockPlugin.zonedSchedule(
@@ -73,13 +74,13 @@ void main() {
       final tzDateTime = captured as dynamic;
       expect(tzDateTime.year, 2026);
       expect(tzDateTime.month, 7);
-      expect(tzDateTime.day, 24);
+      expect(tzDateTime.day, 26);
       expect(tzDateTime.hour, 20);
       expect(tzDateTime.minute, 0);
     });
 
     test('uses correct notification ID', () async {
-      await service.scheduleDayBeforeReminder(sampleTrip);
+      await service.scheduleReminder(sampleTrip);
 
       verify(() => mockPlugin.zonedSchedule(
             2000 + 'trip-1'.hashCode,
@@ -96,7 +97,7 @@ void main() {
     });
 
     test('uses correct title and body', () async {
-      await service.scheduleDayBeforeReminder(sampleTrip);
+      await service.scheduleReminder(sampleTrip);
 
       verify(() => mockPlugin.zonedSchedule(
             any(),
@@ -113,7 +114,7 @@ void main() {
     });
 
     test('uses correct payload', () async {
-      await service.scheduleDayBeforeReminder(sampleTrip);
+      await service.scheduleReminder(sampleTrip);
 
       verify(() => mockPlugin.zonedSchedule(
             any(),
@@ -130,7 +131,7 @@ void main() {
     });
 
     test('sets androidScheduleMode to inexactAllowWhileIdle', () async {
-      await service.scheduleDayBeforeReminder(sampleTrip);
+      await service.scheduleReminder(sampleTrip);
 
       verify(() => mockPlugin.zonedSchedule(
             any(),
@@ -147,7 +148,7 @@ void main() {
     });
 
     test('sets matchDateTimeComponents to null', () async {
-      await service.scheduleDayBeforeReminder(sampleTrip);
+      await service.scheduleReminder(sampleTrip);
 
       verify(() => mockPlugin.zonedSchedule(
             any(),
@@ -169,7 +170,7 @@ void main() {
             '[{"id":"wp-1","name":"A","latitude":40.0,"longitude":-74.0,"alertRadius":300,"orderIndex":0},{"id":"wp-2","name":"B","latitude":41.0,"longitude":-75.0,"alertRadius":500,"orderIndex":1}]',
       );
 
-      await service.scheduleDayBeforeReminder(multiStopTrip);
+      await service.scheduleReminder(multiStopTrip);
 
       verify(() => mockPlugin.zonedSchedule(
             any(),

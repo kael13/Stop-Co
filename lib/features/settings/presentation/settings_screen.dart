@@ -14,6 +14,7 @@ import '../../../core/components/app_input.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/services/tile_cache_providers.dart';
 import '../../profile/data/profile_providers.dart';
+import '../../scheduled_trip/data/scheduled_trip_providers.dart';
 import '../../simulation/presentation/simulation_screen.dart';
 import '../data/settings_providers.dart';
 
@@ -199,6 +200,31 @@ class _AlertPreferencesGroup extends ConsumerWidget {
                   )
                 : Icon(Icons.chevron_right_rounded, color: cs.onSurface.withValues(alpha: 0.4)),
             onTap: () => _pickAlarmSound(context, ref, notifier),
+            contentPadding: EdgeInsets.zero,
+          ),
+          const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+          ListTile(
+            leading: Icon(Icons.notification_add_rounded, color: cs.primary, size: 20),
+            title: const Text('Test Reminder Notification'),
+            subtitle: const Text('Fire a test notification immediately'),
+            trailing: Icon(Icons.chevron_right_rounded, color: cs.onSurface.withValues(alpha: 0.4)),
+            onTap: () async {
+              try {
+                final notif = ref.read(scheduledTripNotificationServiceProvider);
+                await notif.fireGenericTestNotification();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Test notification fired')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Notification failed: $e')),
+                  );
+                }
+              }
+            },
             contentPadding: EdgeInsets.zero,
           ),
         ],

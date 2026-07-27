@@ -42,7 +42,16 @@ class ScheduledTripNotificationService {
     );
   }
 
-  Future<void> scheduleDayBeforeReminder(ScheduledTrip trip) async {
+  Future<void> scheduleReminder(ScheduledTrip trip) async {
+    switch (trip.remindBefore) {
+      case RemindBefore.dayBefore:
+        await _scheduleDayBefore(trip);
+      case RemindBefore.hourBefore:
+        await _scheduleHourBefore(trip);
+    }
+  }
+
+  Future<void> _scheduleDayBefore(ScheduledTrip trip) async {
     final fireLocal = tz.local;
 
     final fireTime = tz.TZDateTime(
@@ -70,7 +79,7 @@ class ScheduledTripNotificationService {
     );
   }
 
-  Future<void> scheduleHourBeforeReminder(ScheduledTrip trip) async {
+  Future<void> _scheduleHourBefore(ScheduledTrip trip) async {
     final fireLocal = tz.local;
 
     final fireTime = tz.TZDateTime(
@@ -106,6 +115,29 @@ class ScheduledTripNotificationService {
     await _plugin.cancel(_hourBeforeId(tripId));
   }
 
+  Future<void> fireGenericTestNotification() async {
+    final androidDetails = AndroidNotificationDetails(
+      AppConstants.tripReminderChannelId,
+      AppConstants.tripReminderChannelName,
+      channelDescription: AppConstants.tripReminderChannelDesc,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+
+    const iosDetails = DarwinNotificationDetails();
+
+    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+    await _plugin.show(
+      _testId,
+      '[TEST] Reminder Notification',
+      'This is a test notification — your reminder channel is working.',
+      details,
+      payload: 'scheduled_trip:test',
+    );
+  }
+
   int _dayBeforeId(String tripId) => 2000 + tripId.hashCode;
   int _hourBeforeId(String tripId) => 3000 + tripId.hashCode;
+  int get _testId => 4000;
 }

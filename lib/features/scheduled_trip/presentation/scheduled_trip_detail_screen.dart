@@ -67,6 +67,17 @@ class ScheduledTripDetailScreen extends ConsumerWidget {
                     style: AppTypography.body.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
                   ),
                 ],
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    Icon(Icons.notifications_outlined, color: cs.primary, size: 16),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      'Reminder: ${trip.remindBefore.label}',
+                      style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

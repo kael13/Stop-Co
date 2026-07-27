@@ -2,6 +2,19 @@ import '../../trip/data/waypoint.dart';
 
 enum ScheduledTripStatus { pending, completed, cancelled }
 
+enum RemindBefore { dayBefore, hourBefore }
+
+extension RemindBeforeExt on RemindBefore {
+  String get label {
+    switch (this) {
+      case RemindBefore.dayBefore:
+        return 'A day before (8 PM)';
+      case RemindBefore.hourBefore:
+        return 'An hour before';
+    }
+  }
+}
+
 extension ScheduledTripStatusExt on ScheduledTripStatus {
   String get label {
     switch (this) {
@@ -23,6 +36,7 @@ class ScheduledTrip {
   final DateTime scheduledStartTime;
   final ScheduledTripStatus status;
   final DateTime createdAt;
+  final RemindBefore remindBefore;
 
   const ScheduledTrip({
     required this.id,
@@ -32,6 +46,7 @@ class ScheduledTrip {
     required this.scheduledStartTime,
     this.status = ScheduledTripStatus.pending,
     required this.createdAt,
+    this.remindBefore = RemindBefore.hourBefore,
   });
 
   List<Waypoint> get waypoints => Waypoint.deserializeList(waypointsJson);
@@ -44,6 +59,7 @@ class ScheduledTrip {
     DateTime? scheduledStartTime,
     ScheduledTripStatus? status,
     DateTime? createdAt,
+    RemindBefore? remindBefore,
   }) {
     return ScheduledTrip(
       id: id ?? this.id,
@@ -53,6 +69,7 @@ class ScheduledTrip {
       scheduledStartTime: scheduledStartTime ?? this.scheduledStartTime,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      remindBefore: remindBefore ?? this.remindBefore,
     );
   }
 
@@ -64,6 +81,7 @@ class ScheduledTrip {
     'scheduledStartTime': scheduledStartTime.toIso8601String(),
     'status': status.name,
     'createdAt': createdAt.toIso8601String(),
+    'remindBefore': remindBefore.name,
   };
 
   factory ScheduledTrip.fromJson(Map<String, dynamic> json) => ScheduledTrip(
@@ -74,5 +92,8 @@ class ScheduledTrip {
     scheduledStartTime: DateTime.parse(json['scheduledStartTime'] as String),
     status: ScheduledTripStatus.values.firstWhere((e) => e.name == json['status'] as String),
     createdAt: DateTime.parse(json['createdAt'] as String),
+    remindBefore: json['remindBefore'] != null
+        ? RemindBefore.values.firstWhere((e) => e.name == json['remindBefore'] as String)
+        : RemindBefore.hourBefore,
   );
 }
