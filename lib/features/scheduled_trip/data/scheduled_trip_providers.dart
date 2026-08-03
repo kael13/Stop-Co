@@ -41,6 +41,12 @@ final completeScheduledTripAction = FutureProvider.family<void, String>((ref, id
   await repo.updateStatus(id, ScheduledTripStatus.completed);
 });
 
+final markAlarmTriggeredAction = FutureProvider.family<void, String>((ref, id) async {
+  final repo = ref.read(scheduledTripRepositoryProvider);
+  await repo.markAlarmTriggered(id, DateTime.now());
+  ref.invalidate(scheduledTripsProvider);
+});
+
 final scheduledTripNotificationServiceProvider = Provider<ScheduledTripNotificationService>((ref) {
   return ScheduledTripNotificationService(notificationsPlugin);
 });

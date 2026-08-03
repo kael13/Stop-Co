@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -18,8 +19,8 @@ void main() {
     name: 'Work',
     waypointsJson:
         '[{"id":"wp-1","name":"Office","latitude":40.0,"longitude":-74.0,"alertRadius":300,"orderIndex":0}]',
-    scheduledStartTime: DateTime(2026, 7, 27, 14, 30),
-    createdAt: DateTime(2026, 7, 20),
+    scheduledStartTime: DateTime(2027, 1, 15, 14, 30),
+    createdAt: DateTime(2027, 1, 8),
     remindBefore: RemindBefore.dayBefore,
   );
 
@@ -72,9 +73,9 @@ void main() {
                     any(named: 'uiLocalNotificationDateInterpretation'),
               )).captured.first;
       final tzDateTime = captured as dynamic;
-      expect(tzDateTime.year, 2026);
-      expect(tzDateTime.month, 7);
-      expect(tzDateTime.day, 26);
+      expect(tzDateTime.year, 2027);
+      expect(tzDateTime.month, 1);
+      expect(tzDateTime.day, 14);
       expect(tzDateTime.hour, 20);
       expect(tzDateTime.minute, 0);
     });
@@ -130,7 +131,81 @@ void main() {
           )).called(1);
     });
 
-    test('sets androidScheduleMode to inexactAllowWhileIdle', () async {
+    test('sets androidScheduleMode to alarmClock (preferred non-native path)', () async {
+      await service.scheduleReminder(sampleTrip);
+
+      verify(() => mockPlugin.zonedSchedule(
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            androidScheduleMode: AndroidScheduleMode.alarmClock,
+            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
+            payload: any(named: 'payload'),
+            uiLocalNotificationDateInterpretation:
+                any(named: 'uiLocalNotificationDateInterpretation'),
+          )).called(1);
+    });
+
+    test('falls back to exactAllowWhileIdle when alarmClock fails', () async {
+      when(() => mockPlugin.zonedSchedule(
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            androidScheduleMode: AndroidScheduleMode.alarmClock,
+            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
+            payload: any(named: 'payload'),
+            uiLocalNotificationDateInterpretation:
+                any(named: 'uiLocalNotificationDateInterpretation'),
+          )).thenThrow(PlatformException(code: 'test'));
+
+      await service.scheduleReminder(sampleTrip);
+
+      verify(() => mockPlugin.zonedSchedule(
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
+            payload: any(named: 'payload'),
+            uiLocalNotificationDateInterpretation:
+                any(named: 'uiLocalNotificationDateInterpretation'),
+          )).called(1);
+    });
+
+    test('falls back to inexactAllowWhileIdle when alarmClock and exactAllowWhileIdle fail',
+        () async {
+      when(() => mockPlugin.zonedSchedule(
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            androidScheduleMode: AndroidScheduleMode.alarmClock,
+            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
+            payload: any(named: 'payload'),
+            uiLocalNotificationDateInterpretation:
+                any(named: 'uiLocalNotificationDateInterpretation'),
+          )).thenThrow(PlatformException(code: 'test'));
+
+      when(() => mockPlugin.zonedSchedule(
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
+            payload: any(named: 'payload'),
+            uiLocalNotificationDateInterpretation:
+                any(named: 'uiLocalNotificationDateInterpretation'),
+          )).thenThrow(PlatformException(code: 'test'));
+
       await service.scheduleReminder(sampleTrip);
 
       verify(() => mockPlugin.zonedSchedule(

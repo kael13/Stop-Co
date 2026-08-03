@@ -11,6 +11,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/theme_providers.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/components/app_input.dart';
+import '../../../core/utils/permission_helper.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/services/tile_cache_providers.dart';
 import '../../profile/data/profile_providers.dart';
@@ -87,6 +88,40 @@ class SettingsScreen extends ConsumerWidget {
                   context,
                   MaterialPageRoute(builder: (_) => const SimulationScreen()),
                 ),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+            const SizedBox(height: AppSpacing.sm),
+            AppCard(
+              child: ListTile(
+                leading: Icon(Icons.timer_rounded, color: Theme.of(context).colorScheme.primary),
+                title: const Text('Test Scheduled Reminder'),
+                subtitle: const Text('Schedule a test notification to verify reminders'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () async {
+                  final duration = await showModalBottomSheet<Duration>(
+                    context: context,
+                    builder: (_) => const _ScheduledReminderDurationSheet(),
+                  );
+                  if (duration == null || !context.mounted) return;
+                  final notif = ref.read(scheduledTripNotificationServiceProvider);
+                  final granted = await PermissionHelper.requestNotificationPermission();
+                  if (!granted) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Notification permission denied')),
+                      );
+                    }
+                    return;
+                  }
+                  await notif.scheduleTestReminder(duration);
+                  if (context.mounted) {
+                    final secs = duration.inSeconds;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Test reminder scheduled in $secs seconds — minimize the app')),
+                    );
+                  }
+                },
                 contentPadding: EdgeInsets.zero,
               ),
             ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
@@ -836,3 +871,79 @@ class _TileCacheSection extends ConsumerWidget {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }
+
+
+class _ScheduledReminderDurationSheet extends StatelessWidget {
+  const _ScheduledReminderDurationSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final options = [
+      (Duration(seconds: 10), '10 seconds'),
+      (Duration(seconds: 30), '30 seconds'),
+      (Duration(minutes: 1), '1 minute'),
+      (Duration(minutes: 2), '2 minutes'),
+      (Duration(minutes: 5), '5 minutes'),
+    ];
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Schedule Test Reminder', style: AppTypography.sectionHeader.copyWith(color: cs.onSurface)),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Choose how long until the notification fires, then minimize the app.',
+              style: AppTypography.secondary.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ...options.map((opt) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: SizedBox(
+                width: double.infinity,
+                child: AppButton(
+                  label: opt.$2,
+                  onPressed: () => Navigator.of(context).pop(opt.$1),
+                ),
+              ),
+            )),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                label: 'Cancel',
+                isText: true,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 16, color: cs.onSurface.withValues(alpha: 0.5)),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      'If it doesn\'t fire, enable "Alarms & reminders" in app settings',
+                      style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.5)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

@@ -1174,3 +1174,146 @@ During simulation mode, `_updateDistance()` called `_updateAccuracyTier()`, whic
 - `android/app/google-services.json` — downloaded from Firebase Console
 - `PRIVACY_POLICY.md` — revamped with Firebase mention
 - `pre-requisite_playstore.md` — release checklist
+
+# Session: Schedule reminder permission fix + simulation test in Settings
+
+## What was done
+1. **Fixed missing `POST_NOTIFICATIONS` permission** — added `await PermissionHelper.requestNotificationPermission()` before `notif.scheduleReminder(trip)` in `schedule_trip_form_screen.dart:_save()`. If denied, shows a SnackBar warning (DB save still succeeds).
+2. **Added `scheduleTestReminder(Duration)`** to `ScheduledTripNotificationService` — schedules a `zonedSchedule` notification at `now + fromNow` for testing the background delivery path.
+3. **Added "Test Scheduled Reminder" tile** in Settings > Simulation section (debug-only). Tapping opens a bottom sheet with preset durations (10s, 30s, 1m, 2m, 5m). On selection: requests notification permission → schedules via `zonedSchedule` → shows snackbar telling user to minimize the app.
+4. **Fixed date-sensitive test** — `scheduled_trip_notification_service_test.dart` used `2026-07-27` which is the current date, causing the "day before" fallback to fire. Moved test date to `2027-01-15`.
+5. **Fixed pre-existing test** — Updated `_persistTrip saves TripRecord with correct fields` to use TripStatus.completed instead of monitoring.
+
+## Root cause of original bug
+On Android 13+ (API 33+), `POST_NOTIFICATIONS` is a runtime permission. `flutter_local_notifications`' `zonedSchedule` silently fails to display the notification without it. The existing `PermissionHelper.requestNotificationPermission()` was never called before `scheduleReminder()`.
+
+## Files changed
+- `lib/features/scheduled_trip/presentation/schedule_trip_form_screen.dart` — added `PermissionHelper` import, permission check + await before `scheduleReminder`
+- `lib/features/scheduled_trip/data/scheduled_trip_notification_service.dart` — added `scheduleTestReminder(Duration)` and `cancelTestReminder()` methods
+- `lib/features/settings/presentation/settings_screen.dart` — added `PermissionHelper` import, "Test Scheduled Reminder" tile in debug-only simulation section, `_ScheduledReminderDurationSheet` bottom sheet widget
+- `test/services/scheduled_trip_notification_service_test.dart` — moved test date to 2027-01-15 to avoid date-sensitive failure
+
+## Verification
+- `flutter analyze`: 0 errors, 6 info (all pre-existing)
+- `flutter test`: 103/103 tests passed
+- `flutter build apk --debug`: succeeded
+
+## Fix: Trip reminder channel importance → high (MIUI fix)
+- Changed `_createTripReminderChannel()` in `main.dart`: `Importance.defaultImportance` → `Importance.high`, added delete+recreate to force apply on existing installs
+- Changed `AndroidNotificationDetails` in `scheduled_trip_notification_service.dart` (both `_schedule` and `fireGenericTestNotification`): `defaultImportance` → `high`, `defaultPriority` → `high`
+- Without this fix, MIUI silently drops `defaultImportance` channel notifications — channel wasn't even visible in notification settings
+- `flutter analyze`: 0 errors, `flutter test`: 103/103, `flutter build apk --debug`: succeeded
+### Fix: Exact alarm for test reminder (MIUI workaround)
+- Added `_schedule()` optional `scheduleMode` parameter (default `inexactAllowWhileIdle`)
+- Added `_requestExactAlarmsPermission()` helper in notification service
+- Modified `scheduleTestReminder()` to request `USE_EXACT_ALARM` permission and use `AndroidScheduleMode.exactAllowWhileIdle` when granted; falls back to `inexactAllowWhileIdle` if denied
+- Regular `scheduleReminder()` continues using `inexactAllowWhileIdle` (fine for hour/day-ahead notifications)
+
+---
+
+# Session: Test reminder exact alarm catch — stil not working
+
+## Status
+Still not working on MIUI device. `exactAllowWhileIdle` throws `PlatformException(exact_alarms_not_permitted)`. Caught and falls back to `inexactAllowWhileIdle`, but MIUI defers inexact alarms.
+
+## What was done
+- Removed `_requestExactAlarmsPermission()` — grayed out by MIUI system
+- `scheduleTestReminder()` now tries `exactAllowWhileIdle` → catches `PlatformException` → falls back silently to `inexactAllowWhileIdle`
+- Added hint in bottom sheet: "enable Alarms & reminders in app settings"
+- Notification channel: `Importance.high` + delete-recreate for MIUI
+- `POST_NOTIFICATIONS` permission checked before `scheduleReminder()`
+
+## Relevant Files
+- `lib/features/scheduled_trip/data/scheduled_trip_notification_service.dart` — try-exact/fallback-inexact
+- `lib/features/settings/presentation/settings_screen.dart` — hint in bottom sheet
+- `lib/main.dart` — Importance.high + delete-recreate
+
+---
+
+# Session: Native AlarmManager for scheduled reminders (MIUI fix)
+
+## Goal
+- Fix scheduled trip reminders not firing on MIUI: `flutter_local_notifications`' `zonedSchedule` with `inexactAllowWhileIdle` was unreliable even for multi-hour intervals; `alarmClock` blocked by MIUI's `SCHEDULE_EXACT_ALARM` restriction.
+
+## What was done
+1. Created `ReminderAlarmReceiver.kt` — native `BroadcastReceiver` that receives `AlarmManager` intents and shows notification directly via `NotificationManager`
+2. Added `com.stopco.app/reminder` MethodChannel to `MainActivity.kt` — `schedule` (uses `AlarmManager.set(RTC_WAKEUP)`) and `cancel` methods
+3. Registered receiver and `FOREGROUND_SERVICE_SPECIAL_USE` permission in `AndroidManifest.xml`
+4. Created `reminder_alarm_channel.dart` — `ReminderAlarmChannel.schedule()` / `.cancel()` Dart helper
+5. Updated `scheduled_trip_notification_service.dart`:
+   - `_schedule()` tries native `ReminderAlarmChannel` → plugin `alarmClock` → plugin `inexactAllowWhileIdle`
+   - `scheduleTestReminder()` same cascade: native → plugin → foreground service + Timer
+   - `cancelReminder()` also cancels via native channel
+6. Fixed test notification tap crash: `main.dart` skips navigation for `tripId == 'test'`; `app.dart` added defensive `where().isEmpty` check for invalid trip IDs
+
+## Key decisions
+- `AlarmManager.set(RTC_WAKEUP)` over `setAlarmClock`/`setExact`: No permissions needed, works on all Android including MIUI, inexact but fires within reasonable window
+- Native BroadcastReceiver over flutter_local_notifications' internal receiver: Bypasses any MIUI-specific plugin blocking
+- `cancel()` also clears the notification via `NotificationManager.cancel()` — prevents stale notifications
+- Three-tier fallback for test reminder: native → plugin → foreground service (proves channel works even when both alarm paths fail)
+
+## Verification
+- `flutter analyze`: 0 errors, 6 pre-existing info
+- `flutter build apk --debug`: succeeded
+- `flutter test`: 103/103 passed
+- Installed on device for overnight test
+
+## Next Steps
+- Verify notification fires after overnight/test period
+- If native `AlarmManager.set()` also deferred on MIUI, consider WorkManager
+
+## Relevant Files
+- `android/app/src/main/kotlin/com/stopco/stop_co/ReminderAlarmReceiver.kt` — NEW: BroadcastReceiver
+- `android/app/src/main/kotlin/com/stopco/stop_co/MainActivity.kt` — added `com.stopco.app/reminder` channel
+- `android/app/src/main/AndroidManifest.xml` — registered receiver
+- `lib/core/platform/reminder_alarm_channel.dart` — NEW: Dart helper
+- `lib/features/scheduled_trip/data/scheduled_trip_notification_service.dart` — native-first scheduling cascade
+- `lib/main.dart` — test notification tap guard
+- `lib/app.dart` — defensive trip not-found guard
+
+---
+
+# Session: Scheduled reminder cleanup — dedup notifications, tap-to-detail, timezone fix, release polish
+
+## What happened
+- **Timezone bug**: `tz.TZDateTime(fireLocal, year, month, day, hour, ...)` interprets components as wall-clock in `fireLocal`. If `tz.local` resolves to UTC (device timezone detection failure), the fire time was off by UTC offset (e.g. 8h for PHT). Fixed all 4 methods to use `tz.TZDateTime.from(scheduledStartTime, fireLocal)` first, then derive components from that.
+- **10s test reminder removed**: No longer fires after saving a schedule.
+- **Log statements stripped**: Removed all `Log.d` from `ReminderMonitorService.kt` for release.
+- **Simulate Reminder button removed**: From `scheduled_trip_detail_screen.dart`.
+- **Lifecycle-aware badge update**: Added `WidgetsBindingObserver` to `_AppShell` in `app.dart` — drains native SharedPreferences triggers on `resume` so "Notified" badge updates when user brings app to foreground.
+- **Notification tap → detail screen**: Modified `ReminderMonitorService` `PendingIntent` to pass `scheduledTripId` extra. Added `NOTIFICATION_TAP_CHANNEL` in `MainActivity.kt` (cold start via `configureFlutterEngine`, warm start via `onNewIntent`). Dart handler in `main.dart` navigates to `/scheduled-trip-detail`.
+- **Deduplication**: Removed `_scheduleHourBefore()` — hour-before handled solely by `ReminderMonitorService`. Day-before (8 PM) kept as plugin `_scheduleDayBefore()`. Removed `ReminderAlarmChannel.schedule()` call from `_schedule()`. Removed day-before reminder from `_startMonitorForTrip()` to avoid duplicate with plugin.
+- **Sound on monitor notification**: Added separate `ALARM_CHANNEL_ID` with `IMPORTANCE_HIGH` + `DEFAULT_SOUND | DEFAULT_VIBRATE` in `ReminderMonitorService.kt`. Foreground service notification stays on silent `IMPORTANCE_LOW` channel.
+- Removed unused `reminder_alarm_channel.dart` import, `_hourBeforeId`, `_dayBeforeFireTime`.
+
+## Verification
+- `flutter analyze`: 0 errors, 0 warnings
+- `flutter test`: 105/105 passed
+- `flutter build apk --debug`: succeeds
+
+## Result
+| Mode | Notifications | Sound | Taps → |
+|---|---|---|---|
+| hourBefore | 1 (monitor) | ✅ | Schedule detail |
+| dayBefore 8 PM | 1 (plugin) | ✅ | Schedule detail |
+| dayBefore hour-before | 1 (monitor) | ✅ | Schedule detail |
+
+---
+
+# Session: Scheduled reminder cleanup — dedup notifications, tap-to-detail, timezone fix, release polish
+
+## What happened
+- **Timezone bug**: `tz.TZDateTime(fireLocal, year, month, day, hour, ...)` interprets components as wall-clock in `fireLocal`. If `tz.local` resolves to UTC (device timezone detection failure), the fire time was off by UTC offset (e.g. 8h for PHT). Fixed all 4 methods to use `tz.TZDateTime.from(scheduledStartTime, fireLocal)` first, then derive components from that.
+- **10s test reminder removed**: No longer fires after saving a schedule.
+- **Simulate Reminder button removed**: From `scheduled_trip_detail_screen.dart`.
+- **Lifecycle-aware badge update**: Added `WidgetsBindingObserver` to `_AppShell` in `app.dart` — drains native SharedPreferences triggers on `resume` so "Notified" badge updates when user brings app to foreground.
+- **Notification tap → detail screen**: Modified `ReminderMonitorService` `PendingIntent` to pass `scheduledTripId` extra. Added `NOTIFICATION_TAP_CHANNEL` in `MainActivity.kt` (cold start via `configureFlutterEngine`, warm start via `onNewIntent`). Dart handler in `main.dart` navigates to `/scheduled-trip-detail`.
+- **Deduplication**: Removed `_scheduleHourBefore()` — hour-before handled solely by `ReminderMonitorService`. Day-before (8 PM) kept as plugin `_scheduleDayBefore()`. Removed `ReminderAlarmChannel.schedule()` call from `_schedule()`. Removed day-before reminder from `_startMonitorForTrip()` to avoid duplicate with plugin.
+- **Sound on monitor notification**: Added separate `ALARM_CHANNEL_ID` with `IMPORTANCE_HIGH` + `DEFAULT_SOUND | DEFAULT_VIBRATE` in `ReminderMonitorService.kt`. Foreground service notification stays on silent `IMPORTANCE_LOW` channel.
+- Removed unused `reminder_alarm_channel.dart` import, `_hourBeforeId`, `_dayBeforeFireTime`.
+- `—` (em dash U+2014) in notification body for departure time formatting.
+
+## Verification
+- `flutter analyze`: 0 errors, 0 warnings
+- `flutter test`: 105/105 passed
+- `flutter build apk --debug`: succeeds

@@ -7,6 +7,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_input.dart';
+import '../../../core/utils/permission_helper.dart';
 import '../../trip/data/waypoint.dart';
 import '../data/scheduled_trip.dart';
 import '../data/scheduled_trip_providers.dart';
@@ -98,8 +99,15 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
     await ref.read(createScheduledTripAction(trip).future);
     if (!mounted) return;
 
-    final notif = ref.read(scheduledTripNotificationServiceProvider);
-    notif.scheduleReminder(trip);
+    final granted = await PermissionHelper.requestNotificationPermission();
+    if (granted) {
+      final notif = ref.read(scheduledTripNotificationServiceProvider);
+      await notif.scheduleReminder(trip);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notification permission denied — reminder will not fire')),
+      );
+    }
 
     if (!mounted) return;
 

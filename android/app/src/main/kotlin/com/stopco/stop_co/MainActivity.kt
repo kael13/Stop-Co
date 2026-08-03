@@ -1,7 +1,11 @@
 package com.stopco.stop_co
 
 import android.app.Activity
+import android.app.AlarmManager
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
@@ -22,6 +26,11 @@ class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.stopco.app/foreground_service"
     private val FILE_PICKER_CHANNEL = "com.stopco.app/file_picker"
     private val SETTINGS_CHANNEL = "com.stopco.app/settings"
+    private val WAKE_LOCK_CHANNEL = "com.stopco.app/wake_lock"
+    private val REMINDER_CHANNEL = "com.stopco.app/reminder"
+    private val REMINDER_CALLBACK_CHANNEL = "com.stopco.app/reminder_callback"
+    private val REMINDER_MONITOR_CHANNEL = "com.stopco.app/reminder_monitor"
+    private val NOTIFICATION_TAP_CHANNEL = "com.stopco.app/notification_tap"
 
     private var filePickerResult: MethodChannel.Result? = null
     private val FILE_PICKER_REQUEST_CODE = 1001
@@ -192,6 +201,164 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            WAKE_LOCK_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "startTestReminder" -> {
+                    val intent = Intent(this, TestReminderService::class.java)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(intent)
+                    } else {
+                        startService(intent)
+                    }
+                    result.success(true)
+                }
+                "stopTestReminder" -> {
+                    val intent = Intent(this, TestReminderService::class.java).apply {
+                        action = TestReminderService.ACTION_STOP
+                    }
+                    startService(intent)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            REMINDER_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "schedule" -> {
+                    val tripId = call.argument<String>("tripId") ?: run {
+                        result.error("NO_TRIP_ID", "tripId required", null); return@setMethodCallHandler
+                    }
+                    val triggerTimeMs = call.argument<Long>("triggerTimeMs") ?: run {
+                        result.error("NO_TIME", "triggerTimeMs required", null); return@setMethodCallHandler
+                    }
+                    val title = call.argument<String>("title") ?: "Trip Reminder"
+                    val body = call.argument<String>("body") ?: ""
+                    val notificationId = call.argument<Int>("notificationId")
+                        ?: (2000 + tripId.hashCode())
+
+                    val intent = Intent(this, ReminderAlarmReceiver::class.java).apply {
+                        putExtra(ReminderAlarmReceiver.EXTRA_TRIP_ID, tripId)
+                        putExtra(ReminderAlarmReceiver.EXTRA_TITLE, title)
+                        putExtra(ReminderAlarmReceiver.EXTRA_BODY, body)
+                        putExtra(ReminderAlarmReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+                    }
+
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        this,
+                        notificationId,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+
+                    val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                    alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTimeMs, pendingIntent)
+                    result.success(true)
+                }
+                "cancel" -> {
+                    val tripId = call.argument<String>("tripId")
+                    val notificationId = if (tripId != null) 2000 + tripId.hashCode()
+                        else call.argument<Int>("notificationId") ?: 0
+
+                    val intent = Intent(this, ReminderAlarmReceiver::class.java)
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        this,
+                        notificationId,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                    alarmManager.cancel(pendingIntent)
+
+                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    notificationManager.cancel(notificationId)
+
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            REMINDER_CALLBACK_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "drainPendingTriggers" -> {
+                    val prefs = getSharedPreferences(ReminderAlarmReceiver.PREFS_NAME, MODE_PRIVATE)
+                    val prefix = ReminderAlarmReceiver.PREFIX
+                    val triggers = mutableMapOf<String, Long>()
+                    prefs.all.forEach { (key, value) ->
+                        if (key.startsWith(prefix) && value is Long) {
+                            val tripId = key.removePrefix(prefix)
+                            triggers[tripId] = value
+                        }
+                    }
+                    triggers.keys.forEach { tripId ->
+                        prefs.edit().remove("$prefix$tripId").apply()
+                    }
+                    result.success(triggers)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            REMINDER_MONITOR_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "start" -> {
+                    val remindersJson = call.argument<String>("reminders") ?: ""
+                    val intent = Intent(this, ReminderMonitorService::class.java).apply {
+                        putExtra(ReminderMonitorService.EXTRA_REMINDERS, remindersJson)
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(intent)
+                    } else {
+                        startService(intent)
+                    }
+                    result.success(true)
+                }
+                "stop" -> {
+                    val intent = Intent(this, ReminderMonitorService::class.java).apply {
+                        action = ReminderMonitorService.ACTION_STOP
+                    }
+                    startService(intent)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            NOTIFICATION_TAP_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getPendingScheduledTrip" -> {
+                    val tripId = intent?.getStringExtra("scheduledTripId")
+                    result.success(tripId)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Check if this activity was started from a notification tap
+        val pendingTripId = intent?.getStringExtra("scheduledTripId")
+        if (pendingTripId != null) {
+            MethodChannel(
+                flutterEngine.dartExecutor.binaryMessenger,
+                NOTIFICATION_TAP_CHANNEL
+            ).invokeMethod("scheduledTrip", pendingTripId)
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -289,5 +456,12 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        val tripId = intent.getStringExtra("scheduledTripId")
+        if (tripId != null) {
+            flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                MethodChannel(messenger, NOTIFICATION_TAP_CHANNEL)
+                    .invokeMethod("scheduledTrip", tripId)
+            }
+        }
     }
 }

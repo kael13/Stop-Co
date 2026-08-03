@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_constants.dart';
+import 'core/platform/reminder_alarm_callback_channel.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_typography.dart';
 import 'core/theme/theme_colors.dart';
@@ -11,6 +12,7 @@ import 'features/onboarding/presentation/brand_intro_screen.dart';
 import 'features/onboarding/presentation/onboarding_screen.dart';
 import 'features/profile/data/profile_providers.dart';
 import 'features/profile/presentation/nickname_setup_screen.dart';
+import 'features/scheduled_trip/data/scheduled_trip.dart';
 import 'features/scheduled_trip/data/scheduled_trip_providers.dart';
 import 'features/scheduled_trip/presentation/scheduled_trip_detail_screen.dart';
 import 'features/trip/presentation/active_trip_screen.dart';
@@ -43,11 +45,42 @@ class StopCoApp extends StatelessWidget {
   }
 }
 
-class _AppShell extends ConsumerWidget {
+class _AppShell extends ConsumerStatefulWidget {
   const _AppShell();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<_AppShell> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _drainAlarmTriggers();
+    }
+  }
+
+  Future<void> _drainAlarmTriggers() async {
+    final triggers = await ReminderAlarmCallbackChannel.drainPendingTriggers();
+    for (final entry in triggers.entries) {
+      ref.read(markAlarmTriggeredAction(entry.key));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final onboardingAsync = ref.watch(onboardingCompletedProvider);
     final nicknameAsync = ref.watch(nicknameProvider);
 
@@ -92,13 +125,21 @@ class _OnboardingGate extends ConsumerWidget {
   }
 }
 
-class _ScheduledTripDetailWrapper extends ConsumerWidget {
+class _ScheduledTripDetailWrapper extends ConsumerStatefulWidget {
   const _ScheduledTripDetailWrapper();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ScheduledTripDetailWrapper> createState() => _ScheduledTripDetailWrapperState();
+}
+
+class _ScheduledTripDetailWrapperState extends ConsumerState<_ScheduledTripDetailWrapper> {
+  bool _didMark = false;
+
+  @override
+  Widget build(BuildContext context) {
     final tripId = ModalRoute.of(context)!.settings.arguments as String;
     final tripsAsync = ref.watch(scheduledTripsProvider);
+
     return tripsAsync.when(
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -107,7 +148,20 @@ class _ScheduledTripDetailWrapper extends ConsumerWidget {
         body: Center(child: Text('Error: $e')),
       ),
       data: (trips) {
-        final trip = trips.firstWhere((t) => t.id == tripId);
+        final matches = trips.where((t) => t.id == tripId);
+        if (matches.isEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.of(context).pop();
+          });
+          return const Scaffold(
+            body: Center(child: Text('Trip not found')),
+          );
+        }
+        final trip = matches.first;
+        if (!_didMark && !trip.alarmTriggered && trip.status == ScheduledTripStatus.pending) {
+          _didMark = true;
+          ref.read(markAlarmTriggeredAction(tripId).future);
+        }
         return ScheduledTripDetailScreen(trip: trip);
       },
     );

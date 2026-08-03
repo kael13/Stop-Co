@@ -1869,6 +1869,17 @@ class $ScheduledTripsTable extends ScheduledTrips
     requiredDuringInsert: false,
     defaultValue: const Constant('hourBefore'),
   );
+  static const VerificationMeta _alarmTriggeredAtMeta = const VerificationMeta(
+    'alarmTriggeredAt',
+  );
+  @override
+  late final GeneratedColumn<int> alarmTriggeredAt = GeneratedColumn<int>(
+    'alarm_triggered_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1879,6 +1890,7 @@ class $ScheduledTripsTable extends ScheduledTrips
     status,
     createdAt,
     remindBefore,
+    alarmTriggeredAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1961,6 +1973,15 @@ class $ScheduledTripsTable extends ScheduledTrips
         ),
       );
     }
+    if (data.containsKey('alarm_triggered_at')) {
+      context.handle(
+        _alarmTriggeredAtMeta,
+        alarmTriggeredAt.isAcceptableOrUnknown(
+          data['alarm_triggered_at']!,
+          _alarmTriggeredAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2002,6 +2023,10 @@ class $ScheduledTripsTable extends ScheduledTrips
         DriftSqlType.string,
         data['${effectivePrefix}remind_before'],
       )!,
+      alarmTriggeredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}alarm_triggered_at'],
+      ),
     );
   }
 
@@ -2021,6 +2046,7 @@ class ScheduledTripsRow extends DataClass
   final String status;
   final DateTime createdAt;
   final String remindBefore;
+  final int? alarmTriggeredAt;
   const ScheduledTripsRow({
     required this.id,
     required this.name,
@@ -2030,6 +2056,7 @@ class ScheduledTripsRow extends DataClass
     required this.status,
     required this.createdAt,
     required this.remindBefore,
+    this.alarmTriggeredAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2044,6 +2071,9 @@ class ScheduledTripsRow extends DataClass
     map['status'] = Variable<String>(status);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['remind_before'] = Variable<String>(remindBefore);
+    if (!nullToAbsent || alarmTriggeredAt != null) {
+      map['alarm_triggered_at'] = Variable<int>(alarmTriggeredAt);
+    }
     return map;
   }
 
@@ -2059,6 +2089,9 @@ class ScheduledTripsRow extends DataClass
       status: Value(status),
       createdAt: Value(createdAt),
       remindBefore: Value(remindBefore),
+      alarmTriggeredAt: alarmTriggeredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(alarmTriggeredAt),
     );
   }
 
@@ -2078,6 +2111,7 @@ class ScheduledTripsRow extends DataClass
       status: serializer.fromJson<String>(json['status']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       remindBefore: serializer.fromJson<String>(json['remindBefore']),
+      alarmTriggeredAt: serializer.fromJson<int?>(json['alarmTriggeredAt']),
     );
   }
   @override
@@ -2092,6 +2126,7 @@ class ScheduledTripsRow extends DataClass
       'status': serializer.toJson<String>(status),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'remindBefore': serializer.toJson<String>(remindBefore),
+      'alarmTriggeredAt': serializer.toJson<int?>(alarmTriggeredAt),
     };
   }
 
@@ -2104,6 +2139,7 @@ class ScheduledTripsRow extends DataClass
     String? status,
     DateTime? createdAt,
     String? remindBefore,
+    Value<int?> alarmTriggeredAt = const Value.absent(),
   }) => ScheduledTripsRow(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -2113,6 +2149,9 @@ class ScheduledTripsRow extends DataClass
     status: status ?? this.status,
     createdAt: createdAt ?? this.createdAt,
     remindBefore: remindBefore ?? this.remindBefore,
+    alarmTriggeredAt: alarmTriggeredAt.present
+        ? alarmTriggeredAt.value
+        : this.alarmTriggeredAt,
   );
   ScheduledTripsRow copyWithCompanion(ScheduledTripsCompanion data) {
     return ScheduledTripsRow(
@@ -2132,6 +2171,9 @@ class ScheduledTripsRow extends DataClass
       remindBefore: data.remindBefore.present
           ? data.remindBefore.value
           : this.remindBefore,
+      alarmTriggeredAt: data.alarmTriggeredAt.present
+          ? data.alarmTriggeredAt.value
+          : this.alarmTriggeredAt,
     );
   }
 
@@ -2145,7 +2187,8 @@ class ScheduledTripsRow extends DataClass
           ..write('scheduledStartTime: $scheduledStartTime, ')
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
-          ..write('remindBefore: $remindBefore')
+          ..write('remindBefore: $remindBefore, ')
+          ..write('alarmTriggeredAt: $alarmTriggeredAt')
           ..write(')'))
         .toString();
   }
@@ -2160,6 +2203,7 @@ class ScheduledTripsRow extends DataClass
     status,
     createdAt,
     remindBefore,
+    alarmTriggeredAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -2172,7 +2216,8 @@ class ScheduledTripsRow extends DataClass
           other.scheduledStartTime == this.scheduledStartTime &&
           other.status == this.status &&
           other.createdAt == this.createdAt &&
-          other.remindBefore == this.remindBefore);
+          other.remindBefore == this.remindBefore &&
+          other.alarmTriggeredAt == this.alarmTriggeredAt);
 }
 
 class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
@@ -2184,6 +2229,7 @@ class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
   final Value<String> status;
   final Value<DateTime> createdAt;
   final Value<String> remindBefore;
+  final Value<int?> alarmTriggeredAt;
   final Value<int> rowid;
   const ScheduledTripsCompanion({
     this.id = const Value.absent(),
@@ -2194,6 +2240,7 @@ class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
     this.status = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.remindBefore = const Value.absent(),
+    this.alarmTriggeredAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ScheduledTripsCompanion.insert({
@@ -2205,6 +2252,7 @@ class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
     required String status,
     required DateTime createdAt,
     this.remindBefore = const Value.absent(),
+    this.alarmTriggeredAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -2221,6 +2269,7 @@ class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
     Expression<String>? status,
     Expression<DateTime>? createdAt,
     Expression<String>? remindBefore,
+    Expression<int>? alarmTriggeredAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2233,6 +2282,7 @@ class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
       if (status != null) 'status': status,
       if (createdAt != null) 'created_at': createdAt,
       if (remindBefore != null) 'remind_before': remindBefore,
+      if (alarmTriggeredAt != null) 'alarm_triggered_at': alarmTriggeredAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2246,6 +2296,7 @@ class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
     Value<String>? status,
     Value<DateTime>? createdAt,
     Value<String>? remindBefore,
+    Value<int?>? alarmTriggeredAt,
     Value<int>? rowid,
   }) {
     return ScheduledTripsCompanion(
@@ -2257,6 +2308,7 @@ class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       remindBefore: remindBefore ?? this.remindBefore,
+      alarmTriggeredAt: alarmTriggeredAt ?? this.alarmTriggeredAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2290,6 +2342,9 @@ class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
     if (remindBefore.present) {
       map['remind_before'] = Variable<String>(remindBefore.value);
     }
+    if (alarmTriggeredAt.present) {
+      map['alarm_triggered_at'] = Variable<int>(alarmTriggeredAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2307,6 +2362,7 @@ class ScheduledTripsCompanion extends UpdateCompanion<ScheduledTripsRow> {
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
           ..write('remindBefore: $remindBefore, ')
+          ..write('alarmTriggeredAt: $alarmTriggeredAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3575,6 +3631,7 @@ typedef $$ScheduledTripsTableCreateCompanionBuilder =
       required String status,
       required DateTime createdAt,
       Value<String> remindBefore,
+      Value<int?> alarmTriggeredAt,
       Value<int> rowid,
     });
 typedef $$ScheduledTripsTableUpdateCompanionBuilder =
@@ -3587,6 +3644,7 @@ typedef $$ScheduledTripsTableUpdateCompanionBuilder =
       Value<String> status,
       Value<DateTime> createdAt,
       Value<String> remindBefore,
+      Value<int?> alarmTriggeredAt,
       Value<int> rowid,
     });
 
@@ -3636,6 +3694,11 @@ class $$ScheduledTripsTableFilterComposer
 
   ColumnFilters<String> get remindBefore => $composableBuilder(
     column: $table.remindBefore,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get alarmTriggeredAt => $composableBuilder(
+    column: $table.alarmTriggeredAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3688,6 +3751,11 @@ class $$ScheduledTripsTableOrderingComposer
     column: $table.remindBefore,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get alarmTriggeredAt => $composableBuilder(
+    column: $table.alarmTriggeredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ScheduledTripsTableAnnotationComposer
@@ -3728,6 +3796,11 @@ class $$ScheduledTripsTableAnnotationComposer
 
   GeneratedColumn<String> get remindBefore => $composableBuilder(
     column: $table.remindBefore,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get alarmTriggeredAt => $composableBuilder(
+    column: $table.alarmTriggeredAt,
     builder: (column) => column,
   );
 }
@@ -3777,6 +3850,7 @@ class $$ScheduledTripsTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<String> remindBefore = const Value.absent(),
+                Value<int?> alarmTriggeredAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ScheduledTripsCompanion(
                 id: id,
@@ -3787,6 +3861,7 @@ class $$ScheduledTripsTableTableManager
                 status: status,
                 createdAt: createdAt,
                 remindBefore: remindBefore,
+                alarmTriggeredAt: alarmTriggeredAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3799,6 +3874,7 @@ class $$ScheduledTripsTableTableManager
                 required String status,
                 required DateTime createdAt,
                 Value<String> remindBefore = const Value.absent(),
+                Value<int?> alarmTriggeredAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ScheduledTripsCompanion.insert(
                 id: id,
@@ -3809,6 +3885,7 @@ class $$ScheduledTripsTableTableManager
                 status: status,
                 createdAt: createdAt,
                 remindBefore: remindBefore,
+                alarmTriggeredAt: alarmTriggeredAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

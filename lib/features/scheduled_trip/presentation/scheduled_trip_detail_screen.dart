@@ -15,6 +15,7 @@ class ScheduledTripDetailScreen extends ConsumerWidget {
   const ScheduledTripDetailScreen({super.key, required this.trip});
 
   Color _statusColor(ColorScheme cs) {
+    if (trip.alarmTriggered) return const Color(0xFFFFB340);
     switch (trip.status) {
       case ScheduledTripStatus.pending:
         return cs.primary;
@@ -82,19 +83,33 @@ class ScheduledTripDetailScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
-            ),
-            child: Text(
-              trip.status.label,
-              style: AppTypography.caption.copyWith(
-                color: statusColor,
-                fontWeight: FontWeight.w600,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+                ),
+                child: Text(
+                  trip.displayStatusLabel,
+                  style: AppTypography.caption.copyWith(
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
+              if (trip.alarmTriggered) ...[
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'Reminder sent at ${DateFormat('h:mm a').format(trip.alarmTriggeredAt!)}',
+                  style: AppTypography.caption.copyWith(
+                    color: cs.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
@@ -177,7 +192,7 @@ class ScheduledTripDetailScreen extends ConsumerWidget {
               },
               width: double.infinity,
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xs),
             TextButton(
               onPressed: () {
                 Navigator.push(

@@ -13,8 +13,9 @@ import '../data/scheduled_trip_providers.dart';
 class SchedulesListView extends ConsumerWidget {
   const SchedulesListView({super.key});
 
-  Color _statusColor(ScheduledTripStatus status, ColorScheme cs) {
-    switch (status) {
+  Color _statusColor(ScheduledTrip trip, ColorScheme cs) {
+    if (trip.alarmTriggered) return const Color(0xFFFFB340);
+    switch (trip.status) {
       case ScheduledTripStatus.pending:
         return cs.primary;
       case ScheduledTripStatus.completed:
@@ -92,7 +93,7 @@ class SchedulesListView extends ConsumerWidget {
           itemCount: trips.length,
           itemBuilder: (context, index) {
             final trip = trips[index];
-            final statusColor = _statusColor(trip.status, cs);
+            final statusColor = _statusColor(trip, cs);
             final waypoints = trip.waypoints;
             final dateLabel = _formatDate(trip.scheduledStartTime);
             final timeLabel = _formatTime(trip.scheduledStartTime);
@@ -170,7 +171,7 @@ class SchedulesListView extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           ),
                           child: Text(
-                            trip.status.label,
+                            trip.displayStatusLabel,
                             style: AppTypography.caption.copyWith(
                               color: statusColor,
                               fontWeight: FontWeight.w600,

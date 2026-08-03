@@ -28,6 +28,13 @@ extension ScheduledTripStatusExt on ScheduledTripStatus {
   }
 }
 
+extension DisplayStatus on ScheduledTrip {
+  String get displayStatusLabel {
+    if (alarmTriggered) return 'Notified';
+    return status.label;
+  }
+}
+
 class ScheduledTrip {
   final String id;
   final String name;
@@ -37,6 +44,7 @@ class ScheduledTrip {
   final ScheduledTripStatus status;
   final DateTime createdAt;
   final RemindBefore remindBefore;
+  final int? alarmTriggeredAtEpochMs;
 
   const ScheduledTrip({
     required this.id,
@@ -47,7 +55,14 @@ class ScheduledTrip {
     this.status = ScheduledTripStatus.pending,
     required this.createdAt,
     this.remindBefore = RemindBefore.hourBefore,
+    this.alarmTriggeredAtEpochMs,
   });
+
+  DateTime? get alarmTriggeredAt => alarmTriggeredAtEpochMs != null
+      ? DateTime.fromMillisecondsSinceEpoch(alarmTriggeredAtEpochMs!)
+      : null;
+
+  bool get alarmTriggered => alarmTriggeredAtEpochMs != null;
 
   List<Waypoint> get waypoints => Waypoint.deserializeList(waypointsJson);
 
@@ -60,6 +75,7 @@ class ScheduledTrip {
     ScheduledTripStatus? status,
     DateTime? createdAt,
     RemindBefore? remindBefore,
+    int? alarmTriggeredAtEpochMs,
   }) {
     return ScheduledTrip(
       id: id ?? this.id,
@@ -70,6 +86,7 @@ class ScheduledTrip {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       remindBefore: remindBefore ?? this.remindBefore,
+      alarmTriggeredAtEpochMs: alarmTriggeredAtEpochMs ?? this.alarmTriggeredAtEpochMs,
     );
   }
 
@@ -82,6 +99,7 @@ class ScheduledTrip {
     'status': status.name,
     'createdAt': createdAt.toIso8601String(),
     'remindBefore': remindBefore.name,
+    'alarmTriggeredAtEpochMs': alarmTriggeredAtEpochMs,
   };
 
   factory ScheduledTrip.fromJson(Map<String, dynamic> json) => ScheduledTrip(
@@ -95,5 +113,6 @@ class ScheduledTrip {
     remindBefore: json['remindBefore'] != null
         ? RemindBefore.values.firstWhere((e) => e.name == json['remindBefore'] as String)
         : RemindBefore.hourBefore,
+    alarmTriggeredAtEpochMs: json['alarmTriggeredAtEpochMs'] as int?,
   );
 }

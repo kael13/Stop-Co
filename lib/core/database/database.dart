@@ -74,6 +74,7 @@ class ScheduledTrips extends Table {
   TextColumn get status => text()();
   DateTimeColumn get createdAt => dateTime()();
   TextColumn get remindBefore => text().withDefault(const Constant('hourBefore'))();
+  Column<int> get alarmTriggeredAt => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -96,7 +97,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -124,6 +125,9 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 8) {
         await migrator.addColumn(scheduledTrips, scheduledTrips.remindBefore);
+      }
+      if (from < 9) {
+        await customStatement('ALTER TABLE scheduled_trips ADD COLUMN alarm_triggered_at INTEGER');
       }
     },
   );
@@ -326,6 +330,7 @@ class LocalDatabase extends _$LocalDatabase {
       scheduledStartTime: Value(trip.scheduledStartTime),
       status: Value(trip.status.name),
       createdAt: Value(trip.createdAt),
+      alarmTriggeredAt: Value.absentIfNull(trip.alarmTriggeredAtEpochMs),
     ));
   }
 
@@ -333,6 +338,13 @@ class LocalDatabase extends _$LocalDatabase {
     return (update(scheduledTrips)..where((t) => t.id.equals(id)))
         .write(ScheduledTripsCompanion(
       status: Value(status.name),
+    ));
+  }
+
+  Future<void> markScheduledTripAlarmTriggered(String id, int epochMs) {
+    return (update(scheduledTrips)..where((t) => t.id.equals(id)))
+        .write(ScheduledTripsCompanion(
+      alarmTriggeredAt: Value(epochMs),
     ));
   }
 
@@ -350,6 +362,7 @@ class LocalDatabase extends _$LocalDatabase {
       status: ScheduledTripStatus.values.firstWhere((s) => s.name == row.status),
       createdAt: row.createdAt,
       remindBefore: RemindBefore.values.firstWhere((e) => e.name == row.remindBefore),
+      alarmTriggeredAtEpochMs: row.alarmTriggeredAt,
     );
   }
 

@@ -25,4 +25,8 @@ class ScheduledTripRepository {
   Future<void> delete(String id) {
     return _db.deleteScheduledTrip(id);
   }
+
+  Future<void> markAlarmTriggered(String id, DateTime at) {
+    return _db.markScheduledTripAlarmTriggered(id, at.millisecondsSinceEpoch);
+  }
 }

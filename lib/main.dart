@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -9,8 +10,10 @@ import 'app.dart';
 import 'core/constants/app_constants.dart';
 import 'core/database/database.dart';
 import 'core/database/database_provider.dart';
+import 'core/platform/reminder_alarm_callback_channel.dart';
 import 'core/services/tile_cache_service.dart';
 import 'core/services/tile_cache_providers.dart';
+import 'features/scheduled_trip/data/scheduled_trip_repository.dart';
 final FlutterLocalNotificationsPlugin notificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
@@ -18,7 +21,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 bool _pluginInitialized = false;
 
-Future<void> _initPluginOnce() async {
+Future<void> _initPluginOnce(LocalDatabase db) async {
   if (_pluginInitialized) return;
   _pluginInitialized = true;
 
@@ -38,12 +41,15 @@ Future<void> _initPluginOnce() async {
 
   await notificationsPlugin.initialize(
     initSettings,
-    onDidReceiveNotificationResponse: (response) {
+    onDidReceiveNotificationResponse: (response) async {
       final payload = response.payload;
       if (payload == 'alarm') {
         navigatorKey.currentState?.pushReplacementNamed('/alarm');
       } else if (payload != null && payload.startsWith('scheduled_trip:')) {
         final tripId = payload.substring('scheduled_trip:'.length);
+        if (tripId == 'test') return;
+        // Mark alarm as triggered when user taps the notification
+        await ScheduledTripRepository(db).markAlarmTriggered(tripId, DateTime.now());
         navigatorKey.currentState?.pushNamed(
           '/scheduled-trip-detail',
           arguments: tripId,
@@ -78,7 +84,7 @@ Future<void> _createTripReminderChannel() async {
     AppConstants.tripReminderChannelId,
     AppConstants.tripReminderChannelName,
     description: AppConstants.tripReminderChannelDesc,
-    importance: Importance.defaultImportance,
+    importance: Importance.high,
     playSound: true,
     enableVibration: true,
   );
@@ -87,12 +93,13 @@ Future<void> _createTripReminderChannel() async {
       .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
 
+  await androidPlugin?.deleteNotificationChannel(AppConstants.tripReminderChannelId);
   await androidPlugin?.createNotificationChannel(androidChannel);
 }
 
-Future<void> _initNotifications() async {
+Future<void> _initNotifications(LocalDatabase db) async {
   tz_data.initializeTimeZones();
-  await _initPluginOnce();
+  await _initPluginOnce(db);
 }
 
 void main() async {
@@ -105,7 +112,7 @@ void main() async {
   final tileCache = TileCacheService();
   await tileCache.init();
 
-  await _initNotifications();
+  await _initNotifications(db);
   await _createAlarmChannel();
   await _createTripReminderChannel();
 
@@ -118,4 +125,55 @@ void main() async {
       child: const StopCoApp(),
     ),
   );
+
+  // Drain native alarm triggers that may have fired while app was killed
+  await _drainPendingAlarmTriggers(db);
+
+  // Listen for notification taps from the native ReminderMonitorService
+  _setupNotificationTapHandler();
+
+  // Check for a pending trip from cold-start notification tap
+  _checkPendingNotificationTap();
+}
+
+void _setupNotificationTapHandler() {
+  final channel = MethodChannel('com.stopco.app/notification_tap');
+  channel.setMethodCallHandler((call) async {
+    if (call.method == 'scheduledTrip') {
+      final tripId = call.arguments as String;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navigatorKey.currentState?.pushNamed(
+          '/scheduled-trip-detail',
+          arguments: tripId,
+        );
+      });
+    }
+  });
+}
+
+Future<void> _checkPendingNotificationTap() async {
+  try {
+    final channel = MethodChannel('com.stopco.app/notification_tap');
+    final tripId = await channel.invokeMethod<String>('getPendingScheduledTrip');
+    if (tripId != null && tripId.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navigatorKey.currentState?.pushNamed(
+          '/scheduled-trip-detail',
+          arguments: tripId,
+        );
+      });
+    }
+  } catch (_) {}
+}
+
+Future<void> _drainPendingAlarmTriggers(LocalDatabase db) async {
+  final triggers = await ReminderAlarmCallbackChannel.drainPendingTriggers();
+  if (triggers.isEmpty) return;
+  final repo = ScheduledTripRepository(db);
+  for (final entry in triggers.entries) {
+    await repo.markAlarmTriggered(
+      entry.key,
+      DateTime.fromMillisecondsSinceEpoch(entry.value),
+    );
+  }
 }
