@@ -1317,3 +1317,105 @@ Still not working on MIUI device. `exactAllowWhileIdle` throws `PlatformExceptio
 - `flutter analyze`: 0 errors, 0 warnings
 - `flutter test`: 105/105 passed
 - `flutter build apk --debug`: succeeds
+
+---
+
+# Session: Day-before (8 PM) reminder moved to native ReminderMonitorService
+
+## Goal
+- Make the "A day before (8 PM)" reminder use the same native `ReminderMonitorService` delivery as the hour-before reminder, instead of the `flutter_local_notifications` plugin `zonedSchedule` path (which was unreliable on MIUI).
+
+## What was done
+- `scheduled_trip_notification_service.dart`:
+  - Removed plugin path entirely: `_schedule()` (alarmClock → exactAllowWhileIdle → inexactAllowWhileIdle cascade), `_scheduleDayBefore()`, `_dayBeforeId()`.
+  - `_startMonitorForTrip()` now builds a reminders list:
+    - `dayBefore` trips → 2 entries: `"Trip Tomorrow: {name}"` at local 8 PM the day before (`_dayBeforeFireTime()`, uses `tz.local`, day−1 20:00), then `"Upcoming Trip: {name}"` at start−1h (`_hourBeforeFireTime()`).
+    - `hourBefore` trips → 1 entry (unchanged).
+  - `cancelReminder()` → only `ReminderMonitorChannel.stop()` (covers both entries; dropped `_plugin.cancel(_dayBeforeId)`).
+  - `_plugin` kept for `fireGenericTestNotification()` / `cancelTestReminder()`.
+- Tests rewritten in `scheduled_trip_notification_service_test.dart`:
+  - Now assert against a mock `MethodChannel('com.stopco.app/reminder_monitor')` capturing the JSON `reminders` argument, instead of mocking `zonedSchedule` calls.
+  - Covers: dayBefore → 2 entries with correct titles/bodies/timestamps; hourBefore → 1 entry; plural stops text; cancel → stop.
+  - Timezone-safe expectations: derived from `tz.TZDateTime.from(scheduledStartTime, tz.local)` because the device tz offset shifts the epoch (tests run with `tz.local` = UTC on a +8 host).
+
+## Key decisions
+- **No Kotlin changes needed**: `ReminderMonitorService.kt` already accepts a JSON array of reminders and loops them in `checkAndNotify()`.
+- **Notification-ID collision accepted**: both entries share `tripId.hashCode() + 5000`, so the hour-before alert replaces the day-before one (desired).
+- **Keep both alerts** for `dayBefore` trips: 8 PM day-before + 1 hour-before (user confirmed).
+
+## Verification
+- `flutter analyze`: 0 errors (6 pre-existing info)
+- `flutter test`: 99/99 passed
+
+## Relevant Files
+- `lib/features/scheduled_trip/data/scheduled_trip_notification_service.dart` — day-before via native monitor, plugin path removed
+- `test/services/scheduled_trip_notification_service_test.dart` — rewritten against reminder_monitor channel mock
+
+---
+
+# Session: Production readiness assessment — reminders skipped, multi-trip bug documented
+
+## What happened
+- User confirmed both native reminder paths work on-device:
+  - Day-before (8 PM): for a trip scheduled same-day, `_dayBeforeFireTime()` sees yesterday 8 PM already in the past → falls back to `now + 5s` → "Trip Tomorrow: {name}" fires ~5–35s after saving (within the 30s poll).
+  - Hour-before: fires correctly via the same native monitor.
+- User asked "can we solidify this?" → I analyzed and found 3 gaps.
+- User then decided to **skip the solidification feature** and asked "is this production ready?" → I answered honestly: **not fully** — one real functional bug exists (multi-trip clobbering), the rest is acceptable to skip.
+
+## Production readiness verdict
+| Area | Status |
+|---|---|
+| Single trip, both reminders fire | ✅ Works (user verified on device) |
+| Multiple scheduled trips | ❌ **Bug** — reminders clobber each other |
+| Reboot / process death | ⚠️ Reminders lost (accepted — user skipped) |
+| Doze / battery (30s poll for days) | ⚠️ Works but drains battery; ok to ship |
+| Tests | ✅ 99/99 pass, analyze 0 errors |
+
+## The multi-trip bug (Gap 1 — functional, NOT just hardening)
+`ReminderMonitorService` holds one in-memory list. Every `ReminderMonitorChannel.start()` **replaces** the whole set, and `cancelReminder()` calls `stop()` which kills **all** reminders.
+- Schedule trip B → trip A's reminder is wiped.
+- Cancel trip A → trip B's reminder dies too.
+- Files: `scheduled_trip_notification_service.dart:17,84` (`scheduleReminder` pushes only one trip's list; `cancelReminder` → `ReminderMonitorChannel.stop()`), `ReminderMonitorService.kt:51-66` (`onStartCommand` clears + replaces `reminders`).
+
+## Skipped gaps (user chose not to fix)
+- **Gap 2 — Reboot/process death**: reminders live only in service memory. `START_STICKY` restart with null intent → empty list → `checkAndNotify()` sees all done → `stopSelf()`. No `BOOT_COMPLETED` receiver exists (permission declared in manifest but no receiver registers it). Reboot or OS kill silently cancels reminders.
+- **Gap 3 — Battery/Doze**: 30s `Handler` poll runs for the whole wait (days for far trips); deep Doze defers handler timers → possible late notification. Also dead code: `ReminderAlarmChannel.schedule()` → `ReminderAlarmReceiver` + `AlarmManager.setAndAllowWhileIdle` (MainActivity.kt:235-282) is no longer called by anything.
+
+## How to test in-app (day-before path)
+- Settings → "Test Scheduled Reminder" does NOT exercise the native monitor (uses plugin `fireGenericTestNotification()` + WakeLock + `Future.delayed`) — only good for permission checks.
+- To test the native day-before path: Schedules → New Schedule → same-day trip ~2h out → pick "A day before (8 PM)" → Save. "Reminder monitor" silent FGS notification appears, then "Trip Tomorrow: {name}" fires ~5–35s later (past-fallback). Tap → detail screen. "Notified" badge appears on return to foreground (lifecycle drain).
+- Caveat: if trip start is <1h away, both entries fire simultaneously and share notification ID `tripId.hashCode()+5000` → "Upcoming Trip" overwrites "Trip Tomorrow".
+
+## Note for future work
+Minimal multi-trip fix is small (~15 lines in `scheduled_trip_notification_service.dart` + provider tweaks): rebuild the full pending-reminder set from the DB on every schedule/edit/cancel and push in one `start()` call; drop "stop everything" cancel. Not implemented — user skipped.
+
+## Release prereqs still open (from `pre-requisite_playstore.md`)
+- Version bump in `pubspec.yaml` (currently `1.0.0+1`)
+- App icon verification (`@mipmap/ic_launcher`)
+- `flutter build appbundle --release`
+- Play Console listing (description, category, content rating) — user handles
+- Keystore ✅, Privacy Policy ✅ (`PRIVACY_POLICY.md`)
+
+---
+
+# Session: Remove "A day before (8 PM)" reminder — hour-before only + tooltip
+
+## Goal
+- Remove the "A day before (8 PM)" reminder feature entirely; keep only the "An hour before" reminder.
+- Add a tooltip explaining the reminder triggers 1 hour before the scheduled trip.
+
+## What was done
+1. `scheduled_trip.dart`: removed `RemindBefore.dayBefore` from the enum (single value `hourBefore` remains); removed its `label` case; added `orElse: () => RemindBefore.hourBefore` to `fromJson` so legacy `'dayBefore'` rows parse without throwing.
+2. `scheduled_trip_notification_service.dart`: `_startMonitorForTrip()` always registers only the single "Upcoming Trip" hour-before entry; deleted `_dayBeforeFireTime()`.
+3. `database.dart`: `_toScheduledTrip()` added `orElse: () => RemindBefore.hourBefore` — existing `dayBefore` rows fall back to hour-before. **No schema migration** (column kept, only `hourBefore` written going forward).
+4. `schedule_trip_form_screen.dart`: removed `_remindBefore` state; replaced the `SegmentedButton<RemindBefore>` with a static `AppCard` row (notifications icon + "An hour before" + info icon with `Tooltip("A reminder will be sent 1 hour before your scheduled departure.")`).
+5. `scheduled_trip_notification_service_test.dart`: rewritten — always asserts a single hour-before entry; removed day-before expectations.
+
+## Key decisions
+- Kept `remind_before` DB column + `remindBefore` model field (always `hourBefore`) to avoid a schema migration; legacy rows read as hour-before via `orElse` fallback.
+- Static row over single-option SegmentedButton — matches the Time picker AppCard style; Tooltip on info icon for the 1-hour explanation.
+- No Kotlin changes needed — `ReminderMonitorService` already handles a 1-element reminders array.
+
+## Verification
+- `flutter analyze`: 0 errors (6 pre-existing info)
+- `flutter test`: 98/98 passed

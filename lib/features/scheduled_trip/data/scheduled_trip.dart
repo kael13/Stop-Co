@@ -2,13 +2,11 @@ import '../../trip/data/waypoint.dart';
 
 enum ScheduledTripStatus { pending, completed, cancelled }
 
-enum RemindBefore { dayBefore, hourBefore }
+enum RemindBefore { hourBefore }
 
 extension RemindBeforeExt on RemindBefore {
   String get label {
     switch (this) {
-      case RemindBefore.dayBefore:
-        return 'A day before (8 PM)';
       case RemindBefore.hourBefore:
         return 'An hour before';
     }
@@ -111,7 +109,10 @@ class ScheduledTrip {
     status: ScheduledTripStatus.values.firstWhere((e) => e.name == json['status'] as String),
     createdAt: DateTime.parse(json['createdAt'] as String),
     remindBefore: json['remindBefore'] != null
-        ? RemindBefore.values.firstWhere((e) => e.name == json['remindBefore'] as String)
+        ? RemindBefore.values.firstWhere(
+            (e) => e.name == json['remindBefore'] as String,
+            orElse: () => RemindBefore.hourBefore,
+          )
         : RemindBefore.hourBefore,
     alarmTriggeredAtEpochMs: json['alarmTriggeredAtEpochMs'] as int?,
   );

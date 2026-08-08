@@ -1,17 +1,17 @@
+import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:timezone/data/latest.dart' as tz_data;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:stop_co/features/scheduled_trip/data/scheduled_trip.dart';
 import 'package:stop_co/features/scheduled_trip/data/scheduled_trip_notification_service.dart';
-
-class MockFlutterLocalNotificationsPlugin extends Mock
-    implements FlutterLocalNotificationsPlugin {}
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 
 void main() {
-  late MockFlutterLocalNotificationsPlugin mockPlugin;
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late MethodChannel monitorChannel;
+  late List<MethodCall> monitorCalls;
   late ScheduledTripNotificationService service;
 
   final sampleTrip = ScheduledTrip(
@@ -21,222 +21,54 @@ void main() {
         '[{"id":"wp-1","name":"Office","latitude":40.0,"longitude":-74.0,"alertRadius":300,"orderIndex":0}]',
     scheduledStartTime: DateTime(2027, 1, 15, 14, 30),
     createdAt: DateTime(2027, 1, 8),
-    remindBefore: RemindBefore.dayBefore,
   );
 
   setUpAll(() {
     tz_data.initializeTimeZones();
-    registerFallbackValue(
-      const AndroidNotificationDetails('', '', importance: Importance.defaultImportance),
-    );
-    registerFallbackValue(const DarwinNotificationDetails());
-    registerFallbackValue(NotificationDetails());
-    registerFallbackValue(AndroidScheduleMode.inexactAllowWhileIdle);
-    registerFallbackValue(UILocalNotificationDateInterpretation.absoluteTime);
-    registerFallbackValue(tz.TZDateTime(tz.local, 2024, 1, 1));
   });
 
   setUp(() {
-    mockPlugin = MockFlutterLocalNotificationsPlugin();
-    service = ScheduledTripNotificationService(mockPlugin);
-
-    when(() => mockPlugin.cancel(any())).thenAnswer((_) async {});
-    when(() => mockPlugin.zonedSchedule(
-          any(),
-          any(),
-          any(),
-          any(),
-          any(),
-          androidScheduleMode: any(named: 'androidScheduleMode'),
-          matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-          payload: any(named: 'payload'),
-          uiLocalNotificationDateInterpretation:
-              any(named: 'uiLocalNotificationDateInterpretation'),
-        )).thenAnswer((_) async {});
+    monitorChannel = const MethodChannel('com.stopco.app/reminder_monitor');
+    monitorCalls = [];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(monitorChannel, (call) async {
+      monitorCalls.add(call);
+      return null;
+    });
+    service = ScheduledTripNotificationService(FlutterLocalNotificationsPlugin());
   });
 
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(monitorChannel, null);
+  });
+
+  List<Map<String, dynamic>> startedReminders() {
+    final startCall = monitorCalls.where((c) => c.method == 'start').first;
+    final args = startCall.arguments as Map<Object?, Object?>;
+    final raw = args['reminders'] as String;
+    return (jsonDecode(raw) as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+  }
+
   group('scheduleReminder', () {
-    test('schedules at 8 PM the day before departure', () async {
+    int expectedHourBeforeMs() {
+      final startLocal = tz.TZDateTime.from(sampleTrip.scheduledStartTime, tz.local);
+      return startLocal.subtract(const Duration(hours: 1)).millisecondsSinceEpoch;
+    }
+
+    test('registers the single hour-before entry', () async {
       await service.scheduleReminder(sampleTrip);
 
-      final captured =
-          verify(() => mockPlugin.zonedSchedule(
-                any(),
-                any(),
-                any(),
-                captureAny(),
-                any(),
-                androidScheduleMode: any(named: 'androidScheduleMode'),
-                matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-                payload: any(named: 'payload'),
-                uiLocalNotificationDateInterpretation:
-                    any(named: 'uiLocalNotificationDateInterpretation'),
-              )).captured.first;
-      final tzDateTime = captured as dynamic;
-      expect(tzDateTime.year, 2027);
-      expect(tzDateTime.month, 1);
-      expect(tzDateTime.day, 14);
-      expect(tzDateTime.hour, 20);
-      expect(tzDateTime.minute, 0);
-    });
+      expect(monitorCalls.map((c) => c.method), contains('start'));
+      final reminders = startedReminders();
+      expect(reminders.length, 1);
 
-    test('uses correct notification ID', () async {
-      await service.scheduleReminder(sampleTrip);
-
-      verify(() => mockPlugin.zonedSchedule(
-            2000 + 'trip-1'.hashCode,
-            any(),
-            any(),
-            any(),
-            any(),
-            androidScheduleMode: any(named: 'androidScheduleMode'),
-            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-            payload: any(named: 'payload'),
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).called(1);
-    });
-
-    test('uses correct title and body', () async {
-      await service.scheduleReminder(sampleTrip);
-
-      verify(() => mockPlugin.zonedSchedule(
-            any(),
-            'Trip Tomorrow: Work',
-            'Departure at 2:30 PM — 1 stop',
-            any(),
-            any(),
-            androidScheduleMode: any(named: 'androidScheduleMode'),
-            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-            payload: any(named: 'payload'),
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).called(1);
-    });
-
-    test('uses correct payload', () async {
-      await service.scheduleReminder(sampleTrip);
-
-      verify(() => mockPlugin.zonedSchedule(
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            androidScheduleMode: any(named: 'androidScheduleMode'),
-            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-            payload: 'scheduled_trip:trip-1',
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).called(1);
-    });
-
-    test('sets androidScheduleMode to alarmClock (preferred non-native path)', () async {
-      await service.scheduleReminder(sampleTrip);
-
-      verify(() => mockPlugin.zonedSchedule(
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            androidScheduleMode: AndroidScheduleMode.alarmClock,
-            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-            payload: any(named: 'payload'),
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).called(1);
-    });
-
-    test('falls back to exactAllowWhileIdle when alarmClock fails', () async {
-      when(() => mockPlugin.zonedSchedule(
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            androidScheduleMode: AndroidScheduleMode.alarmClock,
-            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-            payload: any(named: 'payload'),
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).thenThrow(PlatformException(code: 'test'));
-
-      await service.scheduleReminder(sampleTrip);
-
-      verify(() => mockPlugin.zonedSchedule(
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-            payload: any(named: 'payload'),
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).called(1);
-    });
-
-    test('falls back to inexactAllowWhileIdle when alarmClock and exactAllowWhileIdle fail',
-        () async {
-      when(() => mockPlugin.zonedSchedule(
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            androidScheduleMode: AndroidScheduleMode.alarmClock,
-            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-            payload: any(named: 'payload'),
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).thenThrow(PlatformException(code: 'test'));
-
-      when(() => mockPlugin.zonedSchedule(
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-            payload: any(named: 'payload'),
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).thenThrow(PlatformException(code: 'test'));
-
-      await service.scheduleReminder(sampleTrip);
-
-      verify(() => mockPlugin.zonedSchedule(
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-            payload: any(named: 'payload'),
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).called(1);
-    });
-
-    test('sets matchDateTimeComponents to null', () async {
-      await service.scheduleReminder(sampleTrip);
-
-      verify(() => mockPlugin.zonedSchedule(
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            androidScheduleMode: any(named: 'androidScheduleMode'),
-            matchDateTimeComponents: null,
-            payload: any(named: 'payload'),
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).called(1);
+      final hourBefore = reminders[0];
+      expect(hourBefore['tripId'], 'trip-1');
+      expect(hourBefore['title'], 'Upcoming Trip: Work');
+      expect(hourBefore['body'], 'Departure at 2:30 PM — 1 stop');
+      expect(hourBefore['triggerTimeMs'], expectedHourBeforeMs());
     });
 
     test('shows plural stops text for multi-stop trip', () async {
@@ -247,26 +79,17 @@ void main() {
 
       await service.scheduleReminder(multiStopTrip);
 
-      verify(() => mockPlugin.zonedSchedule(
-            any(),
-            any(),
-            'Departure at 2:30 PM — 2 stops',
-            any(),
-            any(),
-            androidScheduleMode: any(named: 'androidScheduleMode'),
-            matchDateTimeComponents: any(named: 'matchDateTimeComponents'),
-            payload: any(named: 'payload'),
-            uiLocalNotificationDateInterpretation:
-                any(named: 'uiLocalNotificationDateInterpretation'),
-          )).called(1);
+      final reminders = startedReminders();
+      expect(reminders.length, 1);
+      expect(reminders[0]['body'], 'Departure at 2:30 PM — 2 stops');
     });
   });
 
   group('cancelReminder', () {
-    test('cancels correct notification ID', () async {
+    test('stops the reminder monitor', () async {
       await service.cancelReminder('trip-1');
 
-      verify(() => mockPlugin.cancel(2000 + 'trip-1'.hashCode)).called(1);
+      expect(monitorCalls.map((c) => c.method), contains('stop'));
     });
   });
 }

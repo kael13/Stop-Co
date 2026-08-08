@@ -321,7 +321,7 @@ class LocalDatabase extends _$LocalDatabase {
   }
 
   Future<void> saveScheduledTrip(ScheduledTrip trip) {
-    return into(scheduledTrips).insert(ScheduledTripsCompanion(
+    return into(scheduledTrips).insertOnConflictUpdate(ScheduledTripsCompanion(
       id: Value(trip.id),
       name: Value(trip.name),
       description: Value.absentIfNull(trip.description),
@@ -361,7 +361,10 @@ class LocalDatabase extends _$LocalDatabase {
       scheduledStartTime: row.scheduledStartTime,
       status: ScheduledTripStatus.values.firstWhere((s) => s.name == row.status),
       createdAt: row.createdAt,
-      remindBefore: RemindBefore.values.firstWhere((e) => e.name == row.remindBefore),
+      remindBefore: RemindBefore.values.firstWhere(
+        (e) => e.name == row.remindBefore,
+        orElse: () => RemindBefore.hourBefore,
+      ),
       alarmTriggeredAtEpochMs: row.alarmTriggeredAt,
     );
   }

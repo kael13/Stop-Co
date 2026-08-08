@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/platform/file_picker_channel.dart';
@@ -27,9 +28,7 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -40,7 +39,10 @@ class SettingsScreen extends ConsumerWidget {
             accentColor: const Color(0xFF0066FF),
           ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
-          const _AlertPreferencesGroup().animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+          const _AlertPreferencesGroup()
+              .animate()
+              .fadeIn(delay: 60.ms)
+              .slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
             title: 'Nap Mode',
@@ -48,18 +50,26 @@ class SettingsScreen extends ConsumerWidget {
           ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
           AppCard(
-            child: SwitchListTile(
-              secondary: Icon(Icons.bedtime_rounded, color: Theme.of(context).colorScheme.primary),
-              title: const Text('Enable Nap Mode'),
-              subtitle: const Text('Dims screen, loud vibration, smart snooze (3x max)'),
-              value: settings.napModeEnabled,
-              onChanged: (_) {
-                ref.read(settingsProvider.notifier).toggleNapMode();
-              },
-              activeThumbColor: Theme.of(context).colorScheme.primary,
-              contentPadding: EdgeInsets.zero,
-            ),
-          ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+                child: SwitchListTile(
+                  secondary: Icon(
+                    Icons.bedtime_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text('Enable Nap Mode'),
+                  subtitle: const Text(
+                    'Dims screen, loud vibration, smart snooze (3x max)',
+                  ),
+                  value: settings.napModeEnabled,
+                  onChanged: (_) {
+                    ref.read(settingsProvider.notifier).toggleNapMode();
+                  },
+                  activeThumbColor: Theme.of(context).colorScheme.primary,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              )
+              .animate()
+              .fadeIn(delay: 60.ms)
+              .slideY(begin: 0.06, end: 0, duration: 280.ms),
           if (kReleaseMode == false) ...[
             const SizedBox(height: AppSpacing.lg),
             _SectionHeader(
@@ -67,9 +77,10 @@ class SettingsScreen extends ConsumerWidget {
               accentColor: const Color(0xFF00A896),
             ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
             const SizedBox(height: AppSpacing.sm),
-            _CommuteModeSection(
-              currentMode: settings.commuteMode,
-            ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+            _CommuteModeSection(currentMode: settings.commuteMode)
+                .animate()
+                .fadeIn(delay: 60.ms)
+                .slideY(begin: 0.06, end: 0, duration: 280.ms),
           ],
           const SizedBox(height: AppSpacing.lg),
           if (kReleaseMode == false) ...[
@@ -79,52 +90,77 @@ class SettingsScreen extends ConsumerWidget {
             ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
-              child: ListTile(
-                leading: Icon(Icons.science_rounded, color: Theme.of(context).colorScheme.primary),
-                title: const Text('Test Trip Simulation'),
-                subtitle: const Text('Simulate a trip with mock GPS data'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SimulationScreen()),
-                ),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.science_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    title: const Text('Test Trip Simulation'),
+                    subtitle: const Text('Simulate a trip with mock GPS data'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SimulationScreen(),
+                      ),
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                )
+                .animate()
+                .fadeIn(delay: 60.ms)
+                .slideY(begin: 0.06, end: 0, duration: 280.ms),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
-              child: ListTile(
-                leading: Icon(Icons.timer_rounded, color: Theme.of(context).colorScheme.primary),
-                title: const Text('Test Scheduled Reminder'),
-                subtitle: const Text('Schedule a test notification to verify reminders'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () async {
-                  final duration = await showModalBottomSheet<Duration>(
-                    context: context,
-                    builder: (_) => const _ScheduledReminderDurationSheet(),
-                  );
-                  if (duration == null || !context.mounted) return;
-                  final notif = ref.read(scheduledTripNotificationServiceProvider);
-                  final granted = await PermissionHelper.requestNotificationPermission();
-                  if (!granted) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Notification permission denied')),
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.timer_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    title: const Text('Test Scheduled Reminder'),
+                    subtitle: const Text(
+                      'Schedule a test notification to verify reminders',
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () async {
+                      final duration = await showModalBottomSheet<Duration>(
+                        context: context,
+                        builder: (_) => const _ScheduledReminderDurationSheet(),
                       );
-                    }
-                    return;
-                  }
-                  await notif.scheduleTestReminder(duration);
-                  if (context.mounted) {
-                    final secs = duration.inSeconds;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Test reminder scheduled in $secs seconds — minimize the app')),
-                    );
-                  }
-                },
-                contentPadding: EdgeInsets.zero,
-              ),
-            ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+                      if (duration == null || !context.mounted) return;
+                      final notif = ref.read(
+                        scheduledTripNotificationServiceProvider,
+                      );
+                      final granted =
+                          await PermissionHelper.requestNotificationPermission();
+                      if (!granted) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Notification permission denied'),
+                            ),
+                          );
+                        }
+                        return;
+                      }
+                      await notif.scheduleTestReminder(duration);
+                      if (context.mounted) {
+                        final secs = duration.inSeconds;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Test reminder scheduled in $secs seconds — minimize the app',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                )
+                .animate()
+                .fadeIn(delay: 60.ms)
+                .slideY(begin: 0.06, end: 0, duration: 280.ms),
             const SizedBox(height: AppSpacing.lg),
           ],
           _SectionHeader(
@@ -132,21 +168,30 @@ class SettingsScreen extends ConsumerWidget {
             accentColor: const Color(0xFF00A896),
           ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
-          const _TileCacheSection().animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+          const _TileCacheSection()
+              .animate()
+              .fadeIn(delay: 60.ms)
+              .slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
             title: 'Appearance',
             accentColor: const Color(0xFF3F51B5),
           ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
-          _ThemeModeSection().animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+          _ThemeModeSection()
+              .animate()
+              .fadeIn(delay: 60.ms)
+              .slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
           _SectionHeader(
             title: 'About',
             accentColor: const Color(0xFF8E8E93),
           ).animate().fadeIn().slideX(begin: -0.08, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.sm),
-          _AboutSection().animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0, duration: 280.ms),
+          _AboutSection()
+              .animate()
+              .fadeIn(delay: 60.ms)
+              .slideY(begin: 0.06, end: 0, duration: 280.ms),
           const SizedBox(height: AppSpacing.lg),
           _ResetButton(
             onReset: () {
@@ -207,9 +252,17 @@ class _AlertPreferencesGroup extends ConsumerWidget {
       child: Column(
         children: [
           _buildRadiusSection(context, settings, notifier, cs),
-          const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+          const Divider(
+            height: 1,
+            indent: AppSpacing.sm,
+            endIndent: AppSpacing.sm,
+          ),
           _buildAlarmTypeSection(context, settings, notifier, cs),
-          const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+          const Divider(
+            height: 1,
+            indent: AppSpacing.sm,
+            endIndent: AppSpacing.sm,
+          ),
           SwitchListTile(
             secondary: Icon(Icons.replay_rounded, color: cs.primary, size: 20),
             title: const Text('Repeated Alarm'),
@@ -219,13 +272,23 @@ class _AlertPreferencesGroup extends ConsumerWidget {
             activeThumbColor: cs.primary,
             contentPadding: EdgeInsets.zero,
           ),
-          const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+          const Divider(
+            height: 1,
+            indent: AppSpacing.sm,
+            endIndent: AppSpacing.sm,
+          ),
           ListTile(
-            leading: Icon(Icons.music_note_rounded, color: cs.primary, size: 20),
+            leading: Icon(
+              Icons.music_note_rounded,
+              color: cs.primary,
+              size: 20,
+            ),
             title: const Text('Alarm Sound'),
             subtitle: Text(
               _soundDisplayName(settings.customAlarmSoundPath),
-              style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.4)),
+              style: AppTypography.caption.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.4),
+              ),
             ),
             trailing: settings.customAlarmSoundPath != null
                 ? IconButton(
@@ -233,19 +296,35 @@ class _AlertPreferencesGroup extends ConsumerWidget {
                     onPressed: () => notifier.clearCustomAlarmSound(),
                     tooltip: 'Reset to default',
                   )
-                : Icon(Icons.chevron_right_rounded, color: cs.onSurface.withValues(alpha: 0.4)),
+                : Icon(
+                    Icons.chevron_right_rounded,
+                    color: cs.onSurface.withValues(alpha: 0.4),
+                  ),
             onTap: () => _pickAlarmSound(context, ref, notifier),
             contentPadding: EdgeInsets.zero,
           ),
-          const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+          const Divider(
+            height: 1,
+            indent: AppSpacing.sm,
+            endIndent: AppSpacing.sm,
+          ),
           ListTile(
-            leading: Icon(Icons.notification_add_rounded, color: cs.primary, size: 20),
+            leading: Icon(
+              Icons.notification_add_rounded,
+              color: cs.primary,
+              size: 20,
+            ),
             title: const Text('Test Reminder Notification'),
             subtitle: const Text('Fire a test notification immediately'),
-            trailing: Icon(Icons.chevron_right_rounded, color: cs.onSurface.withValues(alpha: 0.4)),
+            trailing: Icon(
+              Icons.chevron_right_rounded,
+              color: cs.onSurface.withValues(alpha: 0.4),
+            ),
             onTap: () async {
               try {
-                final notif = ref.read(scheduledTripNotificationServiceProvider);
+                final notif = ref.read(
+                  scheduledTripNotificationServiceProvider,
+                );
                 await notif.fireGenericTestNotification();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -267,9 +346,19 @@ class _AlertPreferencesGroup extends ConsumerWidget {
     );
   }
 
-  Widget _buildRadiusSection(BuildContext context, AppSettings settings, SettingsNotifier notifier, ColorScheme cs) {
+  Widget _buildRadiusSection(
+    BuildContext context,
+    AppSettings settings,
+    SettingsNotifier notifier,
+    ColorScheme cs,
+  ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.xs),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.xs,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -277,13 +366,18 @@ class _AlertPreferencesGroup extends ConsumerWidget {
             children: [
               Icon(Icons.straighten_rounded, size: 18, color: cs.primary),
               const SizedBox(width: AppSpacing.xs),
-              Text('Default Alert Radius', style: AppTypography.bodyBold.copyWith(color: cs.onSurface)),
+              Text(
+                'Default Alert Radius',
+                style: AppTypography.bodyBold.copyWith(color: cs.onSurface),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'The default radius for new destinations',
-            style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.4)),
+            style: AppTypography.caption.copyWith(
+              color: cs.onSurface.withValues(alpha: 0.4),
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
@@ -312,7 +406,12 @@ class _AlertPreferencesGroup extends ConsumerWidget {
     );
   }
 
-  Widget _buildAlarmTypeSection(BuildContext context, AppSettings settings, SettingsNotifier notifier, ColorScheme cs) {
+  Widget _buildAlarmTypeSection(
+    BuildContext context,
+    AppSettings settings,
+    SettingsNotifier notifier,
+    ColorScheme cs,
+  ) {
     final colors = <AlarmType, Color>{
       AlarmType.soundAndVibration: const Color(0xFF0066FF),
       AlarmType.soundOnly: const Color(0xFFFF6B35),
@@ -320,21 +419,35 @@ class _AlertPreferencesGroup extends ConsumerWidget {
     };
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.xs, AppSpacing.sm, AppSpacing.xs),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm,
+        AppSpacing.xs,
+        AppSpacing.sm,
+        AppSpacing.xs,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.notifications_active_rounded, size: 18, color: cs.primary),
+              Icon(
+                Icons.notifications_active_rounded,
+                size: 18,
+                color: cs.primary,
+              ),
               const SizedBox(width: AppSpacing.xs),
-              Text('Alarm Type', style: AppTypography.bodyBold.copyWith(color: cs.onSurface)),
+              Text(
+                'Alarm Type',
+                style: AppTypography.bodyBold.copyWith(color: cs.onSurface),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'How you want to be alerted',
-            style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.4)),
+            style: AppTypography.caption.copyWith(
+              color: cs.onSurface.withValues(alpha: 0.4),
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           SegmentedButton<AlarmType>(
@@ -348,7 +461,8 @@ class _AlertPreferencesGroup extends ConsumerWidget {
                 )
                 .toList(),
             selected: {settings.alarmType},
-            onSelectionChanged: (selected) => notifier.setAlarmType(selected.first),
+            onSelectionChanged: (selected) =>
+                notifier.setAlarmType(selected.first),
             showSelectedIcon: false,
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: colors[settings.alarmType],
@@ -395,7 +509,8 @@ class _AlertPreferencesGroup extends ConsumerWidget {
 
   String _soundDisplayName(String? currentPath) {
     if (currentPath == null) return 'Default';
-    if (currentPath.startsWith('content://') || currentPath.contains('/alarms/')) {
+    if (currentPath.startsWith('content://') ||
+        currentPath.contains('/alarms/')) {
       return 'Custom sound';
     }
     final segments = currentPath.split('/');
@@ -403,7 +518,11 @@ class _AlertPreferencesGroup extends ConsumerWidget {
     return fileName.length > 24 ? '${fileName.substring(0, 21)}...' : fileName;
   }
 
-  Future<void> _pickAlarmSound(BuildContext context, WidgetRef ref, SettingsNotifier notifier) async {
+  Future<void> _pickAlarmSound(
+    BuildContext context,
+    WidgetRef ref,
+    SettingsNotifier notifier,
+  ) async {
     try {
       final nativePath = await FilePickerChannel.pickAudioFile();
       if (nativePath != null && nativePath.isNotEmpty) {
@@ -444,9 +563,9 @@ class _AlertPreferencesGroup extends ConsumerWidget {
 
     final sourceFile = File(result);
     if (!await sourceFile.exists()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('File not found')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('File not found')));
       return;
     }
 
@@ -487,7 +606,9 @@ class _CommuteModeSection extends StatelessWidget {
                   vertical: 2,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
                 child: Text(
@@ -505,17 +626,23 @@ class _CommuteModeSection extends StatelessWidget {
           Text(
             'Automatically detected from your GPS speed while tracking.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.15),
               ),
             ),
             child: Column(
@@ -532,14 +659,16 @@ class _CommuteModeSection extends StatelessWidget {
                         mode == CommuteMode.walking
                             ? Icons.directions_walk_rounded
                             : mode == CommuteMode.bus
-                                ? Icons.directions_bus_rounded
-                                : mode == CommuteMode.train
-                                    ? Icons.directions_train_rounded
-                                    : Icons.directions_car_rounded,
+                            ? Icons.directions_bus_rounded
+                            : mode == CommuteMode.train
+                            ? Icons.directions_train_rounded
+                            : Icons.directions_car_rounded,
                         size: 18,
                         color: isActive
                             ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
@@ -548,22 +677,29 @@ class _CommuteModeSection extends StatelessWidget {
                           children: [
                             Text(
                               mode.label,
-                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: isActive
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.onSurface,
-                                fontWeight: isActive
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                              ),
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(
+                                    color: isActive
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                    fontWeight: isActive
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                  ),
                             ),
                             Text(
                               mode == CommuteMode.walking
                                   ? '< 7 km/h'
                                   : '${thresholdKmh.toStringAsFixed(0)}+ km/h',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.4),
+                                  ),
                             ),
                           ],
                         ),
@@ -589,30 +725,63 @@ class _CommuteModeSection extends StatelessWidget {
   }
 }
 
-class _AboutSection extends StatelessWidget {
+class _AboutSection extends ConsumerStatefulWidget {
   const _AboutSection();
+
+  @override
+  ConsumerState<_AboutSection> createState() => _AboutSectionState();
+}
+
+class _AboutSectionState extends ConsumerState<_AboutSection> {
+  String? _version;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final v = info.version;
+      if (mounted) setState(() => _version = v);
+    } catch (_) {
+      // PackageInfo unavailable (tests/edge) — fall back to pubspec version.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
-        Icon(Icons.notifications_active_rounded, color: cs.primary.withValues(alpha: 0.5), size: 32),
+        Icon(
+          Icons.notifications_active_rounded,
+          color: cs.primary.withValues(alpha: 0.5),
+          size: 32,
+        ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           AppConstants.appName,
-          style: AppTypography.title.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
+          style: AppTypography.title.copyWith(
+            color: cs.onSurface.withValues(alpha: 0.6),
+          ),
         ),
         const SizedBox(height: AppSpacing.xxs),
         Text(
-          'Version 1.0.0',
-          style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.35)),
+          'Version ${_version ?? '1.0.0'}',
+          style: AppTypography.caption.copyWith(
+            color: cs.onSurface.withValues(alpha: 0.35),
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppSpacing.xxs),
         Text(
           'For commuters, by commuters — a minimalist GPS destination alarm.',
-          style: AppTypography.secondary.copyWith(color: cs.onSurface.withValues(alpha: 0.45)),
+          style: AppTypography.secondary.copyWith(
+            color: cs.onSurface.withValues(alpha: 0.45),
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -727,17 +896,25 @@ class _ProfileSection extends ConsumerWidget {
                     children: [
                       Text(
                         nickname ?? 'Set a nickname',
-                        style: AppTypography.bodyBold.copyWith(color: cs.onSurface),
+                        style: AppTypography.bodyBold.copyWith(
+                          color: cs.onSurface,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         nickname == null ? 'Tap to set' : 'Tap to change',
-                        style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.4)),
+                        style: AppTypography.caption.copyWith(
+                          color: cs.onSurface.withValues(alpha: 0.4),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.edit_rounded, size: 20, color: cs.onSurface.withValues(alpha: 0.35)),
+                Icon(
+                  Icons.edit_rounded,
+                  size: 20,
+                  color: cs.onSurface.withValues(alpha: 0.35),
+                ),
               ],
             ),
           ),
@@ -795,58 +972,112 @@ class _TileCacheSection extends ConsumerWidget {
               children: [
                 Icon(Icons.map_rounded, size: 18, color: cs.primary),
                 const SizedBox(width: AppSpacing.xs),
-                Text('Tile Cache', style: AppTypography.bodyBold.copyWith(color: cs.onSurface)),
+                Text(
+                  'Tile Cache',
+                  style: AppTypography.bodyBold.copyWith(color: cs.onSurface),
+                ),
               ],
             ),
           ),
-          const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+          const Divider(
+            height: 1,
+            indent: AppSpacing.sm,
+            endIndent: AppSpacing.sm,
+          ),
           statsAsync.when(
             loading: () => const Padding(
               padding: EdgeInsets.all(AppSpacing.md),
-              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
             ),
             error: (_, __) => Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text('Failed to load cache stats', style: AppTypography.caption.copyWith(color: cs.error)),
+              child: Text(
+                'Failed to load cache stats',
+                style: AppTypography.caption.copyWith(color: cs.error),
+              ),
             ),
             data: (stats) => Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.xs),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.sm,
+                    AppSpacing.sm,
+                    AppSpacing.sm,
+                    AppSpacing.xs,
+                  ),
                   child: Row(
                     children: [
-                      Icon(Icons.storage_rounded, size: 16, color: cs.onSurface.withValues(alpha: 0.5)),
+                      Icon(
+                        Icons.storage_rounded,
+                        size: 16,
+                        color: cs.onSurface.withValues(alpha: 0.5),
+                      ),
                       const SizedBox(width: AppSpacing.xs),
                       Text(
                         '${stats.count} tiles cached',
-                        style: AppTypography.secondary.copyWith(color: cs.onSurface.withValues(alpha: 0.7)),
+                        style: AppTypography.secondary.copyWith(
+                          color: cs.onSurface.withValues(alpha: 0.7),
+                        ),
                       ),
                       const Spacer(),
                       Text(
                         _formatBytes(stats.sizeBytes),
-                        style: AppTypography.secondary.copyWith(color: cs.onSurface.withValues(alpha: 0.7)),
+                        style: AppTypography.secondary.copyWith(
+                          color: cs.onSurface.withValues(alpha: 0.7),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const Divider(height: 1, indent: AppSpacing.sm, endIndent: AppSpacing.sm),
+                const Divider(
+                  height: 1,
+                  indent: AppSpacing.sm,
+                  endIndent: AppSpacing.sm,
+                ),
                 ListTile(
-                  leading: Icon(Icons.delete_sweep_rounded, color: cs.error, size: 20),
-                  title: Text('Clear Cache', style: AppTypography.secondary.copyWith(color: cs.error)),
+                  leading: Icon(
+                    Icons.delete_sweep_rounded,
+                    color: cs.error,
+                    size: 20,
+                  ),
+                  title: Text(
+                    'Clear Cache',
+                    style: AppTypography.secondary.copyWith(color: cs.error),
+                  ),
                   subtitle: Text(
                     'Removes all cached map tiles',
-                    style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.4)),
+                    style: AppTypography.caption.copyWith(
+                      color: cs.onSurface.withValues(alpha: 0.4),
+                    ),
                   ),
-                  trailing: Icon(Icons.chevron_right_rounded, color: cs.onSurface.withValues(alpha: 0.4), size: 18),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    color: cs.onSurface.withValues(alpha: 0.4),
+                    size: 18,
+                  ),
                   onTap: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Clear Map Cache?'),
-                        content: const Text('Cached map tiles will be removed. They will be re-downloaded when you view the map while online.'),
+                        content: const Text(
+                          'Cached map tiles will be removed. They will be re-downloaded when you view the map while online.',
+                        ),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Clear')),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Clear'),
+                          ),
                         ],
                       ),
                     );
@@ -872,7 +1103,6 @@ class _TileCacheSection extends ConsumerWidget {
   }
 }
 
-
 class _ScheduledReminderDurationSheet extends StatelessWidget {
   const _ScheduledReminderDurationSheet();
 
@@ -894,23 +1124,30 @@ class _ScheduledReminderDurationSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Schedule Test Reminder', style: AppTypography.sectionHeader.copyWith(color: cs.onSurface)),
+            Text(
+              'Schedule Test Reminder',
+              style: AppTypography.sectionHeader.copyWith(color: cs.onSurface),
+            ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Choose how long until the notification fires, then minimize the app.',
-              style: AppTypography.secondary.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
+              style: AppTypography.secondary.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.6),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
-            ...options.map((opt) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: SizedBox(
-                width: double.infinity,
-                child: AppButton(
-                  label: opt.$2,
-                  onPressed: () => Navigator.of(context).pop(opt.$1),
+            ...options.map(
+              (opt) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: AppButton(
+                    label: opt.$2,
+                    onPressed: () => Navigator.of(context).pop(opt.$1),
+                  ),
                 ),
               ),
-            )),
+            ),
             const SizedBox(height: AppSpacing.sm),
             SizedBox(
               width: double.infinity,
@@ -929,12 +1166,18 @@ class _ScheduledReminderDurationSheet extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, size: 16, color: cs.onSurface.withValues(alpha: 0.5)),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 16,
+                    color: cs.onSurface.withValues(alpha: 0.5),
+                  ),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(
                       'If it doesn\'t fire, enable "Alarms & reminders" in app settings',
-                      style: AppTypography.caption.copyWith(color: cs.onSurface.withValues(alpha: 0.5)),
+                      style: AppTypography.caption.copyWith(
+                        color: cs.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
                   ),
                 ],
@@ -946,4 +1189,3 @@ class _ScheduledReminderDurationSheet extends StatelessWidget {
     );
   }
 }
-

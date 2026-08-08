@@ -35,7 +35,6 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
   TimeOfDay _selectedTime = TimeOfDay.now();
   CalendarFormat _calendarFormat = CalendarFormat.month;
   bool _isSaving = false;
-  RemindBefore _remindBefore = RemindBefore.hourBefore;
 
   @override
   void initState() {
@@ -46,7 +45,6 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
       _descController.text = t.description ?? '';
       _selectedDate = t.scheduledStartTime;
       _selectedTime = TimeOfDay.fromDateTime(t.scheduledStartTime);
-      _remindBefore = t.remindBefore;
     } else if (widget.waypoints.isNotEmpty) {
       _nameController.text = widget.waypoints.first.name;
     }
@@ -75,41 +73,51 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
 
     setState(() => _isSaving = true);
 
-    final scheduledStart = DateTime(
-      _selectedDate.year,
-      _selectedDate.month,
-      _selectedDate.day,
-      _selectedTime.hour,
-      _selectedTime.minute,
-    );
-
-    final trip = ScheduledTrip(
-      id: widget.existingTrip?.id ?? _uuid.v4(),
-      name: name,
-      description: _descController.text.trim().isEmpty
-          ? null
-          : _descController.text.trim(),
-      waypointsJson: Waypoint.serializeList(widget.waypoints) ?? '[]',
-      scheduledStartTime: scheduledStart,
-      status: widget.existingTrip?.status ?? ScheduledTripStatus.pending,
-      createdAt: widget.existingTrip?.createdAt ?? DateTime.now(),
-      remindBefore: _remindBefore,
-    );
-
-    await ref.read(createScheduledTripAction(trip).future);
-    if (!mounted) return;
-
-    final granted = await PermissionHelper.requestNotificationPermission();
-    if (granted) {
-      final notif = ref.read(scheduledTripNotificationServiceProvider);
-      await notif.scheduleReminder(trip);
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notification permission denied — reminder will not fire')),
+    try {
+      final scheduledStart = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _selectedTime.hour,
+        _selectedTime.minute,
       );
-    }
 
-    if (!mounted) return;
+      final trip = ScheduledTrip(
+        id: widget.existingTrip?.id ?? _uuid.v4(),
+        name: name,
+        description: _descController.text.trim().isEmpty
+            ? null
+            : _descController.text.trim(),
+        waypointsJson: Waypoint.serializeList(widget.waypoints) ?? '[]',
+        scheduledStartTime: scheduledStart,
+        status: widget.existingTrip?.status ?? ScheduledTripStatus.pending,
+        createdAt: widget.existingTrip?.createdAt ?? DateTime.now(),
+      );
+
+      await ref.read(createScheduledTripAction(trip).future);
+      if (!mounted) return;
+
+      final granted = await PermissionHelper.requestNotificationPermission();
+      if (granted) {
+        final notif = ref.read(scheduledTripNotificationServiceProvider);
+        await notif.scheduleReminder(trip);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notification permission denied — reminder will not fire')),
+        );
+      }
+
+      if (!mounted) return;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save schedule: $e')),
+        );
+      }
+      return;
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
 
     showDialog(
       context: context,
@@ -221,17 +229,26 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
           const SizedBox(height: AppSpacing.lg),
           Text('Remind me', style: AppTypography.sectionHeader.copyWith(color: cs.onSurface)),
           const SizedBox(height: AppSpacing.sm),
-          SegmentedButton<RemindBefore>(
-            segments: const [
-              ButtonSegment(value: RemindBefore.hourBefore, label: Text('An hour before')),
-              ButtonSegment(value: RemindBefore.dayBefore, label: Text('A day before (8 PM)')),
-            ],
-            selected: {_remindBefore},
-            onSelectionChanged: (v) => setState(() => _remindBefore = v.first),
-            style: SegmentedButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
-              ),
+          AppCard(
+            child: Row(
+              children: [
+                Icon(Icons.notifications_rounded, color: cs.primary, size: 20),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'An hour before',
+                    style: AppTypography.bodyBold.copyWith(color: cs.onSurface),
+                  ),
+                ),
+                Tooltip(
+                  message: 'A reminder will be sent 1 hour before your scheduled departure.',
+                  child: Icon(
+                    Icons.info_outline_rounded,
+                    size: 18,
+                    color: cs.onSurface.withValues(alpha: 0.35),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.lg),

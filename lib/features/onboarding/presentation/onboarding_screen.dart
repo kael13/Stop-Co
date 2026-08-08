@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lottie/lottie.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -84,10 +83,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 : const SizedBox.shrink(),
           ),
           const Spacer(),
-          _PageIndicator(
-            count: _slides.length,
-            current: _currentPage,
-          ),
+          _PageIndicator(count: _slides.length, current: _currentPage),
           const Spacer(),
           const SizedBox(width: 80),
         ],
@@ -117,40 +113,53 @@ final _slides = <Widget>[
     title: 'Never Miss Your Stop',
     subtitle:
         'Set a destination alarm, and Stop-Co quietly watches your commute so you can relax.',
-    visual: _SlideIcon(Icons.notifications_active_rounded),
+    visual: const _SlideLogo(
+      assetPath: 'assets/images/slide_1.png',
+      fallbackIcon: Icons.notifications_active_rounded,
+    ),
   ),
   OnboardingPage(
     title: 'Pick Any Spot',
     subtitle:
         'Drop a pin on the map or search for an address — choose exactly where you want the alarm.',
-    visual: _SlideIcon(Icons.location_on_rounded),
+    visual: const _SlideLogo(
+      assetPath: 'assets/images/slide_2.png',
+      fallbackIcon: Icons.location_on_rounded,
+    ),
   ),
   OnboardingPage(
     title: 'Arrive, Get Alerted',
     subtitle:
         'When you enter your chosen zone, the alarm fires with sound, vibration, or both.',
-    visual: _SlideIcon(Icons.alarm_on_rounded),
+    visual: const _SlideLogo(
+      assetPath: 'assets/images/slide_3.png',
+      fallbackIcon: Icons.alarm_on_rounded,
+    ),
   ),
   OnboardingPage(
     title: 'Start Your Journey',
     subtitle: "Ready to never miss a stop again? Let's go!",
-    visual: LottieBuilder.asset(
-      'assets/animations/onboarding_arrival.json',
-      fit: BoxFit.contain,
+    visual: const _SlideLogo(
+      assetPath: 'assets/images/slide_4.png',
+      fallbackIcon: Icons.notifications_active_rounded,
     ),
   ),
 ];
 
-class _SlideIcon extends StatefulWidget {
-  final IconData icon;
+class _SlideLogo extends StatefulWidget {
+  final String assetPath;
+  final IconData fallbackIcon;
 
-  const _SlideIcon(this.icon);
+  const _SlideLogo({
+    required this.assetPath,
+    this.fallbackIcon = Icons.notifications_active_rounded,
+  });
 
   @override
-  State<_SlideIcon> createState() => _SlideIconState();
+  State<_SlideLogo> createState() => _SlideLogoState();
 }
 
-class _SlideIconState extends State<_SlideIcon>
+class _SlideLogoState extends State<_SlideLogo>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _pulse;
@@ -162,9 +171,10 @@ class _SlideIconState extends State<_SlideIcon>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 1.0, end: 1.15).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _pulse = Tween<double>(
+      begin: 1.0,
+      end: 1.15,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -177,19 +187,23 @@ class _SlideIconState extends State<_SlideIcon>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _pulse,
-      builder: (_, child) => Transform.scale(
-        scale: _pulse.value,
-        child: child,
-      ),
+      builder: (_, child) => Transform.scale(scale: _pulse.value, child: child),
       child: Container(
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
         ),
-        child: Icon(
-          widget.icon,
-          size: 120,
-          color: Theme.of(context).colorScheme.primary,
+        child: Image.asset(
+          widget.assetPath,
+          width: 120,
+          height: 120,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => Icon(
+            widget.fallbackIcon,
+            size: 120,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
       ),
     );

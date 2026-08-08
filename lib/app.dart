@@ -180,10 +180,15 @@ class _SplashScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.notifications_active_rounded,
-                color: context.primary,
-                size: 48,
+              Image.asset(
+                'assets/images/splash_logo.png',
+                width: 96,
+                height: 96,
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.notifications_active_rounded,
+                  color: context.primary,
+                  size: 48,
+                ),
               ),
               const SizedBox(height: 24),
               Text(

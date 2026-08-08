@@ -81,42 +81,41 @@ class _BrandIntroScreenState extends ConsumerState<BrandIntroScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
+                      Image.asset(
+                        'assets/icon/stopco.png',
                         width: 120,
                         height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Theme.of(context).colorScheme.primary,
-                              Theme.of(context).colorScheme.secondary,
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Theme.of(context).colorScheme.primary
-                                  .withValues(alpha: 0.3),
-                              blurRadius: 32,
-                              offset: const Offset(0, 8),
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Theme.of(context).colorScheme.primary,
+                                Theme.of(context).colorScheme.secondary,
+                              ],
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.notifications_active_rounded,
-                          size: 64,
-                          color: Colors.white,
+                          ),
+                          child: const Icon(
+                            Icons.notifications_active_rounded,
+                            size: 64,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       Text(
-                        AppConstants.appName,
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: context.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      )
+                            AppConstants.appName,
+                            style: Theme.of(context).textTheme.displayLarge
+                                ?.copyWith(
+                                  color: context.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          )
                           .animate()
                           .fadeIn(delay: 380.ms, duration: 420.ms)
                           .slideY(
@@ -131,16 +130,13 @@ class _BrandIntroScreenState extends ConsumerState<BrandIntroScreen>
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: context.textSecondary,
                         ),
-                      )
-                          .animate()
-                          .fadeIn(delay: 540.ms, duration: 360.ms),
+                      ).animate().fadeIn(delay: 540.ms, duration: 360.ms),
                       const SizedBox(height: AppSpacing.xxl),
                       Text(
-                        'Tap to continue',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.textTertiary,
-                        ),
-                      )
+                            'Tap to continue',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: context.textTertiary),
+                          )
                           .animate(delay: 700.ms)
                           .fadeIn(duration: 400.ms)
                           .then()
