@@ -2,10 +2,14 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:stop_co/features/scheduled_trip/data/scheduled_trip.dart';
 import 'package:stop_co/features/scheduled_trip/data/scheduled_trip_notification_service.dart';
+import 'package:stop_co/features/scheduled_trip/data/scheduled_trip_repository.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+
+class _MockRepo extends Mock implements ScheduledTripRepository {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +17,7 @@ void main() {
   late MethodChannel monitorChannel;
   late List<MethodCall> monitorCalls;
   late ScheduledTripNotificationService service;
+  late _MockRepo repo;
 
   final sampleTrip = ScheduledTrip(
     id: 'trip-1',
@@ -21,6 +26,13 @@ void main() {
         '[{"id":"wp-1","name":"Office","latitude":40.0,"longitude":-74.0,"alertRadius":300,"orderIndex":0}]',
     scheduledStartTime: DateTime(2027, 1, 15, 14, 30),
     createdAt: DateTime(2027, 1, 8),
+  );
+
+  final multiStopTrip = sampleTrip.copyWith(
+    id: 'trip-2',
+    name: 'Gym',
+    waypointsJson:
+        '[{"id":"wp-1","name":"A","latitude":40.0,"longitude":-74.0,"alertRadius":300,"orderIndex":0},{"id":"wp-2","name":"B","latitude":41.0,"longitude":-75.0,"alertRadius":500,"orderIndex":1}]',
   );
 
   setUpAll(() {
@@ -35,7 +47,11 @@ void main() {
       monitorCalls.add(call);
       return null;
     });
-    service = ScheduledTripNotificationService(FlutterLocalNotificationsPlugin());
+    repo = _MockRepo();
+    service = ScheduledTripNotificationService(
+      FlutterLocalNotificationsPlugin(),
+      repo,
+    );
   });
 
   tearDown(() {
@@ -51,14 +67,16 @@ void main() {
         .cast<Map<String, dynamic>>();
   }
 
-  group('scheduleReminder', () {
-    int expectedHourBeforeMs() {
-      final startLocal = tz.TZDateTime.from(sampleTrip.scheduledStartTime, tz.local);
-      return startLocal.subtract(const Duration(hours: 1)).millisecondsSinceEpoch;
-    }
+  int expectedHourBeforeMs(ScheduledTrip trip) {
+    final startLocal = tz.TZDateTime.from(trip.scheduledStartTime, tz.local);
+    return startLocal.subtract(const Duration(hours: 1)).millisecondsSinceEpoch;
+  }
 
-    test('registers the single hour-before entry', () async {
-      await service.scheduleReminder(sampleTrip);
+  group('syncReminders', () {
+    test('registers a single hour-before entry for one pending trip', () async {
+      when(() => repo.getAll()).thenAnswer((_) async => [sampleTrip]);
+
+      await service.syncReminders();
 
       expect(monitorCalls.map((c) => c.method), contains('start'));
       final reminders = startedReminders();
@@ -68,28 +86,106 @@ void main() {
       expect(hourBefore['tripId'], 'trip-1');
       expect(hourBefore['title'], 'Upcoming Trip: Work');
       expect(hourBefore['body'], 'Departure at 2:30 PM — 1 stop');
-      expect(hourBefore['triggerTimeMs'], expectedHourBeforeMs());
+      expect(hourBefore['triggerTimeMs'], expectedHourBeforeMs(sampleTrip));
+    });
+
+    test('registers all pending trips in one start call', () async {
+      when(() => repo.getAll())
+          .thenAnswer((_) async => [sampleTrip, multiStopTrip]);
+
+      await service.syncReminders();
+
+      final reminders = startedReminders();
+      expect(reminders.length, 2);
+      expect(reminders.map((r) => r['tripId']), containsAll(['trip-1', 'trip-2']));
     });
 
     test('shows plural stops text for multi-stop trip', () async {
-      final multiStopTrip = sampleTrip.copyWith(
-        waypointsJson:
-            '[{"id":"wp-1","name":"A","latitude":40.0,"longitude":-74.0,"alertRadius":300,"orderIndex":0},{"id":"wp-2","name":"B","latitude":41.0,"longitude":-75.0,"alertRadius":500,"orderIndex":1}]',
-      );
+      when(() => repo.getAll()).thenAnswer((_) async => [multiStopTrip]);
 
-      await service.scheduleReminder(multiStopTrip);
+      await service.syncReminders();
 
       final reminders = startedReminders();
       expect(reminders.length, 1);
       expect(reminders[0]['body'], 'Departure at 2:30 PM — 2 stops');
     });
+
+    test('filters out completed trips', () async {
+      when(() => repo.getAll()).thenAnswer(
+        (_) async => [
+          sampleTrip,
+          multiStopTrip.copyWith(status: ScheduledTripStatus.completed),
+        ],
+      );
+
+      await service.syncReminders();
+
+      final reminders = startedReminders();
+      expect(reminders.map((r) => r['tripId']), ['trip-1']);
+    });
+
+    test('filters out cancelled trips', () async {
+      when(() => repo.getAll()).thenAnswer(
+        (_) async => [
+          sampleTrip,
+          multiStopTrip.copyWith(status: ScheduledTripStatus.cancelled),
+        ],
+      );
+
+      await service.syncReminders();
+
+      final reminders = startedReminders();
+      expect(reminders.map((r) => r['tripId']), ['trip-1']);
+    });
+
+    test('filters out alarm-triggered trips', () async {
+      when(() => repo.getAll()).thenAnswer(
+        (_) async => [
+          sampleTrip,
+          multiStopTrip.copyWith(alarmTriggeredAtEpochMs: 1234567890),
+        ],
+      );
+
+      await service.syncReminders();
+
+      final reminders = startedReminders();
+      expect(reminders.map((r) => r['tripId']), ['trip-1']);
+    });
+
+    test('honors excludeId', () async {
+      when(() => repo.getAll())
+          .thenAnswer((_) async => [sampleTrip, multiStopTrip]);
+
+      await service.syncReminders(excludeId: 'trip-1');
+
+      final reminders = startedReminders();
+      expect(reminders.map((r) => r['tripId']), ['trip-2']);
+    });
+
+    test('stops the monitor when no pending trips remain', () async {
+      when(() => repo.getAll()).thenAnswer((_) async => [
+            sampleTrip.copyWith(status: ScheduledTripStatus.completed),
+          ]);
+
+      await service.syncReminders();
+
+      expect(monitorCalls.map((c) => c.method), contains('stop'));
+      expect(monitorCalls.where((c) => c.method == 'start'), isEmpty);
+    });
   });
 
   group('cancelReminder', () {
-    test('stops the reminder monitor', () async {
+    test('rebuilds the set minus the cancelled trip instead of stopping all',
+        () async {
+      when(() => repo.getAll())
+          .thenAnswer((_) async => [sampleTrip, multiStopTrip]);
+
       await service.cancelReminder('trip-1');
 
-      expect(monitorCalls.map((c) => c.method), contains('stop'));
+      expect(monitorCalls.map((c) => c.method), contains('start'));
+      expect(monitorCalls.map((c) => c.method), isNot(contains('stop')));
+      final reminders = startedReminders();
+      expect(reminders.map((r) => r['tripId']), ['trip-2']);
     });
   });
 }

@@ -84,6 +84,10 @@ class ReminderMonitorService : Service() {
 
         for (reminder in reminders) {
             if (reminder.notified) continue
+            if (isTriggerPersisted(reminder.tripId)) {
+                reminder.notified = true
+                continue
+            }
             allDone = false
 
             if (now >= reminder.triggerTimeMs) {
@@ -98,6 +102,11 @@ class ReminderMonitorService : Service() {
         } else {
             handler.postDelayed(checkRunnable, CHECK_INTERVAL_MS)
         }
+    }
+
+    private fun isTriggerPersisted(tripId: String): Boolean {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.contains("$PREFS_PREFIX$tripId")
     }
 
     private fun showNotification(reminder: ReminderEntry) {

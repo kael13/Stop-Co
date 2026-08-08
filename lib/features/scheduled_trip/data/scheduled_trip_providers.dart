@@ -48,5 +48,6 @@ final markAlarmTriggeredAction = FutureProvider.family<void, String>((ref, id) a
 });
 
 final scheduledTripNotificationServiceProvider = Provider<ScheduledTripNotificationService>((ref) {
-  return ScheduledTripNotificationService(notificationsPlugin);
+  final repo = ref.read(scheduledTripRepositoryProvider);
+  return ScheduledTripNotificationService(notificationsPlugin, repo);
 });

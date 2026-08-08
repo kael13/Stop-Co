@@ -100,7 +100,7 @@ class _ScheduleTripFormScreenState extends ConsumerState<ScheduleTripFormScreen>
       final granted = await PermissionHelper.requestNotificationPermission();
       if (granted) {
         final notif = ref.read(scheduledTripNotificationServiceProvider);
-        await notif.scheduleReminder(trip);
+        await notif.syncReminders();
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Notification permission denied — reminder will not fire')),

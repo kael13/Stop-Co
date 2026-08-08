@@ -6,34 +6,46 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/platform/reminder_monitor_channel.dart';
 import '../../../core/platform/wake_lock_channel.dart';
 import 'scheduled_trip.dart';
+import 'scheduled_trip_repository.dart';
 
 class ScheduledTripNotificationService {
   final FlutterLocalNotificationsPlugin _plugin;
+  final ScheduledTripRepository _repository;
 
-  ScheduledTripNotificationService(this._plugin);
+  ScheduledTripNotificationService(this._plugin, this._repository);
 
   static const _simTestId = 9000;
 
-  Future<void> scheduleReminder(ScheduledTrip trip) async {
-    await _startMonitorForTrip(trip);
+  Future<void> syncReminders({String? excludeId}) async {
+    final trips = await _repository.getAll();
+    final pending = trips.where((t) =>
+        t.status == ScheduledTripStatus.pending &&
+        !t.alarmTriggered &&
+        t.id != excludeId);
+
+    final reminders = <Map<String, dynamic>>[
+      for (final trip in pending) _reminderEntryFor(trip),
+    ];
+
+    if (reminders.isEmpty) {
+      await ReminderMonitorChannel.stop();
+    } else {
+      await ReminderMonitorChannel.start(reminders);
+    }
   }
 
-  Future<void> _startMonitorForTrip(ScheduledTrip trip) async {
+  Map<String, dynamic> _reminderEntryFor(ScheduledTrip trip) {
     final timeFormatted = DateFormat('h:mm a').format(trip.scheduledStartTime);
     final stops = trip.waypoints.length;
     final body =
         'Departure at $timeFormatted — $stops stop${stops == 1 ? '' : 's'}';
 
-    final reminders = <Map<String, dynamic>>[
-      {
-        'tripId': trip.id,
-        'title': 'Upcoming Trip: ${trip.name}',
-        'body': body,
-        'triggerTimeMs': _hourBeforeFireTime(trip).millisecondsSinceEpoch,
-      },
-    ];
-
-    await ReminderMonitorChannel.start(reminders);
+    return {
+      'tripId': trip.id,
+      'title': 'Upcoming Trip: ${trip.name}',
+      'body': body,
+      'triggerTimeMs': _hourBeforeFireTime(trip).millisecondsSinceEpoch,
+    };
   }
 
   tz.TZDateTime _hourBeforeFireTime(ScheduledTrip trip) {
@@ -60,7 +72,7 @@ class ScheduledTripNotificationService {
   }
 
   Future<void> cancelReminder(String tripId) async {
-    await ReminderMonitorChannel.stop();
+    await syncReminders(excludeId: tripId);
   }
 
   Future<void> fireGenericTestNotification() async {

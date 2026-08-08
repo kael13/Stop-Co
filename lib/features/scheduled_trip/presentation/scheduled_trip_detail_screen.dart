@@ -159,11 +159,12 @@ class ScheduledTripDetailScreen extends ConsumerWidget {
             AppButton(
               label: 'Start Trip Now',
               icon: Icons.near_me_rounded,
-              onPressed: () {
-                ref.read(scheduledTripNotificationServiceProvider)
-                    .cancelReminder(trip.id);
+              onPressed: () async {
+                await ref.read(completeScheduledTripAction(trip.id).future);
                 ref.read(startScheduledTripAction(trip).future);
-                Navigator.pushNamed(context, '/active-trip');
+                await ref.read(scheduledTripNotificationServiceProvider)
+                    .syncReminders();
+                if (context.mounted) Navigator.pushNamed(context, '/active-trip');
               },
               width: double.infinity,
             ),
@@ -172,9 +173,9 @@ class ScheduledTripDetailScreen extends ConsumerWidget {
               label: 'Mark as Completed',
               icon: Icons.check_circle_outline,
               onPressed: () async {
-                ref.read(scheduledTripNotificationServiceProvider)
-                    .cancelReminder(trip.id);
                 await ref.read(completeScheduledTripAction(trip.id).future);
+                await ref.read(scheduledTripNotificationServiceProvider)
+                    .syncReminders();
                 if (context.mounted) Navigator.pop(context);
               },
               width: double.infinity,
@@ -185,9 +186,9 @@ class ScheduledTripDetailScreen extends ConsumerWidget {
               icon: Icons.cancel_outlined,
               isDestructive: true,
               onPressed: () async {
-                ref.read(scheduledTripNotificationServiceProvider)
-                    .cancelReminder(trip.id);
                 await ref.read(cancelScheduledTripAction(trip.id).future);
+                await ref.read(scheduledTripNotificationServiceProvider)
+                    .syncReminders();
                 if (context.mounted) Navigator.pop(context);
               },
               width: double.infinity,
@@ -231,9 +232,9 @@ class ScheduledTripDetailScreen extends ConsumerWidget {
                   ),
                 );
                 if (confirmed == true) {
-                  ref.read(scheduledTripNotificationServiceProvider)
-                      .cancelReminder(trip.id);
                   await ref.read(deleteScheduledTripAction(trip.id).future);
+                  await ref.read(scheduledTripNotificationServiceProvider)
+                      .syncReminders();
                   if (context.mounted) Navigator.pop(context);
                 }
               },
