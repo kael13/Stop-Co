@@ -303,44 +303,46 @@ class _AlertPreferencesGroup extends ConsumerWidget {
             onTap: () => _pickAlarmSound(context, ref, notifier),
             contentPadding: EdgeInsets.zero,
           ),
-          const Divider(
-            height: 1,
-            indent: AppSpacing.sm,
-            endIndent: AppSpacing.sm,
-          ),
-          ListTile(
-            leading: Icon(
-              Icons.notification_add_rounded,
-              color: cs.primary,
-              size: 20,
+          if (kReleaseMode == false) ...[
+            const Divider(
+              height: 1,
+              indent: AppSpacing.sm,
+              endIndent: AppSpacing.sm,
             ),
-            title: const Text('Test Reminder Notification'),
-            subtitle: const Text('Fire a test notification immediately'),
-            trailing: Icon(
-              Icons.chevron_right_rounded,
-              color: cs.onSurface.withValues(alpha: 0.4),
+            ListTile(
+              leading: Icon(
+                Icons.notification_add_rounded,
+                color: cs.primary,
+                size: 20,
+              ),
+              title: const Text('Test Reminder Notification'),
+              subtitle: const Text('Fire a test notification immediately'),
+              trailing: Icon(
+                Icons.chevron_right_rounded,
+                color: cs.onSurface.withValues(alpha: 0.4),
+              ),
+              onTap: () async {
+                try {
+                  final notif = ref.read(
+                    scheduledTripNotificationServiceProvider,
+                  );
+                  await notif.fireGenericTestNotification();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Test notification fired')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Notification failed: $e')),
+                    );
+                  }
+                }
+              },
+              contentPadding: EdgeInsets.zero,
             ),
-            onTap: () async {
-              try {
-                final notif = ref.read(
-                  scheduledTripNotificationServiceProvider,
-                );
-                await notif.fireGenericTestNotification();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Test notification fired')),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Notification failed: $e')),
-                  );
-                }
-              }
-            },
-            contentPadding: EdgeInsets.zero,
-          ),
+          ],
         ],
       ),
     );
@@ -744,7 +746,7 @@ class _AboutSectionState extends ConsumerState<_AboutSection> {
   Future<void> _loadVersion() async {
     try {
       final info = await PackageInfo.fromPlatform();
-      final v = info.version;
+      final v = info.version.split('.').take(2).join('.');
       if (mounted) setState(() => _version = v);
     } catch (_) {
       // PackageInfo unavailable (tests/edge) — fall back to pubspec version.
@@ -770,7 +772,7 @@ class _AboutSectionState extends ConsumerState<_AboutSection> {
         ),
         const SizedBox(height: AppSpacing.xxs),
         Text(
-          'Version ${_version ?? '1.0.0'}',
+          'Version ${_version ?? '1.0'}',
           style: AppTypography.caption.copyWith(
             color: cs.onSurface.withValues(alpha: 0.35),
           ),

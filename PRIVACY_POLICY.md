@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** July 23, 2026
+**Last updated:** August 9, 2026
 
 ## 1. Introduction
 
@@ -22,7 +22,7 @@ All data you create within the App is stored exclusively on your device in a loc
 - Saved routes
 - Scheduled trips
 
-This data never leaves your device. You can delete all locally stored data at any time via the Settings screen ("Delete All Trips" and "Clear Cache") or by uninstalling the App.
+This data never leaves your device. You can delete all locally stored data at any time via the Settings screen ("Clear Cache" and "Reset Settings") or by uninstalling the App.
 
 ## 4. Location Data
 
@@ -58,11 +58,13 @@ The App requests the following Android permissions. Each is used only for the sp
 
 | Permission | Purpose |
 |---|---|
+| `INTERNET` | Communicate with third-party services (geocoding, map tiles, route calculation) |
 | `ACCESS_FINE_LOCATION` | Precise GPS position to determine proximity to your destination |
 | `ACCESS_COARSE_LOCATION` | Approximate position when precise GPS is unavailable |
 | `ACCESS_BACKGROUND_LOCATION` | Continue monitoring your approach when the App is minimized |
 | `POST_NOTIFICATIONS` | Show alarm notifications when you reach your destination |
 | `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_LOCATION` | Run location tracking as a foreground service |
+| `FOREGROUND_SERVICE_SPECIAL_USE` | Run the scheduled-trip reminder monitor as a foreground service |
 | `VIBRATE` | Vibrate device on alarm |
 | `WAKE_LOCK` | Keep device CPU awake during active tracking |
 | `RECEIVE_BOOT_COMPLETED` | Re-schedule alarms after device reboot |
@@ -76,9 +78,9 @@ The App is not directed at children under 13. The developer does not knowingly c
 
 ## 9. Data Deletion
 
-You can delete all data stored by the App at any time:
+You can delete data stored by the App at any time:
 
-1. **In the App:** Settings → "Delete All Trips" (trip history) and "Clear Cache" (map tiles)
+1. **In the App:** Settings → "Clear Cache" (map tiles) and Settings → "Reset Settings" (restore app preferences to defaults)
 2. **System settings:** Clear app data or storage via your device's App Info screen
 3. **Uninstall:** Removing the App deletes all locally stored data
 

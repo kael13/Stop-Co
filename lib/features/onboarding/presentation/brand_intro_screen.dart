@@ -125,12 +125,34 @@ class _BrandIntroScreenState extends ConsumerState<BrandIntroScreen>
                             curve: Curves.easeOutCubic,
                           ),
                       const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'For commuters, by commuters',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: context.textSecondary,
-                        ),
-                      ).animate().fadeIn(delay: 540.ms, duration: 360.ms),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Never miss your stop again.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: context.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ).animate().fadeIn(delay: 540.ms, duration: 360.ms),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Built by a commuter, for commuters.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(color: context.textSecondary),
+                          ).animate().fadeIn(delay: 620.ms, duration: 360.ms),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Set your pin, lock your screen, and relax.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: context.textTertiary),
+                          ).animate().fadeIn(delay: 700.ms, duration: 360.ms),
+                        ],
+                      ),
                       const SizedBox(height: AppSpacing.xxl),
                       Text(
                             'Tap to continue',
